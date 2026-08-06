@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+@import 'tailwindcss';
+
+/*
+ * Design tokens — mirrors docs/kitchen-sink.html and the Figma "10ME Design"
+ * foundation. Keep these three files in sync when tokens change.
+ */
+@theme {
+  --color-bg-page: #fdfbf7;
+  --color-bg-surface: #ffffff;
+  --color-border: #e7e2dc;
+  --color-text-primary: #231f1a;
+  --color-text-secondary: #736c63;
+  --color-text-inverse: #ffffff;
+  --color-brand-primary: #ff6b47;
+  --color-brand-primary-hover: #e5502e;
+  --color-brand-secondary: #1f7a6c;
+  --color-success: #2e9e6d;
+  --color-error: #dc3545;
+  --color-warning-bg: #fff3e0;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --shadow-card: 0px 2px 8px rgba(35, 31, 26, 0.08);
+
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-bg-page);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
