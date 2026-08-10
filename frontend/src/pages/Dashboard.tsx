@@ -30,5 +30,7 @@ export function Dashboard() {
       return <StubShell title="Buddy Dashboard" />;
     case 'admin':
       return <StubShell title="Admin Dashboard" />;
+    default:
+      return <Navigate to="/login" replace />;
   }
 }
