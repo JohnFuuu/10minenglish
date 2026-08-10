@@ -20,8 +20,10 @@ function StubShell({ title }: { title: string }) {
 }
 
 export function Dashboard() {
-  const { account } = useAuth();
+  const { account, isLoading } = useAuth();
+  if (isLoading) return null;
   if (!account) return <Navigate to="/login" replace />;
+  if (!account.onboardingCompleted) return <Navigate to="/onboarding" replace />;
 
   switch (account.role) {
     case 'user':

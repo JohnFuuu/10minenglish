@@ -10,5 +10,9 @@ meRouter.get('/api/me', requireAuth, async (req, res) => {
     res.status(404).json({ error: 'Account not found' });
     return;
   }
-  res.status(200).json({ id: account.id, role: account.role });
+  res.status(200).json({
+    id: account.id,
+    role: account.role,
+    onboardingCompleted: account.onboardingCompleted,
+  });
 });

@@ -1,0 +1,228 @@
+import { useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
+import { submitOnboarding } from '../lib/api';
+
+interface Option {
+  label: string;
+  icon?: string;
+  bars?: number;
+}
+
+interface OnboardingStep {
+  question: string;
+  options: Option[];
+}
+
+const steps: OnboardingStep[] = [
+  {
+    question: 'How did you hear about 10 Minute English?',
+    options: [
+      { icon: '👨‍👩‍👧', label: 'Friends or family' },
+      { icon: '📱', label: 'TikTok' },
+      { icon: '📺', label: 'TV' },
+      { icon: '📰', label: 'News / article / blog' },
+      { icon: '▶️', label: 'YouTube' },
+      { icon: '🔍', label: 'Google Search' },
+      { icon: '📘', label: 'Facebook / Instagram' },
+      { icon: '💬', label: 'Other' },
+    ],
+  },
+  {
+    question: "Okay, we'll build on what you know!",
+    options: [
+      { bars: 1, label: "I'm new to English" },
+      { bars: 2, label: 'I know some common words' },
+      { bars: 3, label: 'I can have basic conversations' },
+      { bars: 4, label: 'I can talk about various topics' },
+      { bars: 5, label: 'I can discuss most topics in detail' },
+    ],
+  },
+  {
+    question: 'Why are you learning English?',
+    options: [
+      { icon: '💼', label: 'Work or career' },
+      { icon: '✈️', label: 'Travel' },
+      { icon: '🎓', label: 'Study or exams' },
+      { icon: '🌏', label: 'Moving abroad' },
+      { icon: '🧠', label: 'Personal growth' },
+      { icon: '💬', label: 'Other' },
+    ],
+  },
+  {
+    question: 'How many lessons per week?',
+    options: [
+      { icon: '🐢', label: '1–2 lessons — casual pace' },
+      { icon: '🚶', label: '3–4 lessons — steady progress' },
+      { icon: '🏃', label: '5+ lessons — serious study' },
+    ],
+  },
+];
+
+function SignalBars({ filled }: { filled: number }) {
+  const bars = [
+    { x: 2, height: 8, y: 14 },
+    { x: 8, height: 11, y: 11 },
+    { x: 14, height: 14, y: 8 },
+    { x: 20, height: 17, y: 5 },
+    { x: 26, height: 20, y: 2 },
+  ];
+  return (
+    <svg width="32" height="24" viewBox="0 0 32 24" fill="none">
+      {bars.map((b, i) => (
+        <rect
+          key={i}
+          x={b.x}
+          y={b.y}
+          width="5"
+          height={b.height}
+          rx="1.5"
+          fill={i < filled ? '#1cb0f6' : '#d0e8f5'}
+        />
+      ))}
+    </svg>
+  );
+}
+
+export function Onboarding() {
+  const { account, token, completeOnboarding } = useAuth();
+  const navigate = useNavigate();
+
+  const [stepIndex, setStepIndex] = useState(0);
+  const [selections, setSelections] = useState<(string | null)[]>(
+    Array(steps.length).fill(null),
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!account || !token) return <Navigate to="/login" replace />;
+  if (account.onboardingCompleted) return <Navigate to="/dashboard" replace />;
+
+  const step = steps[stepIndex];
+  const selected = selections[stepIndex];
+  const progressPct = ((stepIndex + 1) / steps.length) * 100;
+  const isLast = stepIndex === steps.length - 1;
+
+  function select(label: string) {
+    setSelections((prev) => {
+      const next = [...prev];
+      next[stepIndex] = label;
+      return next;
+    });
+  }
+
+  async function handleContinue() {
+    if (!selected) return;
+    if (!isLast) {
+      setStepIndex((i) => i + 1);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const levelOption = steps[1].options.find((o) => o.label === selections[1]);
+      await submitOnboarding(token!, {
+        referralSource: selections[0]!,
+        selfRatedLevel: levelOption?.bars ?? 1,
+        motivation: selections[2]!,
+        lessonsPerWeekGoal: selections[3]!,
+      });
+      completeOnboarding();
+      navigate('/dashboard');
+    } catch {
+      setError('Something went wrong saving your answers. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function handleBack() {
+    if (stepIndex === 0) return;
+    setStepIndex((i) => i - 1);
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <div className="flex items-center gap-4 px-5 pt-12 pb-5">
+        <button
+          onClick={handleBack}
+          disabled={stepIndex === 0}
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md border-2 border-border disabled:opacity-30"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#777777" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <div className="h-4 flex-1 overflow-hidden rounded-full bg-border">
+          <div
+            className="h-full rounded-full bg-brand-primary transition-all duration-500"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 px-5 pb-7 pt-1">
+        <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full bg-[#f0f0f0] text-5xl">
+          🦉
+        </div>
+        <div className="relative flex-1 rounded-2xl border-2 border-border bg-bg-surface px-4 py-3.5">
+          <p className="text-lg font-bold leading-snug text-text-body">{step.question}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 pb-4">
+        {step.options.map((opt) => {
+          const isSelected = selected === opt.label;
+          return (
+            <button
+              key={opt.label}
+              onClick={() => select(opt.label)}
+              className={
+                isSelected
+                  ? 'flex w-full items-center gap-4 rounded-2xl border-2 border-brand-secondary bg-brand-secondary/10 px-4 py-3.5 text-left transition-all'
+                  : 'flex w-full items-center gap-4 rounded-2xl border-2 border-border bg-bg-surface px-4 py-3.5 text-left transition-all'
+              }
+            >
+              <span
+                className={
+                  isSelected
+                    ? 'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md bg-brand-secondary/20 text-xl'
+                    : 'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md bg-[#f0f0f0] text-xl'
+                }
+              >
+                {opt.bars !== undefined ? <SignalBars filled={opt.bars} /> : opt.icon}
+              </span>
+              <span
+                className={
+                  isSelected
+                    ? 'flex-1 text-sm font-bold text-brand-secondary'
+                    : 'flex-1 text-sm font-bold text-text-body'
+                }
+              >
+                {opt.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {error && <p className="px-5 pb-2 text-center text-sm font-bold text-error">{error}</p>}
+
+      <div className="px-5 pb-8 pt-3">
+        <button
+          onClick={handleContinue}
+          disabled={!selected || isSubmitting}
+          className="w-full rounded-md border-2 border-b-[3px] px-6 py-4 text-sm font-bold uppercase tracking-wide text-text-inverse transition-transform active:translate-y-0.5 disabled:cursor-not-allowed"
+          style={{
+            background: selected ? '#58cc02' : '#e5e5e5',
+            borderColor: selected ? '#46a302' : '#d0d0d0',
+            color: selected ? '#ffffff' : '#afafaf',
+          }}
+        >
+          {isSubmitting ? 'Saving…' : isLast ? "Let's Go!" : 'Continue'}
+        </button>
+      </div>
+    </div>
+  );
+}
