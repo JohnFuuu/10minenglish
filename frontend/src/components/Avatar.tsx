@@ -1,3 +1,5 @@
+import { cn } from '../lib/cn';
+
 type AvatarSize = 32 | 40 | 56;
 
 interface AvatarProps {
@@ -14,10 +16,10 @@ const sizeClasses: Record<AvatarSize, string> = {
 export function Avatar({ initials, size = 40 }: AvatarProps) {
   return (
     <div
-      className={[
-        'flex shrink-0 items-center justify-center rounded-full bg-brand-primary font-semibold text-text-inverse',
+      className={cn(
+        'flex shrink-0 items-center justify-center rounded-full border-2 border-accent-lime bg-brand-primary font-bold text-text-inverse',
         sizeClasses[size],
-      ].join(' ')}
+      )}
     >
       {initials}
     </div>

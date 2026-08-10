@@ -15,10 +15,8 @@ export function NavItem({ label, active = false, badge, onClick, className = '' 
       type="button"
       onClick={onClick}
       className={cn(
-        'flex w-full items-center justify-between rounded-md px-4 py-3 text-sm font-medium transition-colors',
-        active
-          ? 'bg-brand-primary/10 text-brand-primary'
-          : 'text-text-secondary hover:bg-bg-page',
+        'flex w-full items-center justify-between rounded-md px-4 py-3 text-xs font-bold uppercase tracking-wide transition-colors',
+        active ? 'text-brand-primary' : 'text-text-secondary hover:text-text-body',
         className,
       )}
     >

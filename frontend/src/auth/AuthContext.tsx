@@ -1,28 +1,69 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { fetchMe } from '../lib/api';
 
 export type AccountRole = 'user' | 'buddy' | 'admin';
 
 export interface Account {
   id: string;
   role: AccountRole;
+  onboardingCompleted: boolean;
 }
 
 interface AuthContextValue {
   account: Account | null;
-  login: (role: AccountRole) => void;
+  token: string | null;
+  isLoading: boolean;
+  setSession: (token: string, account: Account) => void;
+  completeOnboarding: () => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const TOKEN_STORAGE_KEY = '10me.token';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<Account | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = (role: AccountRole) => setAccount({ id: 'stub-account', role });
-  const logout = () => setAccount(null);
+  useEffect(() => {
+    const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (!storedToken) {
+      setIsLoading(false);
+      return;
+    }
+
+    fetchMe(storedToken)
+      .then((me) => {
+        setToken(storedToken);
+        setAccount({ id: me.id, role: me.role as AccountRole, onboardingCompleted: me.onboardingCompleted });
+      })
+      .catch(() => {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  function setSession(newToken: string, newAccount: Account) {
+    localStorage.setItem(TOKEN_STORAGE_KEY, newToken);
+    setToken(newToken);
+    setAccount(newAccount);
+  }
+
+  function logout() {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    setToken(null);
+    setAccount(null);
+  }
+
+  function completeOnboarding() {
+    setAccount((prev) => (prev ? { ...prev, onboardingCompleted: true } : prev));
+  }
 
   return (
-    <AuthContext.Provider value={{ account, login, logout }}>
+    <AuthContext.Provider
+      value={{ account, token, isLoading, setSession, completeOnboarding, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -1,0 +1,105 @@
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+
+export class ApiError extends Error {
+  status: number;
+  body: unknown;
+
+  constructor(status: number, body: unknown) {
+    super(typeof body === 'object' && body && 'error' in body ? String((body as { error: unknown }).error) : 'Request failed');
+    this.status = status;
+    this.body = body;
+  }
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+  const body = await res.json().catch(() => undefined);
+  if (!res.ok) throw new ApiError(res.status, body);
+  return body as T;
+}
+
+export interface SignupPayload {
+  name: string;
+  email: string;
+  password: string;
+  phoneNumber: string;
+  location: string;
+  nationality: string;
+  dateOfBirth: string;
+  learningGoals: string[];
+  learningGoalOther?: string;
+}
+
+export function signup(payload: SignupPayload) {
+  return request<{ id: string; email: string }>('/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function login(email: string, password: string) {
+  return request<{ token: string; id: string; role: string }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export interface OnboardingAnswers {
+  referralSource: string;
+  selfRatedLevel: number;
+  motivation: string;
+  lessonsPerWeekGoal: string;
+}
+
+export function submitOnboarding(token: string, answers: OnboardingAnswers) {
+  return request<{ onboardingCompleted: boolean }>('/api/onboarding', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(answers),
+  });
+}
+
+export function resendConfirmation(email: string) {
+  return request<{ sent: boolean }>('/auth/resend-confirmation', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function confirmEmail(token: string) {
+  return request<{ confirmed: boolean }>(`/auth/confirm-email?token=${encodeURIComponent(token)}`);
+}
+
+export function forgotPassword(email: string) {
+  return request<{ sent: boolean }>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function resetPassword(token: string, newPassword: string) {
+  return request<{ reset: boolean }>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, newPassword }),
+  });
+}
+
+export function loginWithGoogle(idToken: string) {
+  return request<{ token: string; id: string; role: string }>('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ idToken }),
+  });
+}
+
+export function fetchMe(token: string) {
+  return request<{ id: string; role: string; onboardingCompleted: boolean }>('/api/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
