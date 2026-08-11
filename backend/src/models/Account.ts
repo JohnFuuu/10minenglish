@@ -12,6 +12,12 @@ export const LEARNING_GOALS = [
   'Other',
 ] as const;
 
+export interface AvailabilityBlock {
+  dayOfWeek: number; // 0 = Sunday .. 6 = Saturday
+  startTime: string; // "HH:MM", 24h
+  endTime: string; // "HH:MM", 24h
+}
+
 export interface AccountDocument extends mongoose.Document {
   role: AccountRole;
   email: string;
@@ -24,6 +30,11 @@ export interface AccountDocument extends mongoose.Document {
   learningGoals?: string[];
   learningGoalOther?: string;
   googleId?: string;
+  picture?: string;
+  bio?: string;
+  timezone?: string;
+  zoomLink?: string;
+  availabilityBlocks: AvailabilityBlock[];
   emailConfirmed: boolean;
   emailConfirmationToken?: string;
   emailConfirmationExpires?: Date;
@@ -50,6 +61,22 @@ const accountSchema = new Schema<AccountDocument>({
   learningGoals: { type: [String] },
   learningGoalOther: { type: String },
   googleId: { type: String },
+  picture: { type: String },
+  bio: { type: String },
+  timezone: { type: String },
+  zoomLink: { type: String },
+  availabilityBlocks: {
+    type: [
+      {
+        dayOfWeek: { type: Number, required: true, min: 0, max: 6 },
+        startTime: { type: String, required: true },
+        endTime: { type: String, required: true },
+        _id: false,
+      },
+    ],
+    required: true,
+    default: [],
+  },
   emailConfirmed: { type: Boolean, required: true, default: false },
   emailConfirmationToken: { type: String },
   emailConfirmationExpires: { type: Date },

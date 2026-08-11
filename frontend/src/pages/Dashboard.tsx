@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components';
 import { AdminDashboard } from './AdminDashboard';
+import { BuddyDashboard } from './BuddyDashboard';
 
 function StubShell({ title }: { title: string }) {
   const { logout } = useAuth();
@@ -30,7 +31,7 @@ export function Dashboard() {
     case 'user':
       return <StubShell title="User Dashboard" />;
     case 'buddy':
-      return <StubShell title="Buddy Dashboard" />;
+      return <BuddyDashboard />;
     case 'admin':
       return <AdminDashboard />;
     default:

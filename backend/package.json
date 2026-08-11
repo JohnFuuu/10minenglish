@@ -20,6 +20,7 @@
     "express": "^5.2.1",
     "google-auth-library": "^11.0.0",
     "jsonwebtoken": "^9.0.3",
+    "luxon": "^3.7.2",
     "mongoose": "^9.9.1"
   },
   "devDependencies": {
@@ -27,6 +28,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/luxon": "^3.7.4",
     "@types/node": "^26.1.2",
     "@types/supertest": "^7.2.1",
     "mongodb-memory-server": "^11.2.0",
