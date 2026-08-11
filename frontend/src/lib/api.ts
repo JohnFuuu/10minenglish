@@ -117,3 +117,52 @@ export function provisionBuddy(token: string, payload: ProvisionBuddyPayload) {
     body: JSON.stringify(payload),
   });
 }
+
+export interface AvailabilityBlock {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+}
+
+export interface BuddyProfile {
+  id: string;
+  name?: string;
+  email: string;
+  picture?: string;
+  bio?: string;
+  location?: string;
+  timezone?: string;
+  zoomLink?: string;
+  availabilityBlocks: AvailabilityBlock[];
+}
+
+export function fetchBuddyProfile(token: string) {
+  return request<BuddyProfile>('/api/buddy/profile', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export interface BuddyProfileUpdate {
+  name?: string;
+  picture?: string;
+  bio?: string;
+  location?: string;
+  timezone?: string;
+  zoomLink?: string;
+}
+
+export function updateBuddyProfile(token: string, update: BuddyProfileUpdate) {
+  return request<BuddyProfile>('/api/buddy/profile', {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(update),
+  });
+}
+
+export function updateBuddyAvailability(token: string, blocks: AvailabilityBlock[]) {
+  return request<{ availabilityBlocks: AvailabilityBlock[] }>('/api/buddy/availability', {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ blocks }),
+  });
+}
