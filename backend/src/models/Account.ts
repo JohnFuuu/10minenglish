@@ -47,6 +47,7 @@ export interface AccountDocument extends mongoose.Document {
   selfRatedLevel?: number;
   motivation?: string;
   lessonsPerWeekGoal?: string;
+  credits: number;
 }
 
 const accountSchema = new Schema<AccountDocument>({
@@ -89,6 +90,7 @@ const accountSchema = new Schema<AccountDocument>({
   selfRatedLevel: { type: Number, min: 1, max: 5 },
   motivation: { type: String },
   lessonsPerWeekGoal: { type: String },
+  credits: { type: Number, required: true, default: 0 },
 });
 
 export const Account = mongoose.model<AccountDocument>('Account', accountSchema);

@@ -32,6 +32,8 @@ export function Login() {
         id: me.id,
         role: me.role as AccountRole,
         onboardingCompleted: me.onboardingCompleted,
+        credits: me.credits,
+        isNZLocated: me.isNZLocated,
       });
       navigate(me.onboardingCompleted ? '/dashboard' : '/onboarding');
     } catch (err) {
@@ -61,6 +63,8 @@ export function Login() {
         id: me.id,
         role: me.role as AccountRole,
         onboardingCompleted: me.onboardingCompleted,
+        credits: me.credits,
+        isNZLocated: me.isNZLocated,
       });
       navigate(me.onboardingCompleted ? '/dashboard' : '/onboarding');
     } catch {

@@ -99,7 +99,13 @@ export function loginWithGoogle(idToken: string) {
 }
 
 export function fetchMe(token: string) {
-  return request<{ id: string; role: string; onboardingCompleted: boolean }>('/api/me', {
+  return request<{
+    id: string;
+    role: string;
+    onboardingCompleted: boolean;
+    credits: number;
+    isNZLocated: boolean;
+  }>('/api/me', {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
@@ -165,4 +171,58 @@ export function updateBuddyAvailability(token: string, blocks: AvailabilityBlock
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ blocks }),
   });
+}
+
+export interface CreditPack {
+  size: number;
+  priceCents: number;
+}
+
+export function fetchCreditPacks(token: string) {
+  return request<{ packs: CreditPack[] }>('/api/credit-packs', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function adminUpdateCreditPackPrice(token: string, size: number, priceCents: number) {
+  return request<CreditPack>(`/api/admin/credit-packs/${size}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ priceCents }),
+  });
+}
+
+export function startStripeCheckout(token: string, packSize: number) {
+  return request<{ checkoutUrl: string; sessionId: string }>('/api/payments/stripe/checkout', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ packSize }),
+  });
+}
+
+export function confirmStripePayment(token: string, sessionId: string) {
+  return request<{ status: 'succeeded' | 'failed'; credits?: number }>('/api/payments/stripe/confirm', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ sessionId }),
+  });
+}
+
+export function startPoliCheckout(token: string, packSize: number) {
+  return request<{ navigateUrl: string; token: string }>('/api/payments/poli/checkout', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ packSize }),
+  });
+}
+
+export function confirmPoliPayment(token: string, poliToken: string) {
+  return request<{ status: 'succeeded' | 'failed' | 'pending'; credits?: number }>(
+    '/api/payments/poli/confirm',
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ token: poliToken }),
+    },
+  );
 }

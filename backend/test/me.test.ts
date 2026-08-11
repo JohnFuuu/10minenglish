@@ -35,6 +35,12 @@ describe('GET /api/me', () => {
     const res = await request(app).get('/api/me').set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ id: account.id, role: 'buddy', onboardingCompleted: false });
+    expect(res.body).toEqual({
+      id: account.id,
+      role: 'buddy',
+      onboardingCompleted: false,
+      credits: 0,
+      isNZLocated: false,
+    });
   });
 });
