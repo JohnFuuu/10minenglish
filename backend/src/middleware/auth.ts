@@ -31,3 +31,13 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
+
+export function requireRole(role: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (req.account?.role !== role) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+    next();
+  };
+}

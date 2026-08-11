@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components';
+import { AdminDashboard } from './AdminDashboard';
 
 function StubShell({ title }: { title: string }) {
   const { logout } = useAuth();
@@ -31,7 +32,7 @@ export function Dashboard() {
     case 'buddy':
       return <StubShell title="Buddy Dashboard" />;
     case 'admin':
-      return <StubShell title="Admin Dashboard" />;
+      return <AdminDashboard />;
     default:
       return <Navigate to="/login" replace />;
   }
