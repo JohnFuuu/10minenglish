@@ -103,3 +103,17 @@ export function fetchMe(token: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export interface ProvisionBuddyPayload {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export function provisionBuddy(token: string, payload: ProvisionBuddyPayload) {
+  return request<{ id: string; email: string; role: string }>('/api/admin/buddies', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+}
