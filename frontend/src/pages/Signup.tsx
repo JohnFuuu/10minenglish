@@ -80,6 +80,8 @@ export function Signup() {
         id: me.id,
         role: me.role as AccountRole,
         onboardingCompleted: me.onboardingCompleted,
+        credits: me.credits,
+        isNZLocated: me.isNZLocated,
       });
       navigate(me.onboardingCompleted ? '/dashboard' : '/onboarding');
     } catch {

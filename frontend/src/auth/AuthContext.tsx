@@ -7,6 +7,8 @@ export interface Account {
   id: string;
   role: AccountRole;
   onboardingCompleted: boolean;
+  credits: number;
+  isNZLocated: boolean;
 }
 
 interface AuthContextValue {
@@ -15,6 +17,7 @@ interface AuthContextValue {
   isLoading: boolean;
   setSession: (token: string, account: Account) => void;
   completeOnboarding: () => void;
+  setCredits: (credits: number) => void;
   logout: () => void;
 }
 
@@ -36,7 +39,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchMe(storedToken)
       .then((me) => {
         setToken(storedToken);
-        setAccount({ id: me.id, role: me.role as AccountRole, onboardingCompleted: me.onboardingCompleted });
+        setAccount({
+          id: me.id,
+          role: me.role as AccountRole,
+          onboardingCompleted: me.onboardingCompleted,
+          credits: me.credits,
+          isNZLocated: me.isNZLocated,
+        });
       })
       .catch(() => {
         localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -60,9 +69,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccount((prev) => (prev ? { ...prev, onboardingCompleted: true } : prev));
   }
 
+  function setCredits(credits: number) {
+    setAccount((prev) => (prev ? { ...prev, credits } : prev));
+  }
+
   return (
     <AuthContext.Provider
-      value={{ account, token, isLoading, setSession, completeOnboarding, logout }}
+      value={{ account, token, isLoading, setSession, completeOnboarding, setCredits, logout }}
     >
       {children}
     </AuthContext.Provider>
