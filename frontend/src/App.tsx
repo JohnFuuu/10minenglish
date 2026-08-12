@@ -10,6 +10,7 @@ import { ResetPassword } from './pages/ResetPassword';
 import { Onboarding } from './pages/Onboarding';
 import { CreditsScreen } from './pages/CreditsScreen';
 import { CreditsReturn } from './pages/CreditsReturn';
+import { BookLesson } from './pages/BookLesson';
 import { ComponentPlayground } from './pages/ComponentPlayground';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/credits" element={<CreditsScreen />} />
             <Route path="/credits/return" element={<CreditsReturn />} />
+            <Route path="/book" element={<BookLesson />} />
             <Route path="/playground" element={<ComponentPlayground />} />
           </Routes>
         </BrowserRouter>
