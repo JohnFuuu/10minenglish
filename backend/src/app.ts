@@ -9,6 +9,7 @@ import { buddyRouter } from './routes/buddy.js';
 import { creditPacksRouter } from './routes/creditPacks.js';
 import { createPaymentsRouter } from './routes/payments.js';
 import { createAuthRouter } from './routes/auth.js';
+import { createLessonsRouter } from './routes/lessons.js';
 import { consoleEmailSender, type EmailSender } from './services/email.js';
 import { realGoogleTokenVerifier, type GoogleTokenVerifier } from './services/googleAuth.js';
 import { realStripeClient, type StripeClient } from './services/stripeClient.js';
@@ -38,6 +39,7 @@ export function createApp(deps: AppDependencies = {}) {
   app.use(creditPacksRouter);
   app.use(createPaymentsRouter({ stripeClient, poliClient }));
   app.use(createAuthRouter({ emailSender, googleTokenVerifier }));
+  app.use(createLessonsRouter({ emailSender }));
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err);

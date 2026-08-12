@@ -226,3 +226,73 @@ export function confirmPoliPayment(token: string, poliToken: string) {
     },
   );
 }
+
+export interface BookableBuddy {
+  id: string;
+  name?: string;
+  picture?: string;
+  bio?: string;
+  location?: string;
+}
+
+export function fetchBookableBuddies(token: string) {
+  return request<{ buddies: BookableBuddy[] }>('/api/buddies', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function fetchBuddySlots(token: string, buddyId: string, date: string, viewerTimezone: string) {
+  return request<{ slots: string[] }>(
+    `/api/buddies/${buddyId}/slots?${new URLSearchParams({ date, viewerTimezone })}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+}
+
+export function fetchAvailableBuddies(token: string, startTime: string) {
+  return request<{ buddies: BookableBuddy[] }>(
+    `/api/buddies/available?${new URLSearchParams({ startTime })}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+}
+
+export interface Lesson {
+  id: string;
+  buddyId: string;
+  userId: string;
+  startTime: string;
+  durationMinutes: number;
+  status: 'upcoming' | 'cancelled' | 'completed';
+  zoomLink: string;
+}
+
+export function bookLesson(token: string, buddyId: string, startTime: string) {
+  return request<{ lesson: Lesson; creditsRemaining: number }>('/api/lessons', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ buddyId, startTime }),
+  });
+}
+
+export type RecurringFrequency = { type: 'daily' } | { type: 'weekly' } | { type: 'everyXDays'; days: number };
+
+export interface RecurringBookingPayload {
+  buddyId?: string;
+  startTime: string;
+  frequency: RecurringFrequency;
+  includeWeekends: boolean;
+  occurrenceCount: number;
+  timezone: string;
+}
+
+export function bookRecurringLessons(token: string, payload: RecurringBookingPayload) {
+  return request<{
+    booked: Lesson[];
+    skipped: { startTime: string; reason: string }[];
+    creditsDeducted: number;
+    creditsRemaining: number;
+  }>('/api/lessons/recurring', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+}

@@ -24,7 +24,16 @@ export function UserDashboard() {
         <Button onClick={() => navigate('/credits')}>Buy Credits</Button>
       </div>
 
-      <p className="text-text-secondary">More of the Dashboard — booking, lessons, buddies — built out in later tickets.</p>
+      <Button
+        size="md"
+        tone="blue"
+        className="mb-6 w-full"
+        onClick={() => navigate((account?.credits ?? 0) > 0 ? '/book' : '/credits')}
+      >
+        Book a Lesson
+      </Button>
+
+      <p className="text-text-secondary">More of the Dashboard — lessons list, buddies directory — built out in later tickets.</p>
     </main>
   );
 }
