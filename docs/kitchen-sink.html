@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>10ME — Kitchen Sink</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Inter:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --color-bg-page: #ffffff;
+    --color-bg-surface: #ffffff;
+    --color-border: #e5e5e5;
+    --color-border-strong: #3c3c3c;
+    --color-text-heading: #042c60;
+    --color-text-body: #3c3c3c;
+    --color-text-secondary: #777777;
+    --color-text-inverse: #ffffff;
+    --color-brand-primary: #58cc02;
+    --color-brand-primary-border: #46a302;
+    --color-brand-secondary: #1cb0f6;
+    --color-brand-secondary-border: #18a0dc;
+    --color-accent-lime: #a5ed6e;
+    --color-accent-lime-light: #d7ffb8;
+    --color-success: #46a302;
+    --color-success-bg: #d7ffb8;
+    --color-error: #ff4b4b;
+    --color-warning: #ff9600;
+
+    --space-8: 8px; --space-12: 12px; --space-16: 16px;
+    --space-24: 24px; --space-32: 32px; --space-48: 48px;
+
+    --radius: 12px;
+
+    --font-sans: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: var(--color-bg-page);
+    color: var(--color-text-body);
+    letter-spacing: 0.03em;
+    padding: var(--space-48) var(--space-32) 96px;
+  }
+  h1.page-title {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 32px;
+    letter-spacing: -0.01em;
+    margin: 0 0 var(--space-8);
+    color: var(--color-text-heading);
+  }
+  p.page-sub {
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--space-48);
+    font-size: 16px;
+  }
+  section.block {
+    margin-bottom: var(--space-48);
+  }
+  h2.block-title {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--space-24);
+    padding-bottom: var(--space-12);
+    border-bottom: 2px solid var(--color-border);
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-24);
+    align-items: flex-start;
+  }
+  .item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+  .caption {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-secondary);
+  }
+
+  /* Typography */
+  .type-display { font-family: var(--font-display); font-size: 64px; font-weight: 900; line-height: 1.2; letter-spacing: -0.02em; color: var(--color-brand-primary); }
+  .type-heading { font-family: var(--font-display); font-size: 32px; font-weight: 900; line-height: 1.21; letter-spacing: -0.01em; color: var(--color-text-heading); }
+  .type-heading-sm { font-size: 19px; font-weight: 700; line-height: 1.33; }
+  .type-body { font-size: 15px; font-weight: 500; line-height: 1.47; }
+  .type-caption { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-secondary); }
+
+  /* Color swatches */
+  .swatch-fill {
+    width: 120px;
+    height: 72px;
+    border-radius: var(--radius);
+    border: 2px solid var(--color-border);
+  }
+  .swatch-name { font-size: 12px; font-weight: 700; margin-top: var(--space-8); }
+  .swatch-hex { font-size: 12px; color: var(--color-text-secondary); font-family: monospace; }
+
+  /* Buttons — pressable: depth from a thick bottom border, not a shadow */
+  .btn {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: var(--space-12) var(--space-24);
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 80ms;
+  }
+  .btn-sm { padding: var(--space-8) var(--space-16); font-size: 12px; }
+  .btn-primary {
+    background: var(--color-brand-primary);
+    color: var(--color-text-inverse);
+    border: 2px solid var(--color-brand-primary-border);
+    border-bottom-width: 3px;
+  }
+  .btn-primary:active { transform: translateY(2px); border-bottom-width: 1px; }
+  .btn-primary:disabled { background: var(--color-border); border-color: var(--color-border); color: var(--color-text-secondary); cursor: not-allowed; }
+  .btn-secondary {
+    background: var(--color-bg-surface);
+    color: var(--color-brand-primary);
+    border: 2px solid var(--color-accent-lime);
+    border-bottom-width: 3px;
+  }
+  .btn-secondary:active { transform: translateY(2px); border-bottom-width: 1px; }
+  .btn-secondary:disabled { border-color: var(--color-border); color: var(--color-text-secondary); cursor: not-allowed; }
+
+  /* Inputs */
+  .input {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 500;
+    padding: var(--space-12) var(--space-16);
+    border-radius: var(--radius);
+    border: 2px solid var(--color-border);
+    background: var(--color-bg-surface);
+    color: var(--color-text-body);
+    width: 220px;
+    outline: none;
+  }
+  .input::placeholder { color: var(--color-text-secondary); }
+  .input-focus { border-color: var(--color-brand-secondary); }
+  .input-error { border-color: var(--color-error); }
+  .input-error-msg { font-size: 12px; font-weight: 700; color: var(--color-error); }
+  .input-disabled { background: #f5f5f5; color: var(--color-text-secondary); cursor: not-allowed; }
+
+  /* Badges & pills */
+  .badge {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--color-error);
+    color: var(--color-text-inverse);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pill {
+    padding: var(--space-8) var(--space-16);
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 700;
+    border: 2px solid var(--color-border);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-surface);
+  }
+  .pill-selected {
+    border-color: var(--color-brand-primary);
+    background: var(--color-brand-primary);
+    color: var(--color-text-inverse);
+  }
+  .status-pill {
+    padding: var(--space-8) var(--space-12);
+    border-radius: var(--radius);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .status-active { background: var(--color-success-bg); color: var(--color-success); }
+  .status-inactive { background: #f0f0f0; color: var(--color-text-secondary); }
+
+  /* Avatars */
+  .avatar {
+    border-radius: 50%;
+    border: 2px solid var(--color-accent-lime);
+    background: var(--color-brand-primary);
+    color: var(--color-text-inverse);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  /* Cards — "card-border": 2px border + thick bottom border, no shadow */
+  .card {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius);
+    border: 2px solid var(--color-border-strong);
+    border-bottom-width: 4px;
+    padding: var(--space-16);
+    width: 260px;
+  }
+  .card-title { font-family: var(--font-display); font-size: 19px; font-weight: 800; margin: 0 0 4px; color: var(--color-text-heading); }
+  .card-sub { font-size: 14px; font-weight: 500; color: var(--color-text-secondary); margin: 0; }
+
+  .lesson-card { display: flex; flex-direction: column; gap: var(--space-12); }
+  .lesson-card .top { display: flex; align-items: center; gap: var(--space-12); }
+  .lesson-card .name { font-size: 16px; font-weight: 700; color: var(--color-text-heading); }
+  .lesson-card .time { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); }
+  .lesson-card .actions { display: flex; gap: var(--space-8); }
+
+  .buddy-card { text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--space-8); position: relative; }
+  .fav-icon { position: absolute; top: 0; right: 0; font-size: 18px; }
+
+  /* Credits banner — filled brand-green surface */
+  .credits-banner {
+    background: var(--color-brand-primary);
+    border: 2px solid var(--color-brand-primary-border);
+    border-bottom-width: 5px;
+    border-radius: var(--radius);
+    padding: var(--space-16);
+    width: 280px;
+    color: var(--color-text-inverse);
+  }
+  .credits-banner .amount { font-family: var(--font-display); font-weight: 900; font-size: 40px; line-height: 1; }
+  .credits-banner .label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-accent-lime-light); }
+
+  /* Nav item */
+  .nav-item {
+    width: 220px;
+    padding: var(--space-12) var(--space-16);
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .nav-item-active { color: var(--color-brand-primary); }
+
+  /* Toggles & tabs */
+  .toggle {
+    width: 44px; height: 24px;
+    background: var(--color-border);
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+  }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: white;
+    transition: left 0.15s;
+  }
+  .toggle-on { background: var(--color-brand-primary); }
+  .toggle-on::after { left: 22px; }
+
+  .tabs {
+    display: flex;
+    gap: var(--space-24);
+    border-bottom: 2px solid var(--color-border);
+  }
+  .tab {
+    padding-bottom: var(--space-12);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+    border-bottom: 3px solid transparent;
+  }
+  .tab-active {
+    color: var(--color-brand-primary);
+    border-bottom-color: var(--color-brand-primary);
+  }
+
+  /* Notification row */
+  .notif-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-12);
+    padding: var(--space-16) 0;
+    border-bottom: 2px solid var(--color-border);
+    width: 420px;
+  }
+  .notif-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--color-brand-primary);
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+  .notif-dot-empty { width: 8px; }
+  .notif-unread .notif-text { font-weight: 700; color: var(--color-text-heading); }
+  .notif-text { font-size: 14px; font-weight: 500; color: var(--color-text-body); }
+  .notif-time { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+
+  /* Empty state */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-12);
+    padding: var(--space-48);
+    background: var(--color-bg-surface);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius);
+    width: 320px;
+    text-align: center;
+  }
+  .empty-icon { font-size: 40px; }
+  .empty-heading { font-size: 16px; font-weight: 700; color: var(--color-text-secondary); }
+
+  /* Modal */
+  .modal {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius);
+    border: 2px solid var(--color-border-strong);
+    padding: var(--space-24);
+    width: 340px;
+  }
+  .modal-heading { font-family: var(--font-display); font-size: 19px; font-weight: 800; margin: 0 0 var(--space-8); color: var(--color-text-heading); }
+  .modal-body { font-size: 14px; font-weight: 500; color: var(--color-text-secondary); margin: 0 0 var(--space-24); }
+  .modal-actions { display: flex; gap: var(--space-8); justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+  <h1 class="page-title">10ME — Kitchen Sink</h1>
+  <p class="page-sub">Component style reference — Duolingo-style system adopted from the Figma Make export (see docs/design-system.md). Bold single brand-green, thick pressable borders instead of shadows, one 12px radius throughout. Matches the React component library.</p>
+
+  <section class="block">
+    <h2 class="block-title">Typography</h2>
+    <div class="row" style="flex-direction:column; gap:16px;">
+      <div><span class="type-display">Display — Inter 900</span></div>
+      <div><span class="type-heading">Heading — Inter 900</span></div>
+      <div><span class="type-heading-sm">Heading Small — Nunito 700</span></div>
+      <div><span class="type-body">Body — Nunito 500 — The quick brown fox jumps over the lazy dog.</span></div>
+      <div><span class="type-caption">Caption — Nunito 700 uppercase</span></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Color Tokens</h2>
+    <div class="row">
+      <div class="item"><div class="swatch-fill" style="background:var(--color-brand-primary)"></div><div class="swatch-name">brand/primary (Ecto Green)</div><div class="swatch-hex">#58cc02</div></div>
+      <div class="item"><div class="swatch-fill" style="background:var(--color-brand-primary-border)"></div><div class="swatch-name">brand/primary-border</div><div class="swatch-hex">#46a302</div></div>
+      <div class="item"><div class="swatch-fill" style="background:var(--color-brand-secondary)"></div><div class="swatch-name">brand/secondary (Macaw Blue)</div><div class="swatch-hex">#1cb0f6</div></div>
+      <div class="item"><div class="swatch-fill" style="background:var(--color-accent-lime)"></div><div class="swatch-name">accent/lime (Lingot Lime)</div><div class="swatch-hex">#a5ed6e</div></div>
+      <div class="item"><div class="swatch-fill" style="background:var(--color-accent-lime-light)"></div><div class="swatch-name">accent/lime-light (Eel Light)</div><div class="swatch-hex">#d7ffb8</div></div>
+      <div class="item"><div class="swatch-fill" style="background:var(--color-text-heading)"></div><div class="swatch-name">text/heading (Eel Dark Blue)</div><div class="swatch-hex">#042c60</div></div>
+      <div class="item"><div class="swatch-fill" style="background:var(--color-text-body)"></div><div class="swatch-name">text/body (Graphite)</div><div class="swatch-hex">#3c3c3c</div></div>
+      <div class="item"><div class="swatch-fill" style="background:var(--color-text-secondary)"></div><div class="swatch-name">text/secondary (Ash)</div><div class="swatch-hex">#777777</div></div>
+      <div class="item"><div class="swatch-fill" style="background:var(--color-border)"></div><div class="swatch-name">border</div><div class="swatch-hex">#e5e5e5</div></div>
+      <div class="item"><div class="swatch-fill" style="background:var(--color-border-strong)"></div><div class="swatch-name">border/strong</div><div class="swatch-hex">#3c3c3c</div></div>
+      <div class="item"><div class="swatch-fill" style="background:var(--color-error)"></div><div class="swatch-name">error</div><div class="swatch-hex">#ff4b4b</div></div>
+      <div class="item"><div class="swatch-fill" style="background:var(--color-warning)"></div><div class="swatch-name">warning (streak)</div><div class="swatch-hex">#ff9600</div></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Buttons</h2>
+    <div class="row">
+      <div class="item"><button class="btn btn-primary">Primary</button><span class="caption">default</span></div>
+      <div class="item"><button class="btn btn-primary" disabled>Primary</button><span class="caption">disabled</span></div>
+      <div class="item"><button class="btn btn-primary btn-sm">Primary</button><span class="caption">small</span></div>
+      <div class="item"><button class="btn btn-secondary">Secondary</button><span class="caption">default</span></div>
+      <div class="item"><button class="btn btn-secondary" disabled>Secondary</button><span class="caption">disabled</span></div>
+      <div class="item"><button class="btn btn-secondary btn-sm">Secondary</button><span class="caption">small</span></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Inputs</h2>
+    <div class="row">
+      <div class="item"><input class="input" placeholder="Placeholder text" /><span class="caption">default</span></div>
+      <div class="item"><input class="input input-focus" placeholder="Placeholder text" /><span class="caption">focused</span></div>
+      <div class="item"><input class="input" value="sarah@example.com" /><span class="caption">filled</span></div>
+      <div class="item">
+        <input class="input input-error" value="not-an-email" />
+        <span class="input-error-msg">Please enter a valid email</span>
+        <span class="caption">error</span>
+      </div>
+      <div class="item"><input class="input input-disabled" value="Locked field" disabled /><span class="caption">disabled</span></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Badges &amp; Pills</h2>
+    <div class="row" style="align-items:center;">
+      <div class="item"><span class="badge">3</span><span class="caption">unread badge</span></div>
+      <div class="item"><span class="pill">Improve my pronunciation</span><span class="caption">goal pill — unselected</span></div>
+      <div class="item"><span class="pill pill-selected">Build confidence speaking English</span><span class="caption">goal pill — selected</span></div>
+      <div class="item"><span class="status-pill status-active">Upcoming</span><span class="caption">status — active</span></div>
+      <div class="item"><span class="status-pill status-inactive">Inactive</span><span class="caption">status — inactive</span></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Avatars</h2>
+    <div class="row" style="align-items:center;">
+      <div class="item"><div class="avatar" style="width:32px;height:32px;font-size:12px;">JD</div><span class="caption">32px</span></div>
+      <div class="item"><div class="avatar" style="width:40px;height:40px;font-size:14px;">JD</div><span class="caption">40px</span></div>
+      <div class="item"><div class="avatar" style="width:56px;height:56px;font-size:18px;">JD</div><span class="caption">56px</span></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Cards &amp; Credits Banner</h2>
+    <div class="row">
+      <div class="card">
+        <p class="card-title">Card title</p>
+        <p class="card-sub">Supporting detail text</p>
+      </div>
+
+      <div class="card lesson-card">
+        <div class="top">
+          <div class="avatar" style="width:40px;height:40px;font-size:14px;">MS</div>
+          <div>
+            <div class="name">Maria Santos</div>
+            <div class="time">Today, 3:00 PM</div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary btn-sm">Join Now</button>
+          <button class="btn btn-secondary btn-sm">Details</button>
+        </div>
+      </div>
+
+      <div class="card buddy-card">
+        <span class="fav-icon">♥</span>
+        <div class="avatar" style="width:56px;height:56px;font-size:18px;">YT</div>
+        <div style="font-weight:700; color:var(--color-text-heading);">Yuki Tanaka</div>
+        <div class="caption">Tokyo, Japan</div>
+        <button class="btn btn-primary btn-sm">Book</button>
+      </div>
+
+      <div class="credits-banner">
+        <div class="label">Your credits</div>
+        <div class="amount">12</div>
+        <div class="label">lessons available</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Nav Item</h2>
+    <div class="row" style="flex-direction:column; gap:8px;">
+      <div class="nav-item">Profile</div>
+      <div class="nav-item nav-item-active">Dashboard</div>
+      <div class="nav-item">Notifications <span class="badge">3</span></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Toggles &amp; Tabs</h2>
+    <div class="row" style="align-items:center;">
+      <div class="item"><div class="toggle"></div><span class="caption">off</span></div>
+      <div class="item"><div class="toggle toggle-on"></div><span class="caption">on</span></div>
+    </div>
+    <div style="height:24px;"></div>
+    <div class="tabs" style="width:280px;">
+      <div class="tab tab-active">Upcoming</div>
+      <div class="tab">Previous</div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Notification Row</h2>
+    <div class="item">
+      <div class="notif-row notif-unread">
+        <div class="notif-dot"></div>
+        <div>
+          <div class="notif-text">Buddy cancelled your upcoming lesson — credit refunded</div>
+          <div class="notif-time">2 hours ago</div>
+        </div>
+      </div>
+      <div class="notif-row">
+        <div class="notif-dot notif-dot-empty"></div>
+        <div>
+          <div class="notif-text">Reminder: your lesson with James starts in 1 hour</div>
+          <div class="notif-time">Yesterday</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Empty State</h2>
+    <div class="empty-state">
+      <div class="empty-icon">📅</div>
+      <div class="empty-heading">No lessons booked yet</div>
+      <button class="btn btn-primary btn-sm">Book your first lesson</button>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Modal / Dialog</h2>
+    <div class="modal">
+      <p class="modal-heading">Cancel this lesson?</p>
+      <p class="modal-body">This lesson is less than 12 hours away — no refund will be given. Cancel anyway?</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary btn-sm">Keep Lesson</button>
+        <button class="btn btn-primary btn-sm">Cancel Lesson</button>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>

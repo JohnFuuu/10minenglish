@@ -6,24 +6,6 @@
 
 10ME is an English-speaking practice platform. Users sign up, buy lesson credits, and book 1:1 sessions ("lessons") with teachers/practice partners ("buddies") over Google Meet. Core loops: **Auth → Profile → Credits (Stripe) → Book a lesson (by buddy or by time) → Attend/manage lessons → Favourite buddies**.
 
-## 2. Legend / Component Types
-
-| Type | Meaning |
-|---|---|
-| Dashboard component | Section reachable from the Dashboard |
-| Page | Full page/screen |
-| Fields | Data captured from user |
-| Selection Options | Choice list presented to user |
-| Conditions | Branch logic (if/else) |
-| Action | User- or system-triggered action |
-| Buttons | Clickable CTA |
-| Toggles | Binary switch |
-| External flow | Handoff to a third-party flow (e.g. Stripe) |
-| Option list | Enumerated choices |
-| Message | Success/failure/system message shown to user |
-| External actions | Side effects outside the app (e.g. email trigger) |
-| Notification | Only appears conditionally, on an event |
-
 ## 3. Auth Flow
 
 **Entry page** → **Login page** or **Sign up page**
@@ -57,6 +39,7 @@ Central hub after login. Branches to:
 3. Book Lesson (by Buddy / by Time)
 4. Upcoming / Previous Lessons
 5. Buddies (all / recent / favourites)
+6. Notifications (persistent inbox, read/unread, unread-count badge on the nav item) — added during grilling session, not in original diagram. See `CONTEXT.md`.
 
 ## 5. Profile
 
@@ -147,9 +130,24 @@ Dashboard → **Upcoming lessons** and **Previous lessons**, gated by whether an
 
 ## 11. Open Questions for Walkthrough
 
-1. Email-confirmation gating on login before verification — what's the UX?
-2. Credit pack pricing not shown — needs input.
-3. Partial-fill behavior for recurring bookings when a buddy/teacher isn't available for all sessions in the series.
-4. Exact time threshold for the second buddy-cancellation branch (assumed ≤1 hour).
-5. Is "buddy" a distinct role from "teacher," or are they the same entity referred to differently in Book-by-Buddy vs Book-by-Time flows? The diagram uses both terms without an explicit mapping.
-6. What happens on repeated login failures (lockout, rate limit)?
+Resolved during the grilling session (see `CONTEXT.md` and `docs/adr/`):
+
+1. ~~Email-confirmation gating on login before verification~~ — Resolved: blocked with a distinct message + resend option; skipped entirely for Google OAuth signups (Google is the trust source).
+2. Credit pack pricing not shown — still needs input; pricing is explicitly required to be dynamically configurable (admin-editable), not hardcoded.
+3. ~~Partial-fill behavior for recurring bookings~~ — Resolved: skip unfillable occurrences and continue, only deduct credits for what's actually booked. Credit *sufficiency* for the full series, unlike availability, is checked upfront and blocks the whole booking if insufficient. See `docs/adr/0001-partial-fill-recurring-bookings.md`.
+4. ~~Exact time threshold for the second buddy-cancellation branch~~ — Resolved: simplified to always auto-refund on any buddy-cancellation, regardless of timing (no separate >1hr/≤1hr branches).
+5. ~~Is "buddy" a distinct role from "teacher"~~ — Resolved: same entity, canonicalized as **Buddy**. See `CONTEXT.md`.
+6. ~~What happens on repeated login failures~~ — Resolved: 5-attempt / 15-minute lockout.
+
+New open items surfaced during the grilling session:
+
+7. **Buddy-side dashboard design** — the diagram only documents the User-facing flow. A Buddy now needs their own screens: Profile, Availability Schedule editor, Zoom link setting, Upcoming/Previous Lessons. See `docs/adr/0003-single-app-role-based-ui-for-users-and-buddies.md`. Needs its own design pass.
+8. **No-show handling** — explicitly out of scope for now. Since video calls happen outside the platform (Buddy-supplied static Zoom link, see `docs/adr/0002-...`), the app has no reliable signal that a no-show occurred. A stood-up User currently has no in-app recourse; this would need to be handled via support/admin process until (if) an in-app detection or self-report mechanism is designed.
+9. **Buddy Availability exceptions** — MVP only supports a fixed recurring weekly schedule; one-off time-off/vacation overrides are a deliberate fast-follow, not in scope now.
+
+
+# Tech Stack
+- Frontend: React, TypeScript, Tailwind CSS
+- Backend: Express.js, Node.js
+- Database: MongoDB, CloudFlare Object Storage
+- Authentication: JWT, OAuth2

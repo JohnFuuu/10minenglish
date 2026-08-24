@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@800;900&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  /* Duolingo color system */
+  --color-ecto-green: #58cc02;
+  --color-lingot-lime: #a5ed6e;
+  --color-eel-light: #d7ffb8;
+  --color-macaw-blue: #1cb0f6;
+  --color-eel-dark-blue: #042c60;
+  --color-midnight: #000437;
+  --color-graphite: #3c3c3c;
+  --color-ash: #777777;
+  --color-charcoal: #4b4b4b;
+  --color-paper: #ffffff;
+  --color-ink: #000000;
+
+  /* Font families */
+  --font-din-round: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+  --font-feather: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* Type scale */
+  --text-caption: 13px;
+  --text-body: 15px;
+  --text-heading-sm: 19px;
+  --text-heading: 32px;
+  --text-display: 64px;
+
+  /* Spacing */
+  --spacing-8: 8px;
+  --spacing-12: 12px;
+  --spacing-16: 16px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-40: 40px;
+  --spacing-48: 48px;
+  --spacing-64: 64px;
+
+  /* Border radius — one value in the system */
+  --radius-xl: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  font-family: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+  background-color: #ffffff;
+  color: #3c3c3c;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.03em;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* Duolingo pressable button effect */
+.btn-primary {
+  background: #58cc02;
+  border-bottom: 3px solid #46a302;
+  border-radius: 12px;
+  color: #ffffff;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  transition: transform 80ms, border-bottom-width 80ms;
+}
+.btn-primary:active {
+  transform: translateY(2px);
+  border-bottom-width: 1px;
+}
+
+.btn-outline {
+  background: #ffffff;
+  border: 2px solid #a5ed6e;
+  border-radius: 12px;
+  color: #58cc02;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  transition: background 120ms;
+}
+.btn-outline:active {
+  background: #f0fde4;
+}
+
+.btn-secondary {
+  background: #ffffff;
+  border: 2px solid #1cb0f6;
+  border-radius: 12px;
+  color: #1cb0f6;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.card-border {
+  border: 2px solid #3c3c3c;
+  border-radius: 12px;
+  border-bottom-width: 4px;
+}
