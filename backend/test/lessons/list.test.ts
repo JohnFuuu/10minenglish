@@ -116,4 +116,62 @@ describe('GET /api/lessons', () => {
     expect(byId.get(joinable.id)).toBe(true);
     expect(byId.get(tooEarly.id)).toBe(false);
   });
+
+  it('marks a lesson not joinable once well past its end time', async () => {
+    const { account, token } = await userToken();
+    const b = await buddy();
+    const now = DateTime.now();
+
+    const longOver = await Lesson.create({
+      userId: account.id,
+      buddyId: b.id,
+      startTime: now.minus({ minutes: 40 }).toJSDate(),
+      durationMinutes: 10,
+      zoomLink: b.zoomLink,
+      status: 'upcoming',
+    });
+    const { app } = createTestApp();
+
+    const res = await request(app).get('/api/lessons').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    const previousEntry = res.body.previous.find((l: { id: string }) => l.id === longOver.id);
+    expect(previousEntry).toBeDefined();
+    expect(previousEntry.joinable).toBe(false);
+  });
+
+  it('returns previous lessons most-recent-first', async () => {
+    const { account, token } = await userToken();
+    const b = await buddy();
+    const now = DateTime.now();
+
+    const oldest = await Lesson.create({
+      userId: account.id,
+      buddyId: b.id,
+      startTime: now.minus({ days: 5 }).toJSDate(),
+      zoomLink: b.zoomLink,
+      status: 'completed',
+    });
+    const middle = await Lesson.create({
+      userId: account.id,
+      buddyId: b.id,
+      startTime: now.minus({ days: 2 }).toJSDate(),
+      zoomLink: b.zoomLink,
+      status: 'cancelled',
+    });
+    const mostRecent = await Lesson.create({
+      userId: account.id,
+      buddyId: b.id,
+      startTime: now.minus({ hours: 3 }).toJSDate(),
+      zoomLink: b.zoomLink,
+      status: 'completed',
+    });
+    const { app } = createTestApp();
+
+    const res = await request(app).get('/api/lessons').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    const previousIds = res.body.previous.map((l: { id: string }) => l.id);
+    expect(previousIds).toEqual([mostRecent.id, middle.id, oldest.id]);
+  });
 });
