@@ -22,23 +22,40 @@ export function isLessonJoinable(lesson: LessonDocument, now: Date = new Date())
 }
 
 export async function cancelLesson(params: {
-  lesson: LessonDocument;
-  user: AccountDocument;
+  lessonId: mongoose.Types.ObjectId | string;
+  accountId: mongoose.Types.ObjectId | string;
   now?: Date;
-}): Promise<{ refunded: boolean }> {
-  const { lesson, user, now = new Date() } = params;
-  const hoursUntilStart = (lesson.startTime.getTime() - now.getTime()) / (60 * 60 * 1000);
+}): Promise<{ lesson: LessonDocument; refunded: boolean; creditsRemaining: number } | null> {
+  const { lessonId, accountId, now = new Date() } = params;
+
+  // Atomically claim the lesson: only the request that actually flips
+  // status upcoming -> cancelled proceeds. Concurrent cancel requests for
+  // the same lesson will have all but one of these calls return null,
+  // preventing a double refund.
+  const claimed = await Lesson.findOneAndUpdate(
+    { _id: lessonId, status: 'upcoming' },
+    { $set: { status: 'cancelled' } },
+    { returnDocument: 'after' },
+  );
+  if (!claimed) return null;
+
+  const hoursUntilStart = (claimed.startTime.getTime() - now.getTime()) / (60 * 60 * 1000);
   const refunded = hoursUntilStart >= CANCELLATION_REFUND_CUTOFF_HOURS;
 
-  lesson.status = 'cancelled';
-  await lesson.save();
-
+  let creditsRemaining: number;
   if (refunded) {
-    user.credits += 1;
-    await user.save();
+    const updatedAccount = await Account.findOneAndUpdate(
+      { _id: accountId },
+      { $inc: { credits: 1 } },
+      { returnDocument: 'after' },
+    );
+    creditsRemaining = updatedAccount?.credits ?? 0;
+  } else {
+    const account = await Account.findById(accountId);
+    creditsRemaining = account?.credits ?? 0;
   }
 
-  return { refunded };
+  return { lesson: claimed, refunded, creditsRemaining };
 }
 
 function parseMinutes(time: string): number {

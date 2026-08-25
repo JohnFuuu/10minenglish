@@ -131,4 +131,30 @@ describe('POST /api/lessons/:id/cancel', () => {
     const updatedAccount = await Account.findById(account.id);
     expect(updatedAccount!.credits).toBe(2);
   });
+
+  it('only refunds once when two cancel requests race for the same lesson', async () => {
+    const b = await buddy();
+    const { account, token } = await userToken({ credits: 2 });
+    const lesson = await Lesson.create({
+      userId: account.id,
+      buddyId: b.id,
+      startTime: DateTime.now().plus({ hours: 13 }).toJSDate(),
+      zoomLink: b.zoomLink,
+    });
+    const { app } = createTestApp();
+
+    const [resA, resB] = await Promise.all([
+      request(app).post(`/api/lessons/${lesson.id}/cancel`).set('Authorization', `Bearer ${token}`),
+      request(app).post(`/api/lessons/${lesson.id}/cancel`).set('Authorization', `Bearer ${token}`),
+    ]);
+
+    const statuses = [resA.status, resB.status].sort();
+    expect(statuses).toEqual([200, 409]);
+
+    const successResponse = resA.status === 200 ? resA : resB;
+    expect(successResponse.body.refunded).toBe(true);
+
+    const updatedAccount = await Account.findById(account.id);
+    expect(updatedAccount!.credits).toBe(3);
+  });
 });

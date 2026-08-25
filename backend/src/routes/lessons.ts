@@ -215,7 +215,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
   router.get('/api/lessons', requireAuth, requireRole('user'), async (req, res) => {
     const lessons = await Lesson.find({ userId: req.account!.accountId }).sort({ startTime: 1 });
     const buddyIds = [...new Set(lessons.map((l) => l.buddyId.toString()))];
-    const buddies = await Account.find({ _id: { $in: buddyIds } });
+    const buddies = await Account.find({ _id: { $in: buddyIds } }).select('name');
     const buddyNameById = new Map(buddies.map((b) => [b._id.toString(), b.name]));
 
     const now = Date.now();
@@ -229,7 +229,10 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       (isUpcoming ? upcoming : previous).push(serialized);
     }
 
-    res.status(200).json({ upcoming, previous });
+    // `lessons` is sorted ascending by startTime, so `previous` was built
+    // oldest-first — reverse it so the most recent past lesson leads.
+    // `upcoming` stays ascending (soonest first).
+    res.status(200).json({ upcoming, previous: previous.reverse() });
   });
 
   router.post('/api/lessons/:id/cancel', requireAuth, requireRole('user'), async (req, res) => {
@@ -242,15 +245,24 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       res.status(403).json({ error: 'Forbidden' });
       return;
     }
-    if (lesson.status !== 'upcoming') {
+
+    const user = await Account.findById(req.account!.accountId);
+    if (!user) {
+      res.status(404).json({ error: 'Account not found' });
+      return;
+    }
+
+    const result = await cancelLesson({ lessonId: lesson._id, accountId: user._id });
+    if (!result) {
       res.status(409).json({ error: 'Lesson is not upcoming' });
       return;
     }
 
-    const user = await Account.findById(req.account!.accountId);
-    const { refunded } = await cancelLesson({ lesson, user: user! });
-
-    res.status(200).json({ lesson: serializeLesson(lesson), refunded, creditsRemaining: user!.credits });
+    res.status(200).json({
+      lesson: serializeLesson(result.lesson),
+      refunded: result.refunded,
+      creditsRemaining: result.creditsRemaining,
+    });
   });
 
   return router;

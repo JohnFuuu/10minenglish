@@ -7,6 +7,17 @@ import { ApiError, cancelLesson, fetchUserLessons, type LessonWithBuddy } from '
 
 const REFUND_CUTOFF_HOURS = 12;
 
+// Mirrors the backend's join window (JOIN_WINDOW_MINUTES_BEFORE in
+// lessonBooking.ts): joinable from 10 minutes before start through the
+// lesson's end.
+const JOIN_WINDOW_MINUTES_BEFORE = 10;
+
+// How often we recompute joinability client-side, so "Join lesson" appears
+// without requiring a page reload.
+const JOINABLE_RECHECK_INTERVAL_MS = 30_000;
+
+const ZOOM_LINK_PATTERN = /^https:\/\//;
+
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString([], {
     weekday: 'short',
@@ -37,6 +48,9 @@ export function LessonsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  // null until the first tick fires — before that we fall back to the
+  // server-computed `joinable` snapshot from the initial fetch.
+  const [tickNow, setTickNow] = useState<number | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -50,7 +64,20 @@ export function LessonsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  useEffect(() => {
+    const id = setInterval(() => setTickNow(Date.now()), JOINABLE_RECHECK_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, []);
+
   if (!token || !account) return null;
+
+  function isJoinable(lesson: LessonWithBuddy): boolean {
+    if (tickNow === null) return lesson.joinable;
+    const start = new Date(lesson.startTime).getTime();
+    const windowStart = start - JOIN_WINDOW_MINUTES_BEFORE * 60_000;
+    const windowEnd = start + lesson.durationMinutes * 60_000;
+    return tickNow >= windowStart && tickNow <= windowEnd;
+  }
 
   async function handleCancel(lesson: LessonWithBuddy) {
     setCancellingId(lesson.id);
@@ -97,7 +124,7 @@ export function LessonsScreen() {
                     <p className="text-sm text-text-secondary">{formatDateTime(lesson.startTime)}</p>
                   </div>
                   <div className="flex gap-2">
-                    {lesson.joinable && (
+                    {isJoinable(lesson) && ZOOM_LINK_PATTERN.test(lesson.zoomLink) && (
                       <Button size="sm" tone="blue" onClick={() => window.open(lesson.zoomLink, '_blank', 'noopener')}>
                         Join lesson
                       </Button>
@@ -113,7 +140,13 @@ export function LessonsScreen() {
                 </div>
 
                 {confirmingId === lesson.id && (
-                  <div className="mt-3 rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-warning">
+                  <div
+                    className={
+                      hoursUntil(lesson.startTime) < REFUND_CUTOFF_HOURS
+                        ? 'mt-3 rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-warning'
+                        : 'mt-3 rounded-md bg-success/10 px-3 py-2 text-xs font-bold text-success'
+                    }
+                  >
                     {hoursUntil(lesson.startTime) < REFUND_CUTOFF_HOURS
                       ? "Cancelling now won't refund your credit."
                       : 'This will cancel your lesson and refund 1 credit.'}
