@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { Account, type AccountDocument } from '../models/Account.js';
-import { LESSON_DURATION_MINUTES, type LessonDocument } from '../models/Lesson.js';
+import { Lesson, LESSON_DURATION_MINUTES, type LessonDocument } from '../models/Lesson.js';
 import type { EmailSender } from '../services/email.js';
 import {
   bookLesson,
@@ -9,6 +9,7 @@ import {
   findAvailableBuddy,
   generateCandidateSlots,
   generateRecurringCandidates,
+  isLessonJoinable,
   isSlotBookable,
   type RecurringFrequency,
 } from '../services/lessonBooking.js';
@@ -26,6 +27,14 @@ function serializeLesson(lesson: LessonDocument) {
     durationMinutes: lesson.durationMinutes,
     status: lesson.status,
     zoomLink: lesson.zoomLink,
+  };
+}
+
+function serializeLessonForList(lesson: LessonDocument, buddyName: string | undefined) {
+  return {
+    ...serializeLesson(lesson),
+    buddyName: buddyName ?? 'Buddy',
+    joinable: isLessonJoinable(lesson),
   };
 }
 
@@ -200,6 +209,26 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       creditsRemaining: user.credits,
       lessonDurationMinutes: LESSON_DURATION_MINUTES,
     });
+  });
+
+  router.get('/api/lessons', requireAuth, requireRole('user'), async (req, res) => {
+    const lessons = await Lesson.find({ userId: req.account!.accountId }).sort({ startTime: 1 });
+    const buddyIds = [...new Set(lessons.map((l) => l.buddyId.toString()))];
+    const buddies = await Account.find({ _id: { $in: buddyIds } });
+    const buddyNameById = new Map(buddies.map((b) => [b._id.toString(), b.name]));
+
+    const now = Date.now();
+    const upcoming: ReturnType<typeof serializeLessonForList>[] = [];
+    const previous: ReturnType<typeof serializeLessonForList>[] = [];
+
+    for (const lesson of lessons) {
+      const serialized = serializeLessonForList(lesson, buddyNameById.get(lesson.buddyId.toString()));
+      const endTime = lesson.startTime.getTime() + lesson.durationMinutes * 60_000;
+      const isUpcoming = lesson.status === 'upcoming' && endTime > now;
+      (isUpcoming ? upcoming : previous).push(serialized);
+    }
+
+    res.status(200).json({ upcoming, previous });
   });
 
   return router;

@@ -10,6 +10,15 @@ import type { EmailMessage } from './email.js';
 // itself so a full day's bookable grid stays a manageable size.
 export const SLOT_INTERVAL_MINUTES = 30;
 
+export const JOIN_WINDOW_MINUTES_BEFORE = 10;
+
+export function isLessonJoinable(lesson: LessonDocument, now: Date = new Date()): boolean {
+  if (lesson.status !== 'upcoming') return false;
+  const windowStart = new Date(lesson.startTime.getTime() - JOIN_WINDOW_MINUTES_BEFORE * 60_000);
+  const windowEnd = new Date(lesson.startTime.getTime() + lesson.durationMinutes * 60_000);
+  return now >= windowStart && now <= windowEnd;
+}
+
 function parseMinutes(time: string): number {
   const [hour, minute] = time.split(':').map(Number);
   return hour * 60 + minute;
