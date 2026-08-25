@@ -33,7 +33,11 @@ export function UserDashboard() {
         Book a Lesson
       </Button>
 
-      <p className="text-text-secondary">More of the Dashboard — lessons list, buddies directory — built out in later tickets.</p>
+      <Button variant="secondary" size="md" className="mb-6 w-full" onClick={() => navigate('/lessons')}>
+        My Lessons
+      </Button>
+
+      <p className="text-text-secondary">More of the Dashboard — buddies directory — built out in later tickets.</p>
     </main>
   );
 }
