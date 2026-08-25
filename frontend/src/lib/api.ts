@@ -296,3 +296,24 @@ export function bookRecurringLessons(token: string, payload: RecurringBookingPay
     body: JSON.stringify(payload),
   });
 }
+
+export interface LessonWithBuddy extends Lesson {
+  buddyName: string;
+  joinable: boolean;
+}
+
+export function fetchUserLessons(token: string) {
+  return request<{ upcoming: LessonWithBuddy[]; previous: LessonWithBuddy[] }>('/api/lessons', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function cancelLesson(token: string, lessonId: string) {
+  return request<{ lesson: Lesson; refunded: boolean; creditsRemaining: number }>(
+    `/api/lessons/${lessonId}/cancel`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+}
