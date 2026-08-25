@@ -11,6 +11,7 @@ import { Onboarding } from './pages/Onboarding';
 import { CreditsScreen } from './pages/CreditsScreen';
 import { CreditsReturn } from './pages/CreditsReturn';
 import { BookLesson } from './pages/BookLesson';
+import { LessonsScreen } from './pages/LessonsScreen';
 import { ComponentPlayground } from './pages/ComponentPlayground';
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
             <Route path="/credits" element={<CreditsScreen />} />
             <Route path="/credits/return" element={<CreditsReturn />} />
             <Route path="/book" element={<BookLesson />} />
+            <Route path="/lessons" element={<LessonsScreen />} />
             <Route path="/playground" element={<ComponentPlayground />} />
           </Routes>
         </BrowserRouter>
