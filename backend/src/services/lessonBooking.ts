@@ -12,11 +12,33 @@ export const SLOT_INTERVAL_MINUTES = 30;
 
 export const JOIN_WINDOW_MINUTES_BEFORE = 10;
 
+export const CANCELLATION_REFUND_CUTOFF_HOURS = 12;
+
 export function isLessonJoinable(lesson: LessonDocument, now: Date = new Date()): boolean {
   if (lesson.status !== 'upcoming') return false;
   const windowStart = new Date(lesson.startTime.getTime() - JOIN_WINDOW_MINUTES_BEFORE * 60_000);
   const windowEnd = new Date(lesson.startTime.getTime() + lesson.durationMinutes * 60_000);
   return now >= windowStart && now <= windowEnd;
+}
+
+export async function cancelLesson(params: {
+  lesson: LessonDocument;
+  user: AccountDocument;
+  now?: Date;
+}): Promise<{ refunded: boolean }> {
+  const { lesson, user, now = new Date() } = params;
+  const hoursUntilStart = (lesson.startTime.getTime() - now.getTime()) / (60 * 60 * 1000);
+  const refunded = hoursUntilStart >= CANCELLATION_REFUND_CUTOFF_HOURS;
+
+  lesson.status = 'cancelled';
+  await lesson.save();
+
+  if (refunded) {
+    user.credits += 1;
+    await user.save();
+  }
+
+  return { refunded };
 }
 
 function parseMinutes(time: string): number {

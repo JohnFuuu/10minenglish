@@ -6,6 +6,7 @@ import type { EmailSender } from '../services/email.js';
 import {
   bookLesson,
   buildConfirmationEmail,
+  cancelLesson,
   findAvailableBuddy,
   generateCandidateSlots,
   generateRecurringCandidates,
@@ -229,6 +230,27 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     }
 
     res.status(200).json({ upcoming, previous });
+  });
+
+  router.post('/api/lessons/:id/cancel', requireAuth, requireRole('user'), async (req, res) => {
+    const lesson = await Lesson.findById(req.params.id);
+    if (!lesson) {
+      res.status(404).json({ error: 'Lesson not found' });
+      return;
+    }
+    if (lesson.userId.toString() !== req.account!.accountId) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+    if (lesson.status !== 'upcoming') {
+      res.status(409).json({ error: 'Lesson is not upcoming' });
+      return;
+    }
+
+    const user = await Account.findById(req.account!.accountId);
+    const { refunded } = await cancelLesson({ lesson, user: user! });
+
+    res.status(200).json({ lesson: serializeLesson(lesson), refunded, creditsRemaining: user!.credits });
   });
 
   return router;
