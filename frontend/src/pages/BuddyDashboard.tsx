@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Badge, Button, Input, NavItem } from '../components';
+import { Badge, Button, Card, Input, NavItem } from '../components';
 import { useAuth } from '../auth/AuthContext';
+import { useToast } from '../toast/ToastContext';
 import {
+  ApiError,
+  buddyCancelLesson,
   fetchBuddyProfile,
   fetchNotifications,
+  fetchTeachingLessons,
   updateBuddyAvailability,
   updateBuddyProfile,
   type AvailabilityBlock,
   type BuddyProfile,
+  type LessonWithStudent,
 } from '../lib/api';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -27,11 +32,20 @@ function blockKey(dayOfWeek: number, hour: number): string {
 export function BuddyDashboard() {
   const { token, logout } = useAuth();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [upcomingLessons, setUpcomingLessons] = useState<LessonWithStudent[]>([]);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
     fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetchTeachingLessons(token).then((res) => setUpcomingLessons(res.upcoming));
   }, [token]);
 
   const [profile, setProfile] = useState<BuddyProfile | null>(null);
@@ -110,6 +124,30 @@ export function BuddyDashboard() {
     } finally {
       setIsSavingAvailability(false);
     }
+  }
+
+  async function handleCancelLesson(lesson: LessonWithStudent) {
+    setCancellingId(lesson.id);
+    try {
+      await buddyCancelLesson(token!, lesson.id);
+      setUpcomingLessons((current) => current.filter((l) => l.id !== lesson.id));
+      setConfirmingId(null);
+      showToast("Lesson cancelled — the student's credit was refunded.", 'success');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not cancel this lesson.', 'error');
+    } finally {
+      setCancellingId(null);
+    }
+  }
+
+  function formatLessonTime(iso: string): string {
+    return new Date(iso).toLocaleString([], {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
   }
 
   if (!profile) return null;
@@ -239,6 +277,55 @@ export function BuddyDashboard() {
           <Button onClick={handleSaveAvailability} disabled={isSavingAvailability}>
             Save Availability
           </Button>
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-4 text-xs font-bold uppercase tracking-wide text-text-secondary">
+          Upcoming Lessons to teach
+        </h2>
+
+        {upcomingLessons.length === 0 && (
+          <p className="text-sm text-text-secondary">No upcoming lessons.</p>
+        )}
+
+        <div className="flex flex-col gap-3">
+          {upcomingLessons.map((lesson) => (
+            <Card key={lesson.id}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-text-body">{lesson.userName}</p>
+                  <p className="text-sm text-text-secondary">{formatLessonTime(lesson.startTime)}</p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setConfirmingId(confirmingId === lesson.id ? null : lesson.id)}
+                >
+                  Cancel
+                </Button>
+              </div>
+
+              {confirmingId === lesson.id && (
+                <div className="mt-3 rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-warning">
+                  This will cancel the lesson and refund the student's credit, regardless of how soon it starts.
+                  <div className="mt-2 flex gap-2">
+                    <Button
+                      size="sm"
+                      tone="blue"
+                      disabled={cancellingId === lesson.id}
+                      onClick={() => handleCancelLesson(lesson)}
+                    >
+                      Confirm cancellation
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => setConfirmingId(null)}>
+                      Keep lesson
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
+          ))}
         </div>
       </section>
     </main>
