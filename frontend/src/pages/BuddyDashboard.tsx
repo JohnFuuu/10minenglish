@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Button, Input } from '../components';
+import { useNavigate } from 'react-router-dom';
+import { Badge, Button, Input, NavItem } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import {
   fetchBuddyProfile,
+  fetchNotifications,
   updateBuddyAvailability,
   updateBuddyProfile,
   type AvailabilityBlock,
@@ -24,6 +26,13 @@ function blockKey(dayOfWeek: number, hour: number): string {
 
 export function BuddyDashboard() {
   const { token, logout } = useAuth();
+  const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!token) return;
+    fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
+  }, [token]);
 
   const [profile, setProfile] = useState<BuddyProfile | null>(null);
   const [form, setForm] = useState({ name: '', picture: '', bio: '', location: '', timezone: '', zoomLink: '' });
@@ -113,6 +122,13 @@ export function BuddyDashboard() {
           Log out
         </Button>
       </div>
+
+      <NavItem
+        label="Notifications"
+        badge={unreadCount > 0 ? <Badge count={unreadCount} /> : undefined}
+        onClick={() => navigate('/notifications')}
+        className="mb-6"
+      />
 
       {!profile.zoomLink && (
         <div className="mb-6 flex items-center gap-2 rounded-md border-2 border-warning bg-warning/10 px-3 py-2">

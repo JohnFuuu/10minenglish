@@ -12,6 +12,7 @@ import { CreditsScreen } from './pages/CreditsScreen';
 import { CreditsReturn } from './pages/CreditsReturn';
 import { BookLesson } from './pages/BookLesson';
 import { LessonsScreen } from './pages/LessonsScreen';
+import { NotificationsScreen } from './pages/NotificationsScreen';
 import { ComponentPlayground } from './pages/ComponentPlayground';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
             <Route path="/credits/return" element={<CreditsReturn />} />
             <Route path="/book" element={<BookLesson />} />
             <Route path="/lessons" element={<LessonsScreen />} />
+            <Route path="/notifications" element={<NotificationsScreen />} />
             <Route path="/playground" element={<ComponentPlayground />} />
           </Routes>
         </BrowserRouter>

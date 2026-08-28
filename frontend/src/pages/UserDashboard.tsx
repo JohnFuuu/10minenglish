@@ -1,10 +1,18 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { Button } from '../components';
+import { Badge, Button, NavItem } from '../components';
+import { fetchNotifications } from '../lib/api';
 
 export function UserDashboard() {
-  const { account, logout } = useAuth();
+  const { account, logout, token } = useAuth();
   const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!token) return;
+    fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
+  }, [token]);
 
   return (
     <main className="mx-auto max-w-3xl px-8 py-12">
@@ -14,6 +22,13 @@ export function UserDashboard() {
           Log out
         </Button>
       </div>
+
+      <NavItem
+        label="Notifications"
+        badge={unreadCount > 0 ? <Badge count={unreadCount} /> : undefined}
+        onClick={() => navigate('/notifications')}
+        className="mb-6"
+      />
 
       <div className="mb-6 flex items-center justify-between rounded-md border-2 border-b-[5px] border-brand-primary-border bg-brand-primary p-4">
         <div>
