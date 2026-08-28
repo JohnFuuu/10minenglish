@@ -317,3 +317,44 @@ export function cancelLesson(token: string, lessonId: string) {
     },
   );
 }
+
+export interface AppNotification {
+  id: string;
+  type: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export function fetchNotifications(token: string) {
+  return request<{ notifications: AppNotification[]; unreadCount: number }>('/api/notifications', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function markNotificationRead(token: string, notificationId: string) {
+  return request<{ notification: AppNotification; unreadCount: number }>(
+    `/api/notifications/${notificationId}/read`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+}
+
+export interface LessonWithStudent extends Lesson {
+  userName: string;
+}
+
+export function fetchTeachingLessons(token: string) {
+  return request<{ upcoming: LessonWithStudent[]; previous: LessonWithStudent[] }>('/api/lessons/teaching', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function buddyCancelLesson(token: string, lessonId: string) {
+  return request<{ lesson: Lesson; creditsRemaining: number }>(`/api/lessons/${lessonId}/buddy-cancel`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
