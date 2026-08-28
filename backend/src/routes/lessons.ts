@@ -5,6 +5,7 @@ import { Lesson, LESSON_DURATION_MINUTES, type LessonDocument } from '../models/
 import type { EmailSender } from '../services/email.js';
 import {
   bookLesson,
+  buddyCancelLesson,
   buildConfirmationEmail,
   cancelLesson,
   findAvailableBuddy,
@@ -14,6 +15,7 @@ import {
   isSlotBookable,
   type RecurringFrequency,
 } from '../services/lessonBooking.js';
+import { createNotification } from '../services/notifications.js';
 
 export interface LessonsRouterDependencies {
   emailSender: EmailSender;
@@ -263,6 +265,44 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       refunded: result.refunded,
       creditsRemaining: result.creditsRemaining,
     });
+  });
+
+  router.post('/api/lessons/:id/buddy-cancel', requireAuth, requireRole('buddy'), async (req, res) => {
+    const lesson = await Lesson.findById(req.params.id);
+    if (!lesson) {
+      res.status(404).json({ error: 'Lesson not found' });
+      return;
+    }
+    if (lesson.buddyId.toString() !== req.account!.accountId) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const result = await buddyCancelLesson({ lessonId: lesson._id });
+    if (!result) {
+      res.status(409).json({ error: 'Lesson is not upcoming' });
+      return;
+    }
+
+    const buddy = await Account.findById(req.account!.accountId);
+    const user = await Account.findById(result.lesson.userId);
+    if (user) {
+      const buddyName = buddy?.name ?? 'Your Buddy';
+      const startTimeText = result.lesson.startTime.toISOString();
+      await createNotification({
+        emailSender,
+        accountId: user._id,
+        type: 'buddy_cancellation_refund',
+        message: `${buddyName} cancelled your lesson on ${startTimeText}. Your credit has been refunded.`,
+        email: {
+          to: user.email,
+          subject: 'Your 10ME lesson was cancelled — credit refunded',
+          body: `${buddyName} cancelled your lesson scheduled for ${startTimeText}. We've refunded your credit — you now have ${result.creditsRemaining} credit(s). Book another lesson anytime.`,
+        },
+      });
+    }
+
+    res.status(200).json({ lesson: serializeLesson(result.lesson), creditsRemaining: result.creditsRemaining });
   });
 
   return router;

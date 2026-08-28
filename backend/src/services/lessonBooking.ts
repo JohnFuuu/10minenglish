@@ -58,6 +58,31 @@ export async function cancelLesson(params: {
   return { lesson: claimed, refunded, creditsRemaining };
 }
 
+export async function buddyCancelLesson(params: {
+  lessonId: mongoose.Types.ObjectId | string;
+}): Promise<{ lesson: LessonDocument; creditsRemaining: number } | null> {
+  const { lessonId } = params;
+
+  // Same atomic claim pattern as cancelLesson: only the request that flips
+  // upcoming -> cancelled proceeds, so concurrent cancels can't double-refund.
+  const claimed = await Lesson.findOneAndUpdate(
+    { _id: lessonId, status: 'upcoming' },
+    { $set: { status: 'cancelled' } },
+    { returnDocument: 'after' },
+  );
+  if (!claimed) return null;
+
+  // Buddy-initiated cancellation always refunds — no cutoff check, unlike
+  // cancelLesson — and it refunds the Lesson's User, not the caller.
+  const updatedUser = await Account.findOneAndUpdate(
+    { _id: claimed.userId },
+    { $inc: { credits: 1 } },
+    { returnDocument: 'after' },
+  );
+
+  return { lesson: claimed, creditsRemaining: updatedUser?.credits ?? 0 };
+}
+
 function parseMinutes(time: string): number {
   const [hour, minute] = time.split(':').map(Number);
   return hour * 60 + minute;
