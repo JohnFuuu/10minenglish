@@ -42,6 +42,13 @@ function serializeLessonForList(lesson: LessonDocument, buddyName: string | unde
   };
 }
 
+function serializeLessonForTeachingList(lesson: LessonDocument, userName: string | undefined) {
+  return {
+    ...serializeLesson(lesson),
+    userName: userName ?? 'Student',
+  };
+}
+
 function isValidFrequency(frequency: unknown): frequency is RecurringFrequency {
   if (!frequency || typeof frequency !== 'object') return false;
   const f = frequency as Record<string, unknown>;
@@ -235,6 +242,26 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     // `lessons` is sorted ascending by startTime, so `previous` was built
     // oldest-first — reverse it so the most recent past lesson leads.
     // `upcoming` stays ascending (soonest first).
+    res.status(200).json({ upcoming, previous: previous.reverse() });
+  });
+
+  router.get('/api/lessons/teaching', requireAuth, requireRole('buddy'), async (req, res) => {
+    const lessons = await Lesson.find({ buddyId: req.account!.accountId }).sort({ startTime: 1 });
+    const userIds = [...new Set(lessons.map((l) => l.userId.toString()))];
+    const users = await Account.find({ _id: { $in: userIds } }).select('name');
+    const userNameById = new Map(users.map((u) => [u._id.toString(), u.name]));
+
+    const now = Date.now();
+    const upcoming: ReturnType<typeof serializeLessonForTeachingList>[] = [];
+    const previous: ReturnType<typeof serializeLessonForTeachingList>[] = [];
+
+    for (const lesson of lessons) {
+      const serialized = serializeLessonForTeachingList(lesson, userNameById.get(lesson.userId.toString()));
+      const endTime = lesson.startTime.getTime() + lesson.durationMinutes * 60_000;
+      const isUpcoming = lesson.status === 'upcoming' && endTime > now;
+      (isUpcoming ? upcoming : previous).push(serialized);
+    }
+
     res.status(200).json({ upcoming, previous: previous.reverse() });
   });
 
