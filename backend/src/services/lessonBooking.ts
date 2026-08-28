@@ -191,6 +191,23 @@ export function buildConfirmationEmail(
   };
 }
 
+export function buildBuddyCancellationNotification(params: {
+  buddyName: string;
+  userEmail: string;
+  startTime: Date;
+  creditsRemaining: number;
+}): { message: string; email: EmailMessage } {
+  const startTimeText = params.startTime.toISOString();
+  return {
+    message: `${params.buddyName} cancelled your lesson on ${startTimeText}. Your credit has been refunded.`,
+    email: {
+      to: params.userEmail,
+      subject: 'Your 10ME lesson was cancelled — credit refunded',
+      body: `${params.buddyName} cancelled your lesson scheduled for ${startTimeText}. We've refunded your credit — you now have ${params.creditsRemaining} credit(s). Book another lesson anytime.`,
+    },
+  };
+}
+
 export type RecurringFrequency = { type: 'daily' } | { type: 'weekly' } | { type: 'everyXDays'; days: number };
 
 function stepDays(frequency: RecurringFrequency): number {

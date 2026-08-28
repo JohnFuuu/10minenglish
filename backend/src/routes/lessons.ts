@@ -6,6 +6,7 @@ import type { EmailSender } from '../services/email.js';
 import {
   bookLesson,
   buddyCancelLesson,
+  buildBuddyCancellationNotification,
   buildConfirmationEmail,
   cancelLesson,
   findAvailableBuddy,
@@ -287,18 +288,18 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     const buddy = await Account.findById(req.account!.accountId);
     const user = await Account.findById(result.lesson.userId);
     if (user) {
-      const buddyName = buddy?.name ?? 'Your Buddy';
-      const startTimeText = result.lesson.startTime.toISOString();
+      const { message, email } = buildBuddyCancellationNotification({
+        buddyName: buddy?.name ?? 'Your Buddy',
+        userEmail: user.email,
+        startTime: result.lesson.startTime,
+        creditsRemaining: result.creditsRemaining,
+      });
       await createNotification({
         emailSender,
         accountId: user._id,
         type: 'buddy_cancellation_refund',
-        message: `${buddyName} cancelled your lesson on ${startTimeText}. Your credit has been refunded.`,
-        email: {
-          to: user.email,
-          subject: 'Your 10ME lesson was cancelled — credit refunded',
-          body: `${buddyName} cancelled your lesson scheduled for ${startTimeText}. We've refunded your credit — you now have ${result.creditsRemaining} credit(s). Book another lesson anytime.`,
-        },
+        message,
+        email,
       });
     }
 
