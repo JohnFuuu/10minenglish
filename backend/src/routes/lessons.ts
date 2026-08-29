@@ -321,13 +321,19 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
         startTime: result.lesson.startTime,
         creditsRemaining: result.creditsRemaining,
       });
-      await createNotification({
-        emailSender,
-        accountId: user._id,
-        type: 'buddy_cancellation_refund',
-        message,
-        email,
-      });
+      try {
+        await createNotification({
+          emailSender,
+          accountId: user._id,
+          type: 'buddy_cancellation_refund',
+          message,
+          email,
+        });
+      } catch (err) {
+        // The cancellation and refund are already committed — a failure to notify
+        // (e.g. the email leg throwing) must not surface as a failed cancellation.
+        console.error('Failed to send buddy-cancellation notification', err);
+      }
     }
 
     res.status(200).json({ lesson: serializeLesson(result.lesson), creditsRemaining: result.creditsRemaining });
