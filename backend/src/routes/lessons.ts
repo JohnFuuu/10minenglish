@@ -13,6 +13,7 @@ import {
   generateCandidateSlots,
   generateRecurringCandidates,
   isLessonJoinable,
+  isLessonUpcoming,
   isSlotBookable,
   type RecurringFrequency,
 } from '../services/lessonBooking.js';
@@ -228,14 +229,13 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     const buddies = await Account.find({ _id: { $in: buddyIds } }).select('name');
     const buddyNameById = new Map(buddies.map((b) => [b._id.toString(), b.name]));
 
-    const now = Date.now();
+    const now = new Date();
     const upcoming: ReturnType<typeof serializeLessonForList>[] = [];
     const previous: ReturnType<typeof serializeLessonForList>[] = [];
 
     for (const lesson of lessons) {
       const serialized = serializeLessonForList(lesson, buddyNameById.get(lesson.buddyId.toString()));
-      const endTime = lesson.startTime.getTime() + lesson.durationMinutes * 60_000;
-      const isUpcoming = lesson.status === 'upcoming' && endTime > now;
+      const isUpcoming = isLessonUpcoming(lesson, now);
       (isUpcoming ? upcoming : previous).push(serialized);
     }
 
@@ -251,14 +251,13 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     const users = await Account.find({ _id: { $in: userIds } }).select('name');
     const userNameById = new Map(users.map((u) => [u._id.toString(), u.name]));
 
-    const now = Date.now();
+    const now = new Date();
     const upcoming: ReturnType<typeof serializeLessonForTeachingList>[] = [];
     const previous: ReturnType<typeof serializeLessonForTeachingList>[] = [];
 
     for (const lesson of lessons) {
       const serialized = serializeLessonForTeachingList(lesson, userNameById.get(lesson.userId.toString()));
-      const endTime = lesson.startTime.getTime() + lesson.durationMinutes * 60_000;
-      const isUpcoming = lesson.status === 'upcoming' && endTime > now;
+      const isUpcoming = isLessonUpcoming(lesson, now);
       (isUpcoming ? upcoming : previous).push(serialized);
     }
 

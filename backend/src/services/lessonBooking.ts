@@ -21,6 +21,11 @@ export function isLessonJoinable(lesson: LessonDocument, now: Date = new Date())
   return now >= windowStart && now <= windowEnd;
 }
 
+export function isLessonUpcoming(lesson: LessonDocument, now: Date = new Date()): boolean {
+  const endTime = lesson.startTime.getTime() + lesson.durationMinutes * 60_000;
+  return lesson.status === 'upcoming' && endTime > now;
+}
+
 export async function cancelLesson(params: {
   lessonId: mongoose.Types.ObjectId | string;
   accountId: mongoose.Types.ObjectId | string;
