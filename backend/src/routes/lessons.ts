@@ -46,7 +46,7 @@ function serializeLessonForList(lesson: LessonDocument, buddyName: string | unde
 function serializeLessonForTeachingList(lesson: LessonDocument, userName: string | undefined) {
   return {
     ...serializeLesson(lesson),
-    userName: userName ?? 'Student',
+    userName: userName ?? 'User',
   };
 }
 

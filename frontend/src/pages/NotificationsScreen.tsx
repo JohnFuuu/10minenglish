@@ -78,7 +78,7 @@ export function NotificationsScreen() {
             {!notification.read && notification.type === 'buddy_cancellation_refund' && (
               <div className="mt-3 flex gap-2">
                 <Button size="sm" tone="blue" disabled={dismissingId === notification.id} onClick={() => bookAgain(notification)}>
-                  Book another session
+                  Book another lesson
                 </Button>
                 <Button
                   variant="secondary"

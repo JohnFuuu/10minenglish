@@ -13,7 +13,7 @@ import {
   updateBuddyProfile,
   type AvailabilityBlock,
   type BuddyProfile,
-  type LessonWithStudent,
+  type LessonWithUser,
 } from '../lib/api';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -34,7 +34,7 @@ export function BuddyDashboard() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [upcomingLessons, setUpcomingLessons] = useState<LessonWithStudent[]>([]);
+  const [upcomingLessons, setUpcomingLessons] = useState<LessonWithUser[]>([]);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
@@ -126,13 +126,13 @@ export function BuddyDashboard() {
     }
   }
 
-  async function handleCancelLesson(lesson: LessonWithStudent) {
+  async function handleCancelLesson(lesson: LessonWithUser) {
     setCancellingId(lesson.id);
     try {
       await buddyCancelLesson(token!, lesson.id);
       setUpcomingLessons((current) => current.filter((l) => l.id !== lesson.id));
       setConfirmingId(null);
-      showToast("Lesson cancelled — the student's credit was refunded.", 'success');
+      showToast("Lesson cancelled — the User's credit was refunded.", 'success');
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Could not cancel this lesson.', 'error');
     } finally {
@@ -308,7 +308,7 @@ export function BuddyDashboard() {
 
               {confirmingId === lesson.id && (
                 <div className="mt-3 rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-warning">
-                  This will cancel the lesson and refund the student's credit, regardless of how soon it starts.
+                  This will cancel the lesson and refund the User's credit, regardless of how soon it starts.
                   <div className="mt-2 flex gap-2">
                     <Button
                       size="sm"

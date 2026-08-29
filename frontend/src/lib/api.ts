@@ -342,12 +342,12 @@ export function markNotificationRead(token: string, notificationId: string) {
   );
 }
 
-export interface LessonWithStudent extends Lesson {
+export interface LessonWithUser extends Lesson {
   userName: string;
 }
 
 export function fetchTeachingLessons(token: string) {
-  return request<{ upcoming: LessonWithStudent[]; previous: LessonWithStudent[] }>('/api/lessons/teaching', {
+  return request<{ upcoming: LessonWithUser[]; previous: LessonWithUser[] }>('/api/lessons/teaching', {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
