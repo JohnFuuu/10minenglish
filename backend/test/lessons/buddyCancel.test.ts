@@ -117,4 +117,34 @@ describe('POST /api/lessons/:id/buddy-cancel', () => {
     expect(emailSender.sent[0].to).toBe(u.email);
     expect(emailSender.sent[0].subject).toMatch(/cancelled/i);
   });
+
+  it('leaves an already User-cancelled lesson alone: 409s, no double refund, no notification', async () => {
+    const { account: buddy, token: buddyTok } = await buddyToken();
+    const u = await user({ credits: 2 });
+    const userTok = signAccountToken({ accountId: u.id, role: u.role });
+    const lesson = await Lesson.create({
+      userId: u.id,
+      buddyId: buddy.id,
+      startTime: DateTime.now().plus({ hours: 6 }).toJSDate(),
+      zoomLink: buddy.zoomLink,
+    });
+    const { app } = createTestApp();
+
+    const userCancelRes = await request(app)
+      .post(`/api/lessons/${lesson.id}/cancel`)
+      .set('Authorization', `Bearer ${userTok}`);
+    expect(userCancelRes.status).toBe(200);
+    expect(userCancelRes.body.refunded).toBe(false);
+
+    const buddyCancelRes = await request(app)
+      .post(`/api/lessons/${lesson.id}/buddy-cancel`)
+      .set('Authorization', `Bearer ${buddyTok}`);
+    expect(buddyCancelRes.status).toBe(409);
+
+    const updatedUser = await Account.findById(u.id);
+    expect(updatedUser!.credits).toBe(2);
+
+    const notifications = await Notification.find({ accountId: u.id });
+    expect(notifications).toHaveLength(0);
+  });
 });
