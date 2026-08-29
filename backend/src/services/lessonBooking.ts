@@ -23,7 +23,7 @@ export function isLessonJoinable(lesson: LessonDocument, now: Date = new Date())
 
 export function isLessonUpcoming(lesson: LessonDocument, now: Date = new Date()): boolean {
   const endTime = lesson.startTime.getTime() + lesson.durationMinutes * 60_000;
-  return lesson.status === 'upcoming' && endTime > now;
+  return lesson.status === 'upcoming' && endTime > now.getTime();
 }
 
 export async function cancelLesson(params: {
