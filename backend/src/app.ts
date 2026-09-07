@@ -10,6 +10,7 @@ import { creditPacksRouter } from './routes/creditPacks.js';
 import { createPaymentsRouter } from './routes/payments.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createLessonsRouter } from './routes/lessons.js';
+import { notificationsRouter } from './routes/notifications.js';
 import { consoleEmailSender, type EmailSender } from './services/email.js';
 import { realGoogleTokenVerifier, type GoogleTokenVerifier } from './services/googleAuth.js';
 import { realStripeClient, type StripeClient } from './services/stripeClient.js';
@@ -36,6 +37,7 @@ export function createApp(deps: AppDependencies = {}) {
   app.use(onboardingRouter);
   app.use(adminRouter);
   app.use(buddyRouter);
+  app.use(notificationsRouter);
   app.use(creditPacksRouter);
   app.use(createPaymentsRouter({ stripeClient, poliClient }));
   app.use(createAuthRouter({ emailSender, googleTokenVerifier }));

@@ -21,6 +21,11 @@ export function isLessonJoinable(lesson: LessonDocument, now: Date = new Date())
   return now >= windowStart && now <= windowEnd;
 }
 
+export function isLessonUpcoming(lesson: LessonDocument, now: Date = new Date()): boolean {
+  const endTime = lesson.startTime.getTime() + lesson.durationMinutes * 60_000;
+  return lesson.status === 'upcoming' && endTime > now.getTime();
+}
+
 export async function cancelLesson(params: {
   lessonId: mongoose.Types.ObjectId | string;
   accountId: mongoose.Types.ObjectId | string;
@@ -56,6 +61,31 @@ export async function cancelLesson(params: {
   }
 
   return { lesson: claimed, refunded, creditsRemaining };
+}
+
+export async function buddyCancelLesson(params: {
+  lessonId: mongoose.Types.ObjectId | string;
+}): Promise<{ lesson: LessonDocument; creditsRemaining: number } | null> {
+  const { lessonId } = params;
+
+  // Same atomic claim pattern as cancelLesson: only the request that flips
+  // upcoming -> cancelled proceeds, so concurrent cancels can't double-refund.
+  const claimed = await Lesson.findOneAndUpdate(
+    { _id: lessonId, status: 'upcoming' },
+    { $set: { status: 'cancelled' } },
+    { returnDocument: 'after' },
+  );
+  if (!claimed) return null;
+
+  // Buddy-initiated cancellation always refunds — no cutoff check, unlike
+  // cancelLesson — and it refunds the Lesson's User, not the caller.
+  const updatedUser = await Account.findOneAndUpdate(
+    { _id: claimed.userId },
+    { $inc: { credits: 1 } },
+    { returnDocument: 'after' },
+  );
+
+  return { lesson: claimed, creditsRemaining: updatedUser?.credits ?? 0 };
 }
 
 function parseMinutes(time: string): number {
@@ -163,6 +193,23 @@ export function buildConfirmationEmail(
     to,
     subject: entries.length > 1 ? `Your ${entries.length} 10ME lessons are booked` : 'Your 10ME lesson is booked',
     body: `Your lesson${entries.length > 1 ? 's are' : ' is'} booked:\n\n${lines.join('\n')}`,
+  };
+}
+
+export function buildBuddyCancellationNotification(params: {
+  buddyName: string;
+  userEmail: string;
+  startTime: Date;
+  creditsRemaining: number;
+}): { message: string; email: EmailMessage } {
+  const startTimeText = params.startTime.toISOString();
+  return {
+    message: `${params.buddyName} cancelled your lesson on ${startTimeText}. Your credit has been refunded.`,
+    email: {
+      to: params.userEmail,
+      subject: 'Your 10ME lesson was cancelled — credit refunded',
+      body: `${params.buddyName} cancelled your lesson scheduled for ${startTimeText}. We've refunded your credit — you now have ${params.creditsRemaining} credit(s). Book another lesson anytime.`,
+    },
   };
 }
 

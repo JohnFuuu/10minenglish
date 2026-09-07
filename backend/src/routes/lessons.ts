@@ -5,15 +5,19 @@ import { Lesson, LESSON_DURATION_MINUTES, type LessonDocument } from '../models/
 import type { EmailSender } from '../services/email.js';
 import {
   bookLesson,
+  buddyCancelLesson,
+  buildBuddyCancellationNotification,
   buildConfirmationEmail,
   cancelLesson,
   findAvailableBuddy,
   generateCandidateSlots,
   generateRecurringCandidates,
   isLessonJoinable,
+  isLessonUpcoming,
   isSlotBookable,
   type RecurringFrequency,
 } from '../services/lessonBooking.js';
+import { createNotification } from '../services/notifications.js';
 
 export interface LessonsRouterDependencies {
   emailSender: EmailSender;
@@ -36,6 +40,13 @@ function serializeLessonForList(lesson: LessonDocument, buddyName: string | unde
     ...serializeLesson(lesson),
     buddyName: buddyName ?? 'Buddy',
     joinable: isLessonJoinable(lesson),
+  };
+}
+
+function serializeLessonForTeachingList(lesson: LessonDocument, userName: string | undefined) {
+  return {
+    ...serializeLesson(lesson),
+    userName: userName ?? 'User',
   };
 }
 
@@ -218,20 +229,38 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     const buddies = await Account.find({ _id: { $in: buddyIds } }).select('name');
     const buddyNameById = new Map(buddies.map((b) => [b._id.toString(), b.name]));
 
-    const now = Date.now();
+    const now = new Date();
     const upcoming: ReturnType<typeof serializeLessonForList>[] = [];
     const previous: ReturnType<typeof serializeLessonForList>[] = [];
 
     for (const lesson of lessons) {
       const serialized = serializeLessonForList(lesson, buddyNameById.get(lesson.buddyId.toString()));
-      const endTime = lesson.startTime.getTime() + lesson.durationMinutes * 60_000;
-      const isUpcoming = lesson.status === 'upcoming' && endTime > now;
+      const isUpcoming = isLessonUpcoming(lesson, now);
       (isUpcoming ? upcoming : previous).push(serialized);
     }
 
     // `lessons` is sorted ascending by startTime, so `previous` was built
     // oldest-first — reverse it so the most recent past lesson leads.
     // `upcoming` stays ascending (soonest first).
+    res.status(200).json({ upcoming, previous: previous.reverse() });
+  });
+
+  router.get('/api/lessons/teaching', requireAuth, requireRole('buddy'), async (req, res) => {
+    const lessons = await Lesson.find({ buddyId: req.account!.accountId }).sort({ startTime: 1 });
+    const userIds = [...new Set(lessons.map((l) => l.userId.toString()))];
+    const users = await Account.find({ _id: { $in: userIds } }).select('name');
+    const userNameById = new Map(users.map((u) => [u._id.toString(), u.name]));
+
+    const now = new Date();
+    const upcoming: ReturnType<typeof serializeLessonForTeachingList>[] = [];
+    const previous: ReturnType<typeof serializeLessonForTeachingList>[] = [];
+
+    for (const lesson of lessons) {
+      const serialized = serializeLessonForTeachingList(lesson, userNameById.get(lesson.userId.toString()));
+      const isUpcoming = isLessonUpcoming(lesson, now);
+      (isUpcoming ? upcoming : previous).push(serialized);
+    }
+
     res.status(200).json({ upcoming, previous: previous.reverse() });
   });
 
@@ -263,6 +292,50 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       refunded: result.refunded,
       creditsRemaining: result.creditsRemaining,
     });
+  });
+
+  router.post('/api/lessons/:id/buddy-cancel', requireAuth, requireRole('buddy'), async (req, res) => {
+    const lesson = await Lesson.findById(req.params.id);
+    if (!lesson) {
+      res.status(404).json({ error: 'Lesson not found' });
+      return;
+    }
+    if (lesson.buddyId.toString() !== req.account!.accountId) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    const result = await buddyCancelLesson({ lessonId: lesson._id });
+    if (!result) {
+      res.status(409).json({ error: 'Lesson is not upcoming' });
+      return;
+    }
+
+    const buddy = await Account.findById(req.account!.accountId);
+    const user = await Account.findById(result.lesson.userId);
+    if (user) {
+      const { message, email } = buildBuddyCancellationNotification({
+        buddyName: buddy?.name ?? 'Your Buddy',
+        userEmail: user.email,
+        startTime: result.lesson.startTime,
+        creditsRemaining: result.creditsRemaining,
+      });
+      try {
+        await createNotification({
+          emailSender,
+          accountId: user._id,
+          type: 'buddy_cancellation_refund',
+          message,
+          email,
+        });
+      } catch (err) {
+        // The cancellation and refund are already committed — a failure to notify
+        // (e.g. the email leg throwing) must not surface as a failed cancellation.
+        console.error('Failed to send buddy-cancellation notification', err);
+      }
+    }
+
+    res.status(200).json({ lesson: serializeLesson(result.lesson), creditsRemaining: result.creditsRemaining });
   });
 
   return router;
