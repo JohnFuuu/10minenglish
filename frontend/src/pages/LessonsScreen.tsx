@@ -4,6 +4,7 @@ import { Button, Card } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import { ApiError, cancelLesson, fetchUserLessons, type LessonWithBuddy } from '../lib/api';
+import type { BookLessonPrefill } from './BookLesson';
 
 const REFUND_CUTOFF_HOURS = 12;
 
@@ -26,6 +27,13 @@ function formatDateTime(iso: string): string {
     hour: 'numeric',
     minute: '2-digit',
   });
+}
+
+function timeOfDayValue(iso: string): string {
+  const d = new Date(iso);
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
 }
 
 function hoursUntil(iso: string): number {
@@ -185,6 +193,19 @@ export function LessonsScreen() {
                   <span className="text-xs font-bold uppercase tracking-wide text-text-secondary">
                     {previousStatusLabel(lesson)}
                   </span>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      navigate('/book', {
+                        state: { timeOfDay: timeOfDayValue(lesson.startTime) } satisfies BookLessonPrefill,
+                      })
+                    }
+                  >
+                    Book this time again
+                  </Button>
                 </div>
               </Card>
             ))}

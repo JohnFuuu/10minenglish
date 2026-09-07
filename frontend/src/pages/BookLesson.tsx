@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Avatar, Button, Input } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
@@ -27,6 +27,12 @@ interface RecurringResult {
   kind: 'recurring';
   booked: Lesson[];
   skipped: { startTime: string; reason: string }[];
+}
+
+export interface BookLessonPrefill {
+  buddyId?: string;
+  buddyName?: string;
+  timeOfDay?: string;
 }
 
 const VIEWER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -69,6 +75,7 @@ export function BookLesson() {
   const { account, token, setCredits } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [step, setStep] = useState<Step>('entry');
 
@@ -100,6 +107,15 @@ export function BookLesson() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account]);
+
+  useEffect(() => {
+    const prefill = location.state as BookLessonPrefill | null;
+    if (!prefill?.timeOfDay) return;
+    setSelectedDate(toLocalDateString(nextDays(1)[0]));
+    setTimeInput(prefill.timeOfDay);
+    setStep('time-pick');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!token || !account || account.credits < 1) return null;
 
