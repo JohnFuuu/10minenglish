@@ -206,6 +206,17 @@ export function LessonsScreen() {
                   >
                     Book this time again
                   </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      navigate('/book', {
+                        state: { buddyId: lesson.buddyId, buddyName: lesson.buddyName } satisfies BookLessonPrefill,
+                      })
+                    }
+                  >
+                    Book this buddy again
+                  </Button>
                 </div>
               </Card>
             ))}

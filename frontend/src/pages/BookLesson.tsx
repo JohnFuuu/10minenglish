@@ -110,10 +110,14 @@ export function BookLesson() {
 
   useEffect(() => {
     const prefill = location.state as BookLessonPrefill | null;
-    if (!prefill?.timeOfDay) return;
-    setSelectedDate(toLocalDateString(nextDays(1)[0]));
-    setTimeInput(prefill.timeOfDay);
-    setStep('time-pick');
+    if (!prefill) return;
+    if (prefill.buddyId) {
+      pickBuddy({ id: prefill.buddyId, name: prefill.buddyName });
+    } else if (prefill.timeOfDay) {
+      setSelectedDate(toLocalDateString(nextDays(1)[0]));
+      setTimeInput(prefill.timeOfDay);
+      setStep('time-pick');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
