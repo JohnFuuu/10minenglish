@@ -138,6 +138,9 @@ export async function hasConflict(
   buddyId: mongoose.Types.ObjectId | string,
   startTime: Date,
   durationMinutes: number = LESSON_DURATION_MINUTES,
+  // Set when moving an existing Lesson, so it isn't treated as a conflict with
+  // itself when the new slot overlaps the old one.
+  excludeLessonId?: mongoose.Types.ObjectId | string,
 ): Promise<boolean> {
   const lower = new Date(startTime.getTime() - durationMinutes * 60_000);
   const upper = new Date(startTime.getTime() + durationMinutes * 60_000);
@@ -145,6 +148,7 @@ export async function hasConflict(
     buddyId,
     status: 'upcoming',
     startTime: { $gt: lower, $lt: upper },
+    ...(excludeLessonId ? { _id: { $ne: excludeLessonId } } : {}),
   });
   return conflict !== null;
 }
@@ -159,10 +163,14 @@ export const BOOKABLE_BUDDY_QUERY = {
   zoomLink: { $exists: true, $nin: [null, ''] },
 } as const;
 
-export async function isSlotBookable(buddy: AccountDocument, instant: Date): Promise<boolean> {
+export async function isSlotBookable(
+  buddy: AccountDocument,
+  instant: Date,
+  excludeLessonId?: mongoose.Types.ObjectId | string,
+): Promise<boolean> {
   if (buddy.role !== 'buddy' || !buddy.active || !buddy.zoomLink || !buddy.timezone) return false;
   if (!isWithinAvailability(instant, buddy.availabilityBlocks, buddy.timezone)) return false;
-  return !(await hasConflict(buddy._id, instant));
+  return !(await hasConflict(buddy._id, instant, LESSON_DURATION_MINUTES, excludeLessonId));
 }
 
 export async function findAvailableBuddy(instant: Date): Promise<AccountDocument | null> {
@@ -216,6 +224,24 @@ export function buildBuddyCancellationNotification(params: {
       to: params.userEmail,
       subject: 'Your 10ME lesson was cancelled — credit refunded',
       body: `${params.buddyName} cancelled your lesson scheduled for ${startTimeText}. We've refunded your credit — you now have ${params.creditsRemaining} credit(s). Book another lesson anytime.`,
+    },
+  };
+}
+
+export function buildLessonRescheduledNotification(params: {
+  userName: string;
+  buddyEmail: string;
+  previousStartTime: Date;
+  startTime: Date;
+}): { message: string; email: EmailMessage } {
+  const from = params.previousStartTime.toISOString();
+  const to = params.startTime.toISOString();
+  return {
+    message: `${params.userName} moved your lesson from ${from} to ${to}.`,
+    email: {
+      to: params.buddyEmail,
+      subject: 'A 10ME lesson was moved',
+      body: `${params.userName} moved your lesson from ${from} to ${to}. Your Zoom link is unchanged.`,
     },
   };
 }

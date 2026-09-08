@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card } from '../components';
+import { Button, Card, Input } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
-import { ApiError, cancelLesson, fetchUserLessons, type LessonWithBuddy } from '../lib/api';
+import {
+  ApiError,
+  cancelLesson,
+  fetchBuddySlots,
+  fetchUserLessons,
+  rescheduleLesson,
+  type LessonWithBuddy,
+} from '../lib/api';
 import type { BookLessonPrefill } from './BookLesson';
 
 const REFUND_CUTOFF_HOURS = 12;
@@ -18,6 +25,25 @@ const JOIN_WINDOW_MINUTES_BEFORE = 10;
 const JOINABLE_RECHECK_INTERVAL_MS = 30_000;
 
 const ZOOM_LINK_PATTERN = /^https:\/\//;
+
+// Matches the backend's reschedule rule: a Lesson can only be moved while it is
+// still outside the same window that governs cancellation refunds.
+const RESCHEDULE_CUTOFF_HOURS = REFUND_CUTOFF_HOURS;
+
+const RESCHEDULE_DAY_OPTIONS = 14;
+
+const VIEWER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+function toLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatSlotTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString([], {
@@ -56,6 +82,10 @@ export function LessonsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [reschedulingId, setReschedulingId] = useState<string | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleSlots, setRescheduleSlots] = useState<string[] | null>(null);
+  const [savingRescheduleId, setSavingRescheduleId] = useState<string | null>(null);
   // null until the first tick fires — before that we fall back to the
   // server-computed `joinable` snapshot from the initial fetch.
   const [tickNow, setTickNow] = useState<number | null>(null);
@@ -85,6 +115,50 @@ export function LessonsScreen() {
     const windowStart = start - JOIN_WINDOW_MINUTES_BEFORE * 60_000;
     const windowEnd = start + lesson.durationMinutes * 60_000;
     return tickNow >= windowStart && tickNow <= windowEnd;
+  }
+
+  function openReschedule(lesson: LessonWithBuddy) {
+    if (reschedulingId === lesson.id) {
+      setReschedulingId(null);
+      return;
+    }
+    setConfirmingId(null);
+    setReschedulingId(lesson.id);
+    setRescheduleSlots(null);
+    setRescheduleDate('');
+  }
+
+  async function loadSlots(lesson: LessonWithBuddy, date: string) {
+    setRescheduleDate(date);
+    setRescheduleSlots(null);
+    if (!date) return;
+    try {
+      const res = await fetchBuddySlots(token!, lesson.buddyId, date, VIEWER_TIMEZONE);
+      // The Lesson's own slot is still booked, so it comes back excluded — the
+      // list is the times it can actually move to.
+      setRescheduleSlots(res.slots);
+    } catch {
+      showToast('Could not load available times.', 'error');
+      setRescheduleSlots([]);
+    }
+  }
+
+  async function handleReschedule(lesson: LessonWithBuddy, startTime: string) {
+    setSavingRescheduleId(lesson.id);
+    try {
+      const res = await rescheduleLesson(token!, lesson.id, startTime);
+      setUpcoming((current) =>
+        [...current.map((l) => (l.id === lesson.id ? { ...l, startTime: res.lesson.startTime } : l))].sort(
+          (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+        ),
+      );
+      setReschedulingId(null);
+      showToast('Lesson moved. Your buddy has been notified.', 'success');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not move this lesson.', 'error');
+    } finally {
+      setSavingRescheduleId(null);
+    }
   }
 
   async function handleCancel(lesson: LessonWithBuddy) {
@@ -137,10 +211,18 @@ export function LessonsScreen() {
                         Join lesson
                       </Button>
                     )}
+                    {hoursUntil(lesson.startTime) >= RESCHEDULE_CUTOFF_HOURS && (
+                      <Button variant="secondary" size="sm" onClick={() => openReschedule(lesson)}>
+                        Reschedule
+                      </Button>
+                    )}
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => setConfirmingId(confirmingId === lesson.id ? null : lesson.id)}
+                      onClick={() => {
+                        setReschedulingId(null);
+                        setConfirmingId(confirmingId === lesson.id ? null : lesson.id);
+                      }}
                     >
                       Cancel
                     </Button>
@@ -171,6 +253,51 @@ export function LessonsScreen() {
                         Keep lesson
                       </Button>
                     </div>
+                  </div>
+                )}
+
+                {reschedulingId === lesson.id && (
+                  <div className="mt-3 rounded-md border-2 border-border p-3">
+                    <label
+                      className="mb-2 block text-xs font-bold uppercase tracking-wide text-text-secondary"
+                      htmlFor={`reschedule-date-${lesson.id}`}
+                    >
+                      Move to another time with {lesson.buddyName}
+                    </label>
+                    <Input
+                      id={`reschedule-date-${lesson.id}`}
+                      type="date"
+                      min={toLocalDateString(new Date())}
+                      max={toLocalDateString(
+                        new Date(Date.now() + RESCHEDULE_DAY_OPTIONS * 24 * 60 * 60 * 1000),
+                      )}
+                      value={rescheduleDate}
+                      onChange={(e) => loadSlots(lesson, e.target.value)}
+                    />
+
+                    {rescheduleDate && rescheduleSlots === null && (
+                      <p className="mt-2 text-sm text-text-secondary">Loading times…</p>
+                    )}
+                    {rescheduleSlots?.length === 0 && (
+                      <p className="mt-2 text-sm text-text-secondary">
+                        No free times that day — try another date.
+                      </p>
+                    )}
+                    {rescheduleSlots && rescheduleSlots.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {rescheduleSlots.map((slot) => (
+                          <Button
+                            key={slot}
+                            variant="secondary"
+                            size="sm"
+                            disabled={savingRescheduleId === lesson.id}
+                            onClick={() => handleReschedule(lesson, slot)}
+                          >
+                            {formatSlotTime(slot)}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </Card>
