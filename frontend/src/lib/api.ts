@@ -445,3 +445,25 @@ export function setBuddyFavourite(token: string, buddyId: string, favourited: bo
     },
   );
 }
+
+export interface AdminBuddy {
+  id: string;
+  name?: string;
+  email: string;
+  active: boolean;
+  hasZoomLink: boolean;
+}
+
+export function fetchAdminBuddies(token: string) {
+  return request<{ buddies: AdminBuddy[] }>('/api/admin/buddies', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function setBuddyActive(token: string, buddyId: string, active: boolean) {
+  return request<AdminBuddy & { cancelledLessons: number }>(`/api/admin/buddies/${buddyId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ active }),
+  });
+}

@@ -40,6 +40,9 @@ export interface AccountDocument extends mongoose.Document {
   availabilityBlocks: AvailabilityBlock[];
   // Buddies this User has favourited. Only ever set on User accounts.
   favouriteBuddyIds: mongoose.Types.ObjectId[];
+  // Admin-controlled, and only meaningful for Buddy accounts: an inactive
+  // Buddy is out of rotation but keeps their account and profile.
+  active: boolean;
   emailConfirmed: boolean;
   emailConfirmationToken?: string;
   emailConfirmationExpires?: Date;
@@ -89,6 +92,7 @@ const accountSchema = new Schema<AccountDocument>({
     required: true,
     default: [],
   },
+  active: { type: Boolean, required: true, default: true },
   emailConfirmed: { type: Boolean, required: true, default: false },
   emailConfirmationToken: { type: String },
   emailConfirmationExpires: { type: Date },

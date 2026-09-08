@@ -149,17 +149,24 @@ export async function hasConflict(
   return conflict !== null;
 }
 
+// One definition of "a Buddy a User may book": provisioned, in rotation, and
+// reachable (ADR-0002 — no Zoom link, no Lesson). Every list and every booking
+// path filters on this, so a deactivated Buddy disappears from all of them at
+// once.
+export const BOOKABLE_BUDDY_QUERY = {
+  role: 'buddy',
+  active: true,
+  zoomLink: { $exists: true, $nin: [null, ''] },
+} as const;
+
 export async function isSlotBookable(buddy: AccountDocument, instant: Date): Promise<boolean> {
-  if (buddy.role !== 'buddy' || !buddy.zoomLink || !buddy.timezone) return false;
+  if (buddy.role !== 'buddy' || !buddy.active || !buddy.zoomLink || !buddy.timezone) return false;
   if (!isWithinAvailability(instant, buddy.availabilityBlocks, buddy.timezone)) return false;
   return !(await hasConflict(buddy._id, instant));
 }
 
 export async function findAvailableBuddy(instant: Date): Promise<AccountDocument | null> {
-  const buddies = await Account.find({
-    role: 'buddy',
-    zoomLink: { $exists: true, $nin: [null, ''] },
-  }).sort({ _id: 1 });
+  const buddies = await Account.find(BOOKABLE_BUDDY_QUERY).sort({ _id: 1 });
 
   for (const buddy of buddies) {
     if (await isSlotBookable(buddy, instant)) return buddy;
