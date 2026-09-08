@@ -235,8 +235,18 @@ export interface BookableBuddy {
   location?: string;
 }
 
+// The directory endpoints report favourite state; /api/buddies/available (part
+// of the booking flow) does not, hence the separate type.
+export interface DirectoryBuddy extends BookableBuddy {
+  isFavourite: boolean;
+}
+
+export interface BuddyDetail extends DirectoryBuddy {
+  bookable: boolean;
+}
+
 export function fetchBookableBuddies(token: string) {
-  return request<{ buddies: BookableBuddy[] }>('/api/buddies', {
+  return request<{ buddies: DirectoryBuddy[] }>('/api/buddies', {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
@@ -406,4 +416,32 @@ export function changePassword(token: string, currentPassword: string, newPasswo
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ currentPassword, newPassword }),
   });
+}
+
+export function fetchRecentBuddies(token: string) {
+  return request<{ buddies: DirectoryBuddy[] }>('/api/buddies/recent', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function fetchFavouriteBuddies(token: string) {
+  return request<{ buddies: DirectoryBuddy[] }>('/api/buddies/favourites', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function fetchBuddy(token: string, buddyId: string) {
+  return request<BuddyDetail>(`/api/buddies/${buddyId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function setBuddyFavourite(token: string, buddyId: string, favourited: boolean) {
+  return request<{ favourited: boolean; buddy: DirectoryBuddy }>(
+    `/api/buddies/${buddyId}/favourite`,
+    {
+      method: favourited ? 'POST' : 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
 }

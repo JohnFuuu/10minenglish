@@ -52,11 +52,13 @@ export function UserDashboard() {
         My Lessons
       </Button>
 
+      <Button variant="secondary" size="md" className="mb-6 w-full" onClick={() => navigate('/buddies')}>
+        Buddies
+      </Button>
+
       <Button variant="secondary" size="md" className="mb-6 w-full" onClick={() => navigate('/profile')}>
         My Profile
       </Button>
-
-      <p className="text-text-secondary">More of the Dashboard — buddies directory — built out in later tickets.</p>
     </main>
   );
 }

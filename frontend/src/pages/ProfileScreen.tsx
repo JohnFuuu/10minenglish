@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Avatar, Button, Card, Input } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
+import { initialsOf } from '../lib/initials';
 import { LEARNING_GOALS } from '../lib/learningGoals';
 import {
   ApiError,
@@ -36,15 +37,6 @@ function toForm(profile: UserProfile): ProfileForm {
     learningGoals: profile.learningGoals,
     learningGoalOther: profile.learningGoalOther ?? '',
   };
-}
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join('');
 }
 
 const FIELD_LABEL = 'mb-2 block text-xs font-bold uppercase tracking-wide text-text-secondary';
