@@ -4,9 +4,8 @@ import { Account, type AccountDocument } from '../models/Account.js';
 import { Lesson, LESSON_DURATION_MINUTES, type LessonDocument } from '../models/Lesson.js';
 import type { EmailSender } from '../services/email.js';
 import {
+  BOOKABLE_BUDDY_QUERY,
   bookLesson,
-  buddyCancelLesson,
-  buildBuddyCancellationNotification,
   buildConfirmationEmail,
   cancelLesson,
   findAvailableBuddy,
@@ -17,7 +16,7 @@ import {
   isSlotBookable,
   type RecurringFrequency,
 } from '../services/lessonBooking.js';
-import { createNotification } from '../services/notifications.js';
+import { cancelLessonAsBuddy } from '../services/buddyCancellation.js';
 
 export interface LessonsRouterDependencies {
   emailSender: EmailSender;
@@ -97,7 +96,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       return;
     }
 
-    const buddies = await Account.find({ role: 'buddy', zoomLink: { $exists: true, $nin: [null, ''] } });
+    const buddies = await Account.find(BOOKABLE_BUDDY_QUERY);
     const available: AccountDocument[] = [];
     for (const buddy of buddies) {
       if (await isSlotBookable(buddy, instant)) available.push(buddy);
@@ -305,34 +304,15 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       return;
     }
 
-    const result = await buddyCancelLesson({ lessonId: lesson._id });
+    const buddy = await Account.findById(req.account!.accountId);
+    const result = await cancelLessonAsBuddy({
+      emailSender,
+      lessonId: lesson._id,
+      buddyName: buddy?.name,
+    });
     if (!result) {
       res.status(409).json({ error: 'Lesson is not upcoming' });
       return;
-    }
-
-    const buddy = await Account.findById(req.account!.accountId);
-    const user = await Account.findById(result.lesson.userId);
-    if (user) {
-      const { message, email } = buildBuddyCancellationNotification({
-        buddyName: buddy?.name ?? 'Your Buddy',
-        userEmail: user.email,
-        startTime: result.lesson.startTime,
-        creditsRemaining: result.creditsRemaining,
-      });
-      try {
-        await createNotification({
-          emailSender,
-          accountId: user._id,
-          type: 'buddy_cancellation_refund',
-          message,
-          email,
-        });
-      } catch (err) {
-        // The cancellation and refund are already committed — a failure to notify
-        // (e.g. the email leg throwing) must not surface as a failed cancellation.
-        console.error('Failed to send buddy-cancellation notification', err);
-      }
     }
 
     res.status(200).json({ lesson: serializeLesson(result.lesson), creditsRemaining: result.creditsRemaining });

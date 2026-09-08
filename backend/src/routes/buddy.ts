@@ -4,15 +4,9 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { Account, type AccountDocument, type AvailabilityBlock } from '../models/Account.js';
 import { Lesson } from '../models/Lesson.js';
 import { convertAvailabilityToTimezone } from '../services/availability.js';
+import { BOOKABLE_BUDDY_QUERY } from '../services/lessonBooking.js';
 
 export const buddyRouter = Router();
-
-// A Buddy is only listed once they can actually be met (see ADR-0002): no
-// Zoom link, no booking, so no point offering them in the directory.
-const BOOKABLE_BUDDY_FILTER = {
-  role: 'buddy',
-  zoomLink: { $exists: true, $nin: [null, ''] },
-} as const;
 
 type HydratedAccount = mongoose.HydratedDocument<AccountDocument>;
 
@@ -164,7 +158,7 @@ buddyRouter.get('/api/buddies/:id/availability', requireAuth, async (req, res) =
 });
 
 buddyRouter.get('/api/buddies', requireAuth, async (req, res) => {
-  const buddies = await Account.find(BOOKABLE_BUDDY_FILTER);
+  const buddies = await Account.find(BOOKABLE_BUDDY_QUERY);
   const favourites = await favouriteIdsOf(req.account!.accountId);
 
   res.status(200).json({
@@ -192,7 +186,7 @@ buddyRouter.get('/api/buddies/recent', requireAuth, requireRole('user'), async (
     }
   }
 
-  const buddies = await Account.find({ ...BOOKABLE_BUDDY_FILTER, _id: { $in: orderedIds } });
+  const buddies = await Account.find({ ...BOOKABLE_BUDDY_QUERY, _id: { $in: orderedIds } });
   const byId = new Map(buddies.map((b) => [b.id, b]));
   const favourites = await favouriteIdsOf(req.account!.accountId);
 
@@ -212,7 +206,7 @@ buddyRouter.get('/api/buddies/favourites', requireAuth, requireRole('user'), asy
   }
 
   const buddies = await Account.find({
-    ...BOOKABLE_BUDDY_FILTER,
+    ...BOOKABLE_BUDDY_QUERY,
     _id: { $in: account.favouriteBuddyIds },
   });
 
@@ -268,6 +262,6 @@ buddyRouter.get('/api/buddies/:id', requireAuth, async (req, res, next) => {
   const favourites = await favouriteIdsOf(req.account!.accountId);
   res.status(200).json({
     ...serializeBuddy(buddy, favourites.has(buddy.id)),
-    bookable: Boolean(buddy.zoomLink),
+    bookable: Boolean(buddy.zoomLink) && buddy.active,
   });
 });
