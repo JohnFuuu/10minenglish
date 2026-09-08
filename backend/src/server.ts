@@ -1,6 +1,12 @@
 import 'dotenv/config';
 import { createApp } from './app.js';
 import { connectToDatabase } from './db.js';
+import { consoleEmailSender } from './services/email.js';
+import {
+  REMINDER_LEAD_MINUTES,
+  REMINDER_SWEEP_INTERVAL_MS,
+  sendDueLessonReminders,
+} from './services/lessonReminders.js';
 import { mockPoliClient, mockStripeClient } from './services/mockPaymentClients.js';
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
@@ -22,6 +28,17 @@ async function main() {
   app.listen(PORT, () => {
     console.log(`10ME backend listening on port ${PORT}`);
   });
+
+  // Reminders are time-scheduled rather than request-driven, so the server
+  // sweeps for them itself. Swap this for an external scheduler calling
+  // sendDueLessonReminders if the app is ever run as more than one instance.
+  const emailSender = consoleEmailSender;
+  setInterval(() => {
+    sendDueLessonReminders({ emailSender }).catch((err) => {
+      console.error('Lesson reminder sweep failed', err);
+    });
+  }, REMINDER_SWEEP_INTERVAL_MS);
+  console.log(`Lesson reminders sweeping every ${REMINDER_SWEEP_INTERVAL_MS / 1000}s, ${REMINDER_LEAD_MINUTES}min ahead of each lesson.`);
 }
 
 main().catch((err) => {
