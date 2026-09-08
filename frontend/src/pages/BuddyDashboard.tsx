@@ -35,6 +35,7 @@ export function BuddyDashboard() {
   const { showToast } = useToast();
   const [unreadCount, setUnreadCount] = useState(0);
   const [upcomingLessons, setUpcomingLessons] = useState<LessonWithUser[]>([]);
+  const [previousLessons, setPreviousLessons] = useState<LessonWithUser[]>([]);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
@@ -45,7 +46,10 @@ export function BuddyDashboard() {
 
   useEffect(() => {
     if (!token) return;
-    fetchTeachingLessons(token).then((res) => setUpcomingLessons(res.upcoming));
+    fetchTeachingLessons(token).then((res) => {
+      setUpcomingLessons(res.upcoming);
+      setPreviousLessons(res.previous);
+    });
   }, [token]);
 
   const [profile, setProfile] = useState<BuddyProfile | null>(null);
@@ -324,6 +328,32 @@ export function BuddyDashboard() {
                   </div>
                 </div>
               )}
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-4 text-xs font-bold uppercase tracking-wide text-text-secondary">
+          Previous Lessons taught
+        </h2>
+
+        {previousLessons.length === 0 && (
+          <p className="text-sm text-text-secondary">No previous lessons yet.</p>
+        )}
+
+        <div className="flex flex-col gap-3">
+          {previousLessons.map((lesson) => (
+            <Card key={lesson.id} className="opacity-80">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-text-body">{lesson.userName}</p>
+                  <p className="text-sm text-text-secondary">{formatLessonTime(lesson.startTime)}</p>
+                </div>
+                <span className="text-xs font-bold uppercase tracking-wide text-text-secondary">
+                  {lesson.status === 'cancelled' ? 'Cancelled' : 'Taught'}
+                </span>
+              </div>
             </Card>
           ))}
         </div>
