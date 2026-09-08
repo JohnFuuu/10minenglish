@@ -358,3 +358,52 @@ export function buddyCancelLesson(token: string, lessonId: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export interface UserProfile {
+  id: string;
+  name?: string;
+  email: string;
+  pendingEmail?: string;
+  picture?: string;
+  phoneNumber?: string;
+  location?: string;
+  nationality?: string;
+  dateOfBirth?: string;
+  learningGoals: string[];
+  learningGoalOther?: string;
+  hasPassword: boolean;
+}
+
+export interface UserProfileUpdate {
+  name?: string;
+  email?: string;
+  picture?: string;
+  phoneNumber?: string;
+  location?: string;
+  nationality?: string;
+  dateOfBirth?: string;
+  learningGoals?: string[];
+  learningGoalOther?: string;
+}
+
+export function fetchProfile(token: string) {
+  return request<UserProfile>('/api/profile', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function updateProfile(token: string, update: UserProfileUpdate) {
+  return request<UserProfile>('/api/profile', {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(update),
+  });
+}
+
+export function changePassword(token: string, currentPassword: string, newPassword: string) {
+  return request<{ updated: boolean }>('/api/profile/password', {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { fetchMe } from '../lib/api';
 
 export type AccountRole = 'user' | 'buddy' | 'admin';
@@ -18,11 +18,22 @@ interface AuthContextValue {
   setSession: (token: string, account: Account) => void;
   completeOnboarding: () => void;
   setCredits: (credits: number) => void;
+  refreshAccount: () => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const TOKEN_STORAGE_KEY = '10me.token';
+
+function toAccount(me: Awaited<ReturnType<typeof fetchMe>>): Account {
+  return {
+    id: me.id,
+    role: me.role as AccountRole,
+    onboardingCompleted: me.onboardingCompleted,
+    credits: me.credits,
+    isNZLocated: me.isNZLocated,
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<Account | null>(null);
@@ -39,13 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchMe(storedToken)
       .then((me) => {
         setToken(storedToken);
-        setAccount({
-          id: me.id,
-          role: me.role as AccountRole,
-          onboardingCompleted: me.onboardingCompleted,
-          credits: me.credits,
-          isNZLocated: me.isNZLocated,
-        });
+        setAccount(toAccount(me));
       })
       .catch(() => {
         localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -73,9 +78,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccount((prev) => (prev ? { ...prev, credits } : prev));
   }
 
+  // Profile edits can change values the session carries — editing Location
+  // flips isNZLocated, which decides whether POLi is offered — so the account
+  // has to be re-read rather than patched field by field.
+  const refreshAccount = useCallback(async () => {
+    if (!token) return;
+    setAccount(toAccount(await fetchMe(token)));
+  }, [token]);
+
   return (
     <AuthContext.Provider
-      value={{ account, token, isLoading, setSession, completeOnboarding, setCredits, logout }}
+      value={{
+        account,
+        token,
+        isLoading,
+        setSession,
+        completeOnboarding,
+        setCredits,
+        refreshAccount,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>
