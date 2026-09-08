@@ -14,6 +14,8 @@ import { BookLesson } from './pages/BookLesson';
 import { LessonsScreen } from './pages/LessonsScreen';
 import { NotificationsScreen } from './pages/NotificationsScreen';
 import { ProfileScreen } from './pages/ProfileScreen';
+import { BuddiesScreen } from './pages/BuddiesScreen';
+import { BuddyScreen } from './pages/BuddyScreen';
 import { ComponentPlayground } from './pages/ComponentPlayground';
 
 function App() {
@@ -36,6 +38,8 @@ function App() {
             <Route path="/lessons" element={<LessonsScreen />} />
             <Route path="/notifications" element={<NotificationsScreen />} />
             <Route path="/profile" element={<ProfileScreen />} />
+            <Route path="/buddies" element={<BuddiesScreen />} />
+            <Route path="/buddies/:id" element={<BuddyScreen />} />
             <Route path="/playground" element={<ComponentPlayground />} />
           </Routes>
         </BrowserRouter>
