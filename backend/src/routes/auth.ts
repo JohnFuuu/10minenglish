@@ -1,25 +1,21 @@
-import { randomBytes } from 'node:crypto';
 import { Router } from 'express';
 import { Account } from '../models/Account.js';
 import { hashPassword, verifyPassword } from '../services/password.js';
 import { signAccountToken } from '../middleware/auth.js';
 import type { EmailSender } from '../services/email.js';
 import type { GoogleTokenVerifier } from '../services/googleAuth.js';
+import { EMAIL_CONFIRMATION_TTL_MS, sendConfirmationEmail } from '../services/emailConfirmation.js';
+import { generateToken } from '../services/tokens.js';
 
 export interface AuthRouterDependencies {
   emailSender: EmailSender;
   googleTokenVerifier: GoogleTokenVerifier;
 }
 
-const EMAIL_CONFIRMATION_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 const MAX_FAILED_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
-
-function generateToken(): string {
-  return randomBytes(32).toString('hex');
-}
 
 export function createAuthRouter(deps: AuthRouterDependencies): Router {
   const { emailSender, googleTokenVerifier } = deps;
@@ -79,11 +75,12 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       emailConfirmationExpires,
     });
 
-    await emailSender.send({
-      to: account.email,
-      subject: 'Confirm your 10ME email',
-      body: `Welcome to 10ME! Confirm your email: ${FRONTEND_URL}/confirm-email?token=${emailConfirmationToken}`,
-    });
+    await sendConfirmationEmail(
+      emailSender,
+      account.email,
+      emailConfirmationToken,
+      'Welcome to 10ME! Confirm your email',
+    );
 
     res.status(201).json({ id: account.id, email: account.email });
   });
@@ -104,12 +101,29 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       return;
     }
 
+    // A pending email means this token came from a profile email change rather
+    // than signup: the address is now proven reachable, so apply it. Re-check
+    // uniqueness because someone else may have claimed it since the request.
+    if (account.pendingEmail) {
+      const taken = await Account.findOne({
+        _id: { $ne: account._id },
+        $or: [{ email: account.pendingEmail }, { pendingEmail: account.pendingEmail }],
+      });
+      if (taken) {
+        res.status(409).json({ error: 'Email already registered' });
+        return;
+      }
+
+      account.email = account.pendingEmail;
+      account.pendingEmail = undefined;
+    }
+
     account.emailConfirmed = true;
     account.emailConfirmationToken = undefined;
     account.emailConfirmationExpires = undefined;
     await account.save();
 
-    res.status(200).json({ confirmed: true });
+    res.status(200).json({ confirmed: true, email: account.email });
   });
 
   router.post('/auth/resend-confirmation', async (req, res) => {
@@ -125,11 +139,7 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       account.emailConfirmationExpires = new Date(Date.now() + EMAIL_CONFIRMATION_TTL_MS);
       await account.save();
 
-      await emailSender.send({
-        to: account.email,
-        subject: 'Confirm your 10ME email',
-        body: `Confirm your email: ${FRONTEND_URL}/confirm-email?token=${account.emailConfirmationToken}`,
-      });
+      await sendConfirmationEmail(emailSender, account.email, account.emailConfirmationToken);
     }
 
     // Always 200, regardless of whether the account exists or is already

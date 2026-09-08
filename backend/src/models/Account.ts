@@ -21,6 +21,9 @@ export interface AvailabilityBlock {
 export interface AccountDocument extends mongoose.Document {
   role: AccountRole;
   email: string;
+  // Set while a profile email change is awaiting confirmation; the account
+  // keeps logging in with `email` until the new address is confirmed.
+  pendingEmail?: string;
   name?: string;
   passwordHash?: string;
   phoneNumber?: string;
@@ -53,6 +56,7 @@ export interface AccountDocument extends mongoose.Document {
 const accountSchema = new Schema<AccountDocument>({
   role: { type: String, enum: ['user', 'buddy', 'admin'], required: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  pendingEmail: { type: String, lowercase: true, trim: true },
   name: { type: String },
   passwordHash: { type: String },
   phoneNumber: { type: String },

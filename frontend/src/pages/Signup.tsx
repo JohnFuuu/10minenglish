@@ -6,16 +6,7 @@ import { BackArrow, LegalText, OrDivider } from '../auth/AuthPrimitives';
 import { PasswordVisibilityToggle } from '../auth/PasswordVisibilityToggle';
 import { useAuth, type AccountRole } from '../auth/AuthContext';
 import { ApiError, fetchMe, loginWithGoogle, signup } from '../lib/api';
-
-const LEARNING_GOALS = [
-  'Build confidence speaking English',
-  'Improve my pronunciation',
-  'Practise real-life conversations',
-  'Fix common grammar mistakes',
-  'Expand my vocabulary',
-  "Not sure yet – I'm exploring!",
-  'Other',
-] as const;
+import { LEARNING_GOALS } from '../lib/learningGoals';
 
 export function Signup() {
   const { setSession } = useAuth();

@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import type { NextFunction, Request, Response } from 'express';
 import { healthRouter } from './routes/health.js';
-import { meRouter } from './routes/me.js';
+import { createMeRouter } from './routes/me.js';
 import { onboardingRouter } from './routes/onboarding.js';
 import { adminRouter } from './routes/admin.js';
 import { buddyRouter } from './routes/buddy.js';
@@ -33,7 +33,7 @@ export function createApp(deps: AppDependencies = {}) {
   app.use(cors({ origin: process.env.FRONTEND_URL ?? 'http://localhost:5173' }));
   app.use(express.json());
   app.use(healthRouter);
-  app.use(meRouter);
+  app.use(createMeRouter({ emailSender }));
   app.use(onboardingRouter);
   app.use(adminRouter);
   app.use(buddyRouter);
