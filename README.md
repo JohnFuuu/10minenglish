@@ -65,6 +65,8 @@ A web app connecting English learners (Users) with volunteer conversation partne
 
    Outbound "emails" (confirmation links, password resets, notifications) aren't actually sent in dev — they're logged to the backend terminal (`[email] to=... subject="..." ...`). Copy links from there when testing flows that require them.
 
+   The backend also sweeps once a minute for pre-lesson reminders and sends them an hour ahead of each upcoming lesson, so a lesson booked for later today will log two reminder "emails" (one to the User, one to the Buddy) when it comes due.
+
 ## Testing
 
 ```bash
