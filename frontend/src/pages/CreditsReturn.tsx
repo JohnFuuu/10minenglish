@@ -65,10 +65,20 @@ export function CreditsReturn() {
       {status === 'failed' && (
         <>
           <h1 className="text-2xl font-bold text-text-body">Payment failed</h1>
-          <p className="text-sm text-text-secondary">No credits were added. You can try again.</p>
+          <p className="text-sm text-text-secondary">
+            No credits were added. Pick a pack again, or try the other payment method.
+          </p>
         </>
       )}
-      <Button onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
+
+      {/* A failed payment goes back to Buy Credits, not the Dashboard: the point
+          is to retry with another pack or provider without hunting for the
+          screen again. */}
+      {status === 'failed' ? (
+        <Button onClick={() => navigate('/credits')}>Back to Buy Credits</Button>
+      ) : (
+        <Button onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
+      )}
     </main>
   );
 }
