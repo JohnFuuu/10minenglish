@@ -7,7 +7,9 @@ import {
   BOOKABLE_BUDDY_QUERY,
   bookLesson,
   buildConfirmationEmail,
+  buildLessonRescheduledNotification,
   cancelLesson,
+  CANCELLATION_REFUND_CUTOFF_HOURS,
   findAvailableBuddy,
   generateCandidateSlots,
   generateRecurringCandidates,
@@ -17,6 +19,7 @@ import {
   type RecurringFrequency,
 } from '../services/lessonBooking.js';
 import { cancelLessonAsBuddy } from '../services/buddyCancellation.js';
+import { createNotification } from '../services/notifications.js';
 
 export interface LessonsRouterDependencies {
   emailSender: EmailSender;
@@ -261,6 +264,95 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     }
 
     res.status(200).json({ upcoming, previous: previous.reverse() });
+  });
+
+  router.patch('/api/lessons/:id', requireAuth, requireRole('user'), async (req, res) => {
+    const { startTime } = req.body ?? {};
+    if (typeof startTime !== 'string') {
+      res.status(400).json({ error: 'Missing startTime' });
+      return;
+    }
+    const instant = new Date(startTime);
+    if (Number.isNaN(instant.getTime())) {
+      res.status(400).json({ error: 'Invalid startTime' });
+      return;
+    }
+
+    const lesson = await Lesson.findById(req.params.id);
+    if (!lesson) {
+      res.status(404).json({ error: 'Lesson not found' });
+      return;
+    }
+    if (lesson.userId.toString() !== req.account!.accountId) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+    if (!isLessonUpcoming(lesson)) {
+      res.status(409).json({ error: 'Lesson is not upcoming' });
+      return;
+    }
+
+    // Same 12h line the refund rule draws: inside it a User is committed, so
+    // moving the Lesson can't be used to sidestep the no-refund window.
+    const hoursUntilStart = (lesson.startTime.getTime() - Date.now()) / (60 * 60 * 1000);
+    if (hoursUntilStart < CANCELLATION_REFUND_CUTOFF_HOURS) {
+      res.status(409).json({
+        error: `Lessons can only be moved more than ${CANCELLATION_REFUND_CUTOFF_HOURS} hours ahead`,
+      });
+      return;
+    }
+
+    const buddy = await Account.findById(lesson.buddyId);
+    if (!buddy) {
+      res.status(404).json({ error: 'Buddy not found' });
+      return;
+    }
+    // Excluding this Lesson from the conflict check, so a small shift that
+    // overlaps its current slot isn't rejected as clashing with itself.
+    if (!(await isSlotBookable(buddy, instant, lesson._id))) {
+      res.status(409).json({ error: 'That time is no longer available' });
+      return;
+    }
+
+    const previousStartTime = lesson.startTime;
+    lesson.startTime = instant;
+    // The reminder was scheduled against the old time; let the sweep send a
+    // fresh one for the new time.
+    lesson.reminderSentAt = undefined;
+    await lesson.save();
+
+    const user = await Account.findById(req.account!.accountId);
+    if (user) {
+      // The User triggered this, so they get a plain confirmation, mirroring
+      // the booking one. The Buddy didn't, so they get a Notification.
+      await emailSender.send(
+        buildConfirmationEmail(user.email, [
+          { startTime: instant, buddyName: buddy.name ?? 'your Buddy', zoomLink: lesson.zoomLink },
+        ]),
+      );
+
+      const { message, email } = buildLessonRescheduledNotification({
+        userName: user.name ?? 'Your learner',
+        buddyEmail: buddy.email,
+        previousStartTime,
+        startTime: instant,
+      });
+      try {
+        await createNotification({
+          emailSender,
+          accountId: buddy._id,
+          type: 'lesson_rescheduled',
+          message,
+          email,
+        });
+      } catch (err) {
+        // The move is already committed — failing to notify must not surface
+        // as a failed reschedule.
+        console.error('Failed to send lesson-rescheduled notification', err);
+      }
+    }
+
+    res.status(200).json({ lesson: serializeLesson(lesson) });
   });
 
   router.post('/api/lessons/:id/cancel', requireAuth, requireRole('user'), async (req, res) => {

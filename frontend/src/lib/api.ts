@@ -467,3 +467,11 @@ export function setBuddyActive(token: string, buddyId: string, active: boolean) 
     body: JSON.stringify({ active }),
   });
 }
+
+export function rescheduleLesson(token: string, lessonId: string, startTime: string) {
+  return request<{ lesson: Lesson }>(`/api/lessons/${lessonId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ startTime }),
+  });
+}
