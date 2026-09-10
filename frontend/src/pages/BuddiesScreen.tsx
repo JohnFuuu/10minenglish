@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Heart, UsersRound } from 'lucide-react';
 import { Avatar, BottomNav, Button, NAV_CLEARANCE_CLASS } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { initialsOf } from '../lib/initials';
@@ -19,7 +20,7 @@ type Tab = 'all' | 'recent' | 'favourite';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'all', label: 'ALL' },
   { id: 'recent', label: 'RECENT' },
-  { id: 'favourite', label: '♥ FAV' },
+  { id: 'favourite', label: 'FAV' },
 ];
 
 const EMPTY_MESSAGE: Record<Tab, string> = {
@@ -136,10 +137,11 @@ export function BuddiesScreen() {
             onClick={() => setTab(t.id)}
             className={
               tab === t.id
-                ? 'rounded-md border-2 border-b-[3px] border-brand-primary-border bg-brand-primary px-4 py-2 text-xs font-bold tracking-widest text-text-inverse'
-                : 'rounded-md border-2 border-b-[3px] border-border bg-bg-surface px-4 py-2 text-xs font-bold tracking-widest text-text-secondary'
+                ? 'flex items-center gap-1 rounded-md border-2 border-b-[3px] border-brand-primary-border bg-brand-primary px-4 py-2 text-xs font-bold tracking-widest text-text-inverse'
+                : 'flex items-center gap-1 rounded-md border-2 border-b-[3px] border-border bg-bg-surface px-4 py-2 text-xs font-bold tracking-widest text-text-secondary'
             }
           >
+            {t.id === 'favourite' && <Heart size={12} fill="currentColor" />}
             {t.label}
           </button>
         ))}
@@ -150,7 +152,7 @@ export function BuddiesScreen() {
 
         {!isLoading && filtered.length === 0 && (
           <div className="py-16 text-center">
-            <p className="mb-3 text-4xl">🦉</p>
+            <UsersRound size={36} className="mx-auto mb-3 text-text-secondary" />
             <p className="text-xs font-bold uppercase tracking-widest text-text-secondary">
               {buddies.length === 0 ? EMPTY_MESSAGE[tab] : 'No buddies match your search.'}
             </p>

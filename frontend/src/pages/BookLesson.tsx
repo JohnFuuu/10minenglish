@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { PartyPopper } from 'lucide-react';
 import { Avatar, Button, Input } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
@@ -499,7 +500,7 @@ export function BookLesson() {
 
       {step === 'success' && result && (
         <div className="flex flex-col gap-4 text-center">
-          <p className="text-4xl">🎉</p>
+          <PartyPopper size={40} className="mx-auto text-brand-primary" />
           <h2 className="font-display text-2xl font-black text-brand-primary">Booked!</h2>
 
           {result.kind === 'single' && (

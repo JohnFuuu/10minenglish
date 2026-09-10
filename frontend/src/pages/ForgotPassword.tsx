@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MailCheck } from 'lucide-react';
 import { Button, Input } from '../components';
 import { BackArrow } from '../auth/AuthPrimitives';
 import { forgotPassword } from '../lib/api';
@@ -25,7 +26,7 @@ export function ForgotPassword() {
       <div className="flex flex-1 flex-col justify-center gap-5 px-5 pb-8">
         {submitted ? (
           <div className="text-center">
-            <div className="mb-5 text-6xl">📬</div>
+            <MailCheck size={56} className="mx-auto mb-5 text-brand-primary" />
             <h1 className="mb-2 text-2xl font-bold text-text-body">Check your inbox</h1>
             <p className="text-sm font-medium text-text-secondary">
               If an account exists for{' '}
@@ -50,6 +51,7 @@ export function ForgotPassword() {
               <Input
                 variant="filled"
                 type="email"
+                label="Email"
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

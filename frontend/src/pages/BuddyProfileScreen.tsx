@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { Avatar, BottomNav, Button, Input, NAV_CLEARANCE_CLASS } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
@@ -148,7 +149,7 @@ export function BuddyProfileScreen() {
 
       {!profile.zoomLink && (
         <div className="mb-4 flex items-center gap-2 rounded-md border-2 border-warning bg-warning/10 px-3 py-2">
-          <span>⚠️</span>
+          <AlertTriangle size={16} className="shrink-0 text-warning" />
           <p className="text-xs font-bold uppercase tracking-wide text-text-body">
             Add a Zoom link — Users cannot book you without it.
           </p>
@@ -163,19 +164,22 @@ export function BuddyProfileScreen() {
       )}
 
       <form onSubmit={handleSave} className="flex flex-col gap-3">
-        <Input placeholder="Name" value={form.name} onChange={(e) => updateField('name')(e.target.value)} />
-        <Input placeholder="Bio" value={form.bio} onChange={(e) => updateField('bio')(e.target.value)} />
+        <Input label="Name" placeholder="Name" value={form.name} onChange={(e) => updateField('name')(e.target.value)} />
+        <Input label="Bio" placeholder="Bio" value={form.bio} onChange={(e) => updateField('bio')(e.target.value)} />
         <Input
+          label="Location"
           placeholder="Location"
           value={form.location}
           onChange={(e) => updateField('location')(e.target.value)}
         />
         <Input
+          label="Timezone"
           placeholder="Timezone (e.g. Pacific/Auckland)"
           value={form.timezone}
           onChange={(e) => updateField('timezone')(e.target.value)}
         />
         <Input
+          label="Zoom link"
           placeholder="Zoom link"
           value={form.zoomLink}
           onChange={(e) => updateField('zoomLink')(e.target.value)}

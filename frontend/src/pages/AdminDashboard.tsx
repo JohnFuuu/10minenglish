@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { Button, Input } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
@@ -220,7 +221,7 @@ export function AdminDashboard() {
       </div>
 
       <div className="mb-6 flex items-center gap-2 rounded-md border-2 border-warning bg-warning/10 px-3 py-2">
-        <span>⚠️</span>
+        <AlertTriangle size={16} className="shrink-0 text-warning" />
         <p className="text-xs font-bold uppercase tracking-wide text-text-body">
           Changes take effect immediately
         </p>
@@ -247,9 +248,16 @@ export function AdminDashboard() {
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
+          <Input
+            label="Full name"
+            placeholder="Full name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
           <Input
             type="email"
+            label="Email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -257,6 +265,7 @@ export function AdminDashboard() {
           />
           <Input
             type="password"
+            label="Starter password"
             placeholder="Starter password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}

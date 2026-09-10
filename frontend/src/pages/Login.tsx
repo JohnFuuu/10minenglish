@@ -93,6 +93,7 @@ export function Login() {
               <Input
                 variant="filled"
                 type="email"
+                label="Email"
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -101,6 +102,7 @@ export function Login() {
               <Input
                 variant="filled"
                 type={showPassword ? 'text' : 'password'}
+                label="Password"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

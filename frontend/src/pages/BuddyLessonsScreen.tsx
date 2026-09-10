@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CalendarX } from 'lucide-react';
 import { Avatar, BottomNav, Button, Card, NAV_CLEARANCE_CLASS } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
@@ -92,7 +93,7 @@ export function BuddyLessonsScreen() {
 
       {!isLoading && tab === 'upcoming' && upcoming.length === 0 && (
         <div className="px-5 py-16 text-center">
-          <p className="mb-3 text-5xl">📅</p>
+          <CalendarX size={40} className="mx-auto mb-3 text-text-secondary" />
           <p className="text-sm font-bold uppercase tracking-widest text-text-heading">No upcoming lessons</p>
           <p className="text-sm text-text-secondary">Lessons Users book with you will show up here.</p>
         </div>
@@ -100,7 +101,7 @@ export function BuddyLessonsScreen() {
 
       {!isLoading && tab === 'previous' && previous.length === 0 && (
         <div className="px-5 py-16 text-center">
-          <p className="mb-3 text-5xl">📅</p>
+          <CalendarX size={40} className="mx-auto mb-3 text-text-secondary" />
           <p className="text-sm font-bold uppercase tracking-widest text-text-heading">No past lessons</p>
           <p className="text-sm text-text-secondary">Lessons you've taught appear here.</p>
         </div>

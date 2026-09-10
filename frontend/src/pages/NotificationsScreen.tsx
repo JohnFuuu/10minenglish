@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BellOff } from 'lucide-react';
 import { BottomNav, Button, NAV_CLEARANCE_CLASS } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
@@ -119,7 +120,7 @@ export function NotificationsScreen() {
 
         {!isLoading && notifications.length === 0 && (
           <div className="py-16 text-center">
-            <p className="mb-3 text-5xl">🦉</p>
+            <BellOff size={40} className="mx-auto mb-3 text-text-secondary" />
             <p className="text-sm font-bold uppercase tracking-widest text-text-secondary">All caught up!</p>
           </div>
         )}

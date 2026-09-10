@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Bell, Calendar, CalendarDays, Gem, Users } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar, BottomNav, Button, Card, NAV_CLEARANCE_CLASS } from '../components';
 import { fetchNotifications, fetchUserLessons, type LessonWithBuddy } from '../lib/api';
@@ -29,10 +30,10 @@ export function UserDashboard() {
   const [nextLesson, ...restUpcoming] = upcoming ?? [];
 
   const quickActions = [
-    { label: 'BOOK A LESSON', icon: '📅', path: hasCredits ? '/book' : '/credits' },
-    { label: 'BUDDIES', icon: '👥', path: '/buddies' },
-    { label: 'MY LESSONS', icon: '🗓', path: '/lessons' },
-    { label: 'BUY CREDITS', icon: '💎', path: '/credits' },
+    { label: 'BOOK A LESSON', icon: Calendar, path: hasCredits ? '/book' : '/credits' },
+    { label: 'BUDDIES', icon: Users, path: '/buddies' },
+    { label: 'MY LESSONS', icon: CalendarDays, path: '/lessons' },
+    { label: 'BUY CREDITS', icon: Gem, path: '/credits' },
   ] as const;
 
   return (
@@ -44,17 +45,14 @@ export function UserDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 rounded-md border-2 border-b-[3px] border-accent-lime px-3 py-1.5 text-sm font-bold text-brand-primary">
-            💎 {account?.credits ?? 0}
+            <Gem size={14} /> {account?.credits ?? 0}
           </div>
           <button
             type="button"
             onClick={() => navigate('/notifications')}
             className="relative flex h-9 w-9 items-center justify-center rounded-md border-2 border-b-[3px] border-border"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3c3c3c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
+            <Bell size={18} color="#3c3c3c" strokeWidth={2.5} />
             {unreadCount > 0 && (
               <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[9px] font-bold text-text-inverse">
                 {unreadCount}
@@ -67,7 +65,7 @@ export function UserDashboard() {
       <div className="px-5 pb-4 pt-5">
         <p className="text-xs font-bold uppercase tracking-widest text-text-secondary">{greeting()},</p>
         <h1 className="font-display text-3xl font-black text-text-heading">
-          {account?.name?.split(' ')[0] ?? 'there'}! 👋
+          {account?.name?.split(' ')[0] ?? 'there'}!
         </h1>
       </div>
 
@@ -131,7 +129,7 @@ export function UserDashboard() {
               onClick={() => navigate(action.path)}
               className="flex flex-col items-start rounded-md border-2 border-b-4 border-border-strong bg-bg-surface p-4 text-left"
             >
-              <span className="mb-2 text-2xl">{action.icon}</span>
+              <action.icon className="mb-2 h-6 w-6 text-brand-primary" strokeWidth={2.5} />
               <span className="text-xs font-bold tracking-widest text-text-heading">{action.label}</span>
             </button>
           ))}

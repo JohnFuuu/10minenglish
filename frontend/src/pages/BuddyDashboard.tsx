@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, CalendarDays, Clock, User } from 'lucide-react';
 import { Avatar, BottomNav, Card, NAV_CLEARANCE_CLASS } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { initialsOf } from '../lib/initials';
@@ -14,9 +15,9 @@ function greeting(): string {
 }
 
 const QUICK_ACTIONS = [
-  { label: 'TEACHING', icon: '🗓', path: '/teaching' },
-  { label: 'AVAILABILITY', icon: '🕐', path: '/availability' },
-  { label: 'PROFILE', icon: '👤', path: '/profile' },
+  { label: 'TEACHING', icon: CalendarDays, path: '/teaching' },
+  { label: 'AVAILABILITY', icon: Clock, path: '/availability' },
+  { label: 'PROFILE', icon: User, path: '/profile' },
 ] as const;
 
 export function BuddyDashboard() {
@@ -48,7 +49,7 @@ export function BuddyDashboard() {
       <div className="pb-2 pt-8">
         <p className="text-xs font-bold uppercase tracking-widest text-text-secondary">{greeting()},</p>
         <h1 className="font-display text-3xl font-black text-text-heading">
-          {(profile.name || 'there').split(' ')[0]}! 👋
+          {(profile.name || 'there').split(' ')[0]}!
         </h1>
       </div>
 
@@ -70,7 +71,7 @@ export function BuddyDashboard() {
 
       {!profile.zoomLink && (
         <div className="mb-5 flex items-center gap-2 rounded-md border-2 border-warning bg-warning/10 px-3 py-2">
-          <span>⚠️</span>
+          <AlertTriangle size={16} className="shrink-0 text-warning" />
           <p className="text-xs font-bold uppercase tracking-wide text-text-body">
             Add a Zoom link — Users cannot book you without it.
           </p>
@@ -102,7 +103,7 @@ export function BuddyDashboard() {
               onClick={() => navigate(action.path)}
               className="flex flex-col items-start rounded-md border-2 border-b-4 border-border-strong bg-bg-surface p-3 text-left"
             >
-              <span className="mb-2 text-xl">{action.icon}</span>
+              <action.icon className="mb-2 h-5 w-5 text-brand-primary" strokeWidth={2.5} />
               <span className="text-[10px] font-bold tracking-widest text-text-heading">{action.label}</span>
             </button>
           ))}

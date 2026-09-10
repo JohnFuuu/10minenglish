@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { cn } from '../lib/cn';
 
 export type ToastType = 'error' | 'success';
@@ -36,7 +37,7 @@ export function Toast({ message, type, onDismiss }: ToastProps) {
           visible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0',
         )}
       >
-        <span>{isError ? '⚠️' : '✅'}</span>
+        {isError ? <AlertTriangle size={18} className="shrink-0" /> : <CheckCircle2 size={18} className="shrink-0" />}
         {message}
       </button>
     </div>

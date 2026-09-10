@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MailCheck } from 'lucide-react';
 import { Button, Input } from '../components';
 import { GoogleSignInButton } from '../auth/GoogleSignInButton';
 import { BackArrow, LegalText, OrDivider } from '../auth/AuthPrimitives';
@@ -66,7 +67,7 @@ export function Signup() {
   if (submitted) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-8 text-center">
-        <div className="text-6xl">📬</div>
+        <MailCheck size={56} className="mx-auto text-brand-primary" />
         <h1 className="text-2xl font-bold text-text-body">Check your inbox</h1>
         <p className="text-sm font-medium text-text-secondary">
           We've sent a confirmation link to{' '}
@@ -94,6 +95,7 @@ export function Signup() {
           <div className="flex flex-col gap-3">
             <Input
               variant="filled"
+              label="Name"
               placeholder="Name"
               value={form.name}
               onChange={updateField('name')}
@@ -102,6 +104,7 @@ export function Signup() {
             <Input
               variant="filled"
               type="email"
+              label="Email"
               placeholder="Email"
               value={form.email}
               onChange={updateField('email')}
@@ -110,6 +113,7 @@ export function Signup() {
             <Input
               variant="filled"
               type={showPassword ? 'text' : 'password'}
+              label="Password"
               placeholder="Password"
               value={form.password}
               onChange={updateField('password')}
@@ -124,6 +128,7 @@ export function Signup() {
             <Input
               variant="filled"
               type={showPassword ? 'text' : 'password'}
+              label="Confirm password"
               placeholder="Confirm password"
               value={form.confirmPassword}
               onChange={updateField('confirmPassword')}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { CheckCircle2 } from 'lucide-react';
 import { Button, Input } from '../components';
 import { BackArrow } from '../auth/AuthPrimitives';
 import { PasswordVisibilityToggle } from '../auth/PasswordVisibilityToggle';
@@ -41,7 +42,7 @@ export function ResetPassword() {
       <div className="flex flex-1 flex-col justify-center gap-5 px-5 pb-8">
         {done ? (
           <div className="text-center">
-            <div className="mb-5 text-6xl">✅</div>
+            <CheckCircle2 size={56} className="mx-auto mb-5 text-success" />
             <h1 className="mb-2 text-2xl font-bold text-text-body">Password updated</h1>
             <button
               type="button"
@@ -58,6 +59,7 @@ export function ResetPassword() {
               <Input
                 variant="filled"
                 type={showPassword ? 'text' : 'password'}
+                label="New password"
                 placeholder="New password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}

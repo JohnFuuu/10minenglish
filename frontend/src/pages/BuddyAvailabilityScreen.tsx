@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Check } from 'lucide-react';
 import { BottomNav, Button, NAV_CLEARANCE_CLASS } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -163,7 +164,7 @@ export function BuddyAvailabilityScreen() {
                     : 'h-5 w-5 rounded-full border-2 border-border'
                 }
               >
-                {active && '✓'}
+                {active && <Check size={13} strokeWidth={3} />}
               </span>
             </button>
           );
