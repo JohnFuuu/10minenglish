@@ -13,6 +13,9 @@ import {
 } from '../lib/api';
 import type { BookLessonPrefill } from './BookLesson';
 
+// Mirrors the backend's CANCELLATION_REFUND_CUTOFF_HOURS (lessonBooking.ts),
+// which both the cancellation-refund rule and the reschedule rule read from
+// (see docs/adr/0005) — update both places together if this ever changes.
 const REFUND_CUTOFF_HOURS = 12;
 
 // Mirrors the backend's join window (JOIN_WINDOW_MINUTES_BEFORE in

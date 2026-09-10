@@ -100,7 +100,7 @@ export function BuddyScreen() {
 
           {!buddy.bookable && (
             <p className="mt-2 text-center text-sm text-text-secondary">
-              This buddy hasn't set up a meeting link yet, so they can't be booked.
+              This buddy hasn't set up a Zoom link yet, so they can't be booked.
             </p>
           )}
         </>

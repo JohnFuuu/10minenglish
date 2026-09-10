@@ -19,8 +19,11 @@ if (!JWT_SECRET) throw new Error('JWT_SECRET is not set');
 
 async function main() {
   await connectToDatabase(MONGODB_URI!);
+  const emailSender = consoleEmailSender;
   const app = createApp(
-    PAYMENTS_MOCK ? { stripeClient: mockStripeClient, poliClient: mockPoliClient } : {},
+    PAYMENTS_MOCK
+      ? { emailSender, stripeClient: mockStripeClient, poliClient: mockPoliClient }
+      : { emailSender },
   );
   if (PAYMENTS_MOCK) {
     console.log('PAYMENTS_MOCK=true — Stripe/POLi checkout will auto-succeed, no real provider calls.');
@@ -32,7 +35,8 @@ async function main() {
   // Reminders are time-scheduled rather than request-driven, so the server
   // sweeps for them itself. Swap this for an external scheduler calling
   // sendDueLessonReminders if the app is ever run as more than one instance.
-  const emailSender = consoleEmailSender;
+  // Uses the same emailSender passed into createApp above, so there is one
+  // place — not two — that decides how this process sends email.
   setInterval(() => {
     sendDueLessonReminders({ emailSender }).catch((err) => {
       console.error('Lesson reminder sweep failed', err);

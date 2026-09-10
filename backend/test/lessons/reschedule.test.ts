@@ -55,6 +55,17 @@ function hoursFromNow(hours: number): string {
   return new Date(Date.now() + hours * HOUR_MS).toISOString();
 }
 
+// Walks forward a day at a time from `startHoursAhead` until landing on a
+// day that isn't Monday (UTC), so tests asserting "outside a Monday-only
+// availability block" don't depend on which day they happen to run.
+function firstNonMondayInstant(startHoursAhead: number): string {
+  const date = new Date(Date.now() + startHoursAhead * HOUR_MS);
+  while (date.getUTCDay() === 1) {
+    date.setUTCDate(date.getUTCDate() + 1);
+  }
+  return date.toISOString();
+}
+
 describe('PATCH /api/lessons/:id', () => {
   it('moves an upcoming Lesson to a new time', async () => {
     const { user, buddy, token } = await createPair();
@@ -151,7 +162,10 @@ describe('PATCH /api/lessons/:id', () => {
     const res = await request(app)
       .patch(`/api/lessons/${lesson.id}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ startTime: hoursFromNow(100) });
+      // The Buddy's only availability block above is Monday-only, so any
+      // instant that isn't a Monday is guaranteed outside it regardless of
+      // what day this test happens to run on.
+      .send({ startTime: firstNonMondayInstant(48) });
 
     expect(res.status).toBe(409);
   });
