@@ -4,7 +4,7 @@ import { Button, Input } from '../components';
 import { GoogleSignInButton } from '../auth/GoogleSignInButton';
 import { BackArrow, LegalText, OrDivider } from '../auth/AuthPrimitives';
 import { PasswordVisibilityToggle } from '../auth/PasswordVisibilityToggle';
-import { useAuth, type AccountRole } from '../auth/AuthContext';
+import { toAccount, useAuth } from '../auth/AuthContext';
 import { ApiError, fetchMe, loginWithGoogle, signup } from '../lib/api';
 
 export function Signup() {
@@ -56,13 +56,7 @@ export function Signup() {
     try {
       const result = await loginWithGoogle(idToken);
       const me = await fetchMe(result.token);
-      setSession(result.token, {
-        id: me.id,
-        role: me.role as AccountRole,
-        onboardingCompleted: me.onboardingCompleted,
-        credits: me.credits,
-        isNZLocated: me.isNZLocated,
-      });
+      setSession(result.token, toAccount(me));
       navigate(me.onboardingCompleted ? '/dashboard' : '/onboarding');
     } catch {
       setError('Google sign-in failed.');

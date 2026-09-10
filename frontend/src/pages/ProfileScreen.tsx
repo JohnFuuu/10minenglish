@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Avatar, Button, Card, Input } from '../components';
+import { Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import { initialsOf } from '../lib/initials';
@@ -8,6 +7,7 @@ import { LEARNING_GOALS } from '../lib/learningGoals';
 import {
   ApiError,
   changePassword,
+  fetchNotifications,
   fetchProfile,
   updateProfile,
   type UserProfile,
@@ -42,14 +42,14 @@ function toForm(profile: UserProfile): ProfileForm {
 const FIELD_LABEL = 'mb-2 block text-xs font-bold uppercase tracking-wide text-text-secondary';
 
 export function ProfileScreen() {
-  const { token, refreshAccount } = useAuth();
+  const { token, refreshAccount, logout } = useAuth();
   const { showToast } = useToast();
-  const navigate = useNavigate();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [form, setForm] = useState<ProfileForm | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [isSavingPassword, setIsSavingPassword] = useState(false);
@@ -65,6 +65,11 @@ export function ProfileScreen() {
       .finally(() => setIsLoading(false));
     // showToast is stable (useCallback in ToastProvider); profile is fetched once per token.
   }, [token, showToast]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
+  }, [token]);
 
   function updateField<K extends keyof ProfileForm>(field: K) {
     return (value: ProfileForm[K]) => setForm((prev) => (prev ? { ...prev, [field]: value } : prev));
@@ -141,12 +146,14 @@ export function ProfileScreen() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-8 py-12">
+    <main className={`mx-auto max-w-3xl px-8 pt-12 ${NAV_CLEARANCE_CLASS}`}>
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-body">Profile</h1>
-        <Button variant="secondary" size="sm" onClick={() => navigate('/dashboard')}>
-          Back to Dashboard
-        </Button>
+        <h1 className="font-display text-2xl font-black text-text-heading">Profile</h1>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={logout}>
+            Log out
+          </Button>
+        </div>
       </div>
 
       {isLoading && <p className="text-text-secondary">Loading your profile…</p>}
@@ -355,6 +362,8 @@ export function ProfileScreen() {
           )}
         </>
       )}
+
+      <BottomNav unreadCount={unreadCount} />
     </main>
   );
 }

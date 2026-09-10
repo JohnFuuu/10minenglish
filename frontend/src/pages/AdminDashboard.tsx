@@ -213,7 +213,7 @@ export function AdminDashboard() {
   return (
     <main className="mx-auto max-w-lg px-5 py-12">
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-body">Admin</h1>
+        <h1 className="font-display text-2xl font-black text-text-heading">Admin</h1>
         <Button variant="secondary" size="sm" onClick={logout}>
           Log out
         </Button>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '../components';
-import { useAuth, type AccountRole } from '../auth/AuthContext';
+import { toAccount, useAuth } from '../auth/AuthContext';
 import { GoogleSignInButton } from '../auth/GoogleSignInButton';
 import { BackArrow, LegalText, OrDivider } from '../auth/AuthPrimitives';
 import { PasswordVisibilityToggle } from '../auth/PasswordVisibilityToggle';
@@ -28,13 +28,7 @@ export function Login() {
     try {
       const result = await login(email, password);
       const me = await fetchMe(result.token);
-      setSession(result.token, {
-        id: me.id,
-        role: me.role as AccountRole,
-        onboardingCompleted: me.onboardingCompleted,
-        credits: me.credits,
-        isNZLocated: me.isNZLocated,
-      });
+      setSession(result.token, toAccount(me));
       navigate(me.onboardingCompleted ? '/dashboard' : '/onboarding');
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
@@ -59,13 +53,7 @@ export function Login() {
     try {
       const result = await loginWithGoogle(idToken);
       const me = await fetchMe(result.token);
-      setSession(result.token, {
-        id: me.id,
-        role: me.role as AccountRole,
-        onboardingCompleted: me.onboardingCompleted,
-        credits: me.credits,
-        isNZLocated: me.isNZLocated,
-      });
+      setSession(result.token, toAccount(me));
       navigate(me.onboardingCompleted ? '/dashboard' : '/onboarding');
     } catch {
       setError('Google sign-in failed.');

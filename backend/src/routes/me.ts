@@ -54,6 +54,7 @@ export function createMeRouter(deps: MeRouterDependencies): Router {
     }
     res.status(200).json({
       id: account.id,
+      name: account.name,
       role: account.role,
       onboardingCompleted: account.onboardingCompleted,
       credits: account.credits,

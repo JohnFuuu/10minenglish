@@ -101,6 +101,7 @@ export function loginWithGoogle(idToken: string) {
 export function fetchMe(token: string) {
   return request<{
     id: string;
+    name?: string;
     role: string;
     onboardingCompleted: boolean;
     credits: number;

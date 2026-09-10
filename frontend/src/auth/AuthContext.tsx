@@ -5,6 +5,7 @@ export type AccountRole = 'user' | 'buddy' | 'admin';
 
 export interface Account {
   id: string;
+  name?: string;
   role: AccountRole;
   onboardingCompleted: boolean;
   credits: number;
@@ -25,9 +26,10 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const TOKEN_STORAGE_KEY = '10me.token';
 
-function toAccount(me: Awaited<ReturnType<typeof fetchMe>>): Account {
+export function toAccount(me: Awaited<ReturnType<typeof fetchMe>>): Account {
   return {
     id: me.id,
+    name: me.name,
     role: me.role as AccountRole,
     onboardingCompleted: me.onboardingCompleted,
     credits: me.credits,

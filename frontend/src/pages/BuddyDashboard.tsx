@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Badge, Button, Card, Input, NavItem } from '../components';
+import { Avatar, Badge, Button, Card, Input, NavItem } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
+import { initialsOf } from '../lib/initials';
 import {
   ApiError,
   buddyCancelLesson,
@@ -158,11 +159,27 @@ export function BuddyDashboard() {
 
   return (
     <main className="mx-auto max-w-3xl px-5 py-12">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-body">Buddy Dashboard</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="font-display text-2xl font-black text-text-heading">Buddy Dashboard</h1>
         <Button variant="secondary" size="sm" onClick={logout}>
           Log out
         </Button>
+      </div>
+
+      <div className="mb-6 flex items-center gap-3 rounded-md border-2 border-b-[5px] border-brand-primary-border bg-brand-primary p-4">
+        {profile.picture ? (
+          <img
+            src={profile.picture}
+            alt={profile.name}
+            className="h-14 w-14 shrink-0 rounded-xl border-2 border-accent-lime-light object-cover"
+          />
+        ) : (
+          <Avatar initials={initialsOf(profile.name)} size={56} />
+        )}
+        <div className="min-w-0">
+          <p className="truncate font-bold text-text-inverse">{profile.name || 'Your Buddy profile'}</p>
+          <p className="truncate text-sm text-accent-lime-light">{profile.email}</p>
+        </div>
       </div>
 
       <NavItem

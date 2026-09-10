@@ -70,48 +70,59 @@ export function CreditsScreen() {
         <p className="text-xs font-bold text-accent-lime-light">1 credit = 1 lesson</p>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3">
-        {packs.map((pack) => (
-          <button
-            key={pack.size}
-            type="button"
-            onClick={() => setSelectedSize(pack.size)}
-            className={
-              selectedSize === pack.size
-                ? 'rounded-md border-2 border-b-[4px] border-brand-primary-border bg-brand-primary p-4 text-left'
-                : 'rounded-md border-2 border-b-[4px] border-border bg-bg-surface p-4 text-left'
-            }
-          >
-            <p
+      <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Choose a pack</p>
+      <div className="mb-6 flex flex-col gap-2.5">
+        {packs.map((pack) => {
+          const selected = selectedSize === pack.size;
+          return (
+            <button
+              key={pack.size}
+              type="button"
+              onClick={() => setSelectedSize(pack.size)}
               className={
-                selectedSize === pack.size
-                  ? 'text-lg font-bold text-text-inverse'
-                  : 'text-lg font-bold text-text-heading'
+                selected
+                  ? 'flex items-center justify-between rounded-md border-2 border-b-4 border-brand-primary-border bg-success-bg p-4'
+                  : 'flex items-center justify-between rounded-md border-2 border-b-4 border-border-strong bg-bg-surface p-4'
               }
             >
-              {pack.size} credits
-            </p>
-            <p
-              className={
-                selectedSize === pack.size ? 'text-sm font-bold text-accent-lime-light' : 'text-sm font-bold text-text-secondary'
-              }
-            >
-              ${(pack.priceCents / 100).toFixed(2)} NZD
-            </p>
-          </button>
-        ))}
+              <div className="flex items-center gap-3">
+                <span
+                  className={
+                    selected
+                      ? 'flex h-10 w-10 items-center justify-center rounded-md border-2 border-accent-lime bg-accent-lime-light text-sm font-bold text-success'
+                      : 'flex h-10 w-10 items-center justify-center rounded-md border-2 border-border text-sm font-bold text-text-heading'
+                  }
+                >
+                  {pack.size}
+                </span>
+                <div className="text-left">
+                  <p className="text-sm font-bold uppercase tracking-widest text-text-heading">
+                    {pack.size} credit{pack.size > 1 ? 's' : ''}
+                  </p>
+                  <p className="text-xs text-text-secondary">
+                    ${(pack.priceCents / pack.size / 100).toFixed(2)} per credit
+                  </p>
+                </div>
+              </div>
+              <p className="text-base font-bold text-text-heading">${(pack.priceCents / 100).toFixed(2)}</p>
+            </button>
+          );
+        })}
       </div>
 
       <div className="flex flex-col gap-3">
         <Button tone="blue" disabled={!selectedSize || isPaying} onClick={() => handlePay('stripe')}>
-          Pay with Stripe
+          {isPaying ? 'Processing…' : 'Pay with Stripe'}
         </Button>
         {account?.isNZLocated && (
           <Button variant="secondary" tone="blue" disabled={!selectedSize || isPaying} onClick={() => handlePay('poli')}>
-            Pay with POLi
+            {isPaying ? 'Processing…' : 'Pay with POLi'}
           </Button>
         )}
       </div>
+      <p className="mt-3 text-center text-xs text-text-secondary">
+        Payments are processed securely. Credits added instantly.
+      </p>
     </main>
   );
 }

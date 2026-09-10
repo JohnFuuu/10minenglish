@@ -1,64 +1,176 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { Badge, Button, NavItem } from '../components';
-import { fetchNotifications } from '../lib/api';
+import { Avatar, BottomNav, Button, Card, NAV_CLEARANCE_CLASS } from '../components';
+import { fetchNotifications, fetchUserLessons, type LessonWithBuddy } from '../lib/api';
+import { formatDateTime } from '../lib/formatDateTime';
+import { initialsOf } from '../lib/initials';
+
+function greeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export function UserDashboard() {
-  const { account, logout, token } = useAuth();
+  const { account, token } = useAuth();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [upcoming, setUpcoming] = useState<LessonWithBuddy[] | null>(null);
 
   useEffect(() => {
     if (!token) return;
     fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
+    fetchUserLessons(token).then((res) => setUpcoming(res.upcoming));
   }, [token]);
 
+  const hasCredits = (account?.credits ?? 0) > 0;
+  const [nextLesson, ...restUpcoming] = upcoming ?? [];
+
+  const quickActions = [
+    { label: 'BOOK A LESSON', icon: '📅', path: hasCredits ? '/book' : '/credits' },
+    { label: 'BUDDIES', icon: '👥', path: '/buddies' },
+    { label: 'MY LESSONS', icon: '🗓', path: '/lessons' },
+    { label: 'BUY CREDITS', icon: '💎', path: '/credits' },
+  ] as const;
+
   return (
-    <main className="mx-auto max-w-3xl px-8 py-12">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-body">Dashboard</h1>
-        <Button variant="secondary" size="sm" onClick={logout}>
-          Log out
-        </Button>
-      </div>
-
-      <NavItem
-        label="Notifications"
-        badge={unreadCount > 0 ? <Badge count={unreadCount} /> : undefined}
-        onClick={() => navigate('/notifications')}
-        className="mb-6"
-      />
-
-      <div className="mb-6 flex items-center justify-between rounded-md border-2 border-b-[5px] border-brand-primary-border bg-brand-primary p-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-accent-lime-light">Your credits</p>
-          <p className="font-display text-4xl font-black text-text-inverse">{account?.credits ?? 0}</p>
-          <p className="text-xs font-bold text-accent-lime-light">lessons available</p>
+    <main className={`mx-auto max-w-3xl ${NAV_CLEARANCE_CLASS}`}>
+      <div className="flex items-center justify-between border-b-2 border-border px-5 pb-4 pt-8">
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="" className="h-8 w-8" />
+          <span className="font-display text-lg font-black text-brand-primary">10ME</span>
         </div>
-        <Button onClick={() => navigate('/credits')}>Buy Credits</Button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 rounded-md border-2 border-b-[3px] border-accent-lime px-3 py-1.5 text-sm font-bold text-brand-primary">
+            💎 {account?.credits ?? 0}
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/notifications')}
+            className="relative flex h-9 w-9 items-center justify-center rounded-md border-2 border-b-[3px] border-border"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3c3c3c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            {unreadCount > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[9px] font-bold text-text-inverse">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
-      <Button
-        size="md"
-        tone="blue"
-        className="mb-6 w-full"
-        onClick={() => navigate((account?.credits ?? 0) > 0 ? '/book' : '/credits')}
-      >
-        Book a Lesson
-      </Button>
+      <div className="px-5 pb-4 pt-5">
+        <p className="text-xs font-bold uppercase tracking-widest text-text-secondary">{greeting()},</p>
+        <h1 className="font-display text-3xl font-black text-text-heading">
+          {account?.name?.split(' ')[0] ?? 'there'}! 👋
+        </h1>
+      </div>
 
-      <Button variant="secondary" size="md" className="mb-6 w-full" onClick={() => navigate('/lessons')}>
-        My Lessons
-      </Button>
+      <div className="mx-5 mb-5 rounded-md border-2 border-b-[5px] border-brand-primary-border bg-brand-primary p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-accent-lime-light">Your credits</p>
+            <p className="font-display text-4xl font-black text-text-inverse">{account?.credits ?? 0}</p>
+            <p className="text-xs font-bold text-accent-lime-light">lessons available</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/credits')}
+            className="rounded-md border-2 border-b-4 border-accent-lime-light bg-bg-surface px-5 py-3 text-sm font-bold text-brand-primary"
+          >
+            TOP UP
+          </button>
+        </div>
+      </div>
 
-      <Button variant="secondary" size="md" className="mb-6 w-full" onClick={() => navigate('/buddies')}>
-        Buddies
-      </Button>
+      {nextLesson && (
+        <div className="mb-5 px-5">
+          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Next lesson</p>
+          <Card className="p-4">
+            <div className="mb-3 flex items-center gap-3">
+              <Avatar initials={initialsOf(nextLesson.buddyName)} size={56} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-bold text-text-heading">{nextLesson.buddyName}</p>
+                <p className="text-sm text-text-secondary">{formatDateTime(nextLesson.startTime)}</p>
+              </div>
+              <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-brand-primary" />
+            </div>
+            <div className="flex gap-2">
+              {nextLesson.joinable && nextLesson.zoomLink.startsWith('https://') && (
+                <Button
+                  className="flex-1"
+                  onClick={() => window.open(nextLesson.zoomLink, '_blank', 'noopener')}
+                >
+                  ▶ Join now
+                </Button>
+              )}
+              <Button
+                variant="secondary"
+                className={nextLesson.joinable ? '' : 'flex-1'}
+                onClick={() => navigate('/lessons')}
+              >
+                Details
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
 
-      <Button variant="secondary" size="md" className="mb-6 w-full" onClick={() => navigate('/profile')}>
-        My Profile
-      </Button>
+      <div className="mb-5 px-5">
+        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Quick actions</p>
+        <div className="grid grid-cols-2 gap-3">
+          {quickActions.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              onClick={() => navigate(action.path)}
+              className="flex flex-col items-start rounded-md border-2 border-b-4 border-border-strong bg-bg-surface p-4 text-left"
+            >
+              <span className="mb-2 text-2xl">{action.icon}</span>
+              <span className="text-xs font-bold tracking-widest text-text-heading">{action.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {restUpcoming.length > 0 && (
+        <div className="px-5">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-widest text-text-secondary">Upcoming</p>
+            <button
+              type="button"
+              onClick={() => navigate('/lessons')}
+              className="text-xs font-bold tracking-widest text-brand-secondary"
+            >
+              SEE ALL →
+            </button>
+          </div>
+          <div className="flex flex-col gap-3">
+            {restUpcoming.map((lesson) => (
+              <div
+                key={lesson.id}
+                className="flex items-center gap-3 rounded-md border-2 border-b-[3px] border-border bg-bg-surface p-3"
+              >
+                <Avatar initials={initialsOf(lesson.buddyName)} size={40} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-text-heading">{lesson.buddyName}</p>
+                  <p className="text-xs text-text-secondary">{formatDateTime(lesson.startTime)}</p>
+                </div>
+                <span className="shrink-0 rounded-md bg-success-bg px-2.5 py-1 text-xs font-bold tracking-widest text-success">
+                  UPCOMING
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <BottomNav unreadCount={unreadCount} />
     </main>
   );
 }

@@ -44,7 +44,7 @@ export function BuddyScreen() {
   return (
     <main className="mx-auto max-w-3xl px-8 py-12">
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-body">Buddy</h1>
+        <h1 className="font-display text-2xl font-black text-text-heading">Buddy</h1>
         <Button variant="secondary" size="sm" onClick={() => navigate('/buddies')}>
           Back to Buddies
         </Button>
@@ -66,7 +66,7 @@ export function BuddyScreen() {
                 <Avatar initials={initialsOf(buddy.name)} size={56} />
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-lg font-bold text-text-body">{buddy.name}</p>
+                <p className="truncate text-lg font-bold text-text-heading">{buddy.name}</p>
                 {buddy.location && (
                   <p className="truncate text-sm text-text-secondary">{buddy.location}</p>
                 )}
@@ -75,13 +75,24 @@ export function BuddyScreen() {
                 type="button"
                 aria-label={buddy.isFavourite ? 'Unfavourite' : 'Favourite'}
                 onClick={toggleFavourite}
-                className="shrink-0 px-2 text-2xl text-brand-primary"
+                className="shrink-0 p-1"
               >
-                {buddy.isFavourite ? '★' : '☆'}
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill={buddy.isFavourite ? '#ff4b4b' : 'none'}
+                  stroke={buddy.isFavourite ? '#ff4b4b' : '#777777'}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
               </button>
             </div>
 
-            {buddy.bio && <p className="text-sm text-text-body">{buddy.bio}</p>}
+            {buddy.bio && <p className="text-sm leading-relaxed text-text-body">{buddy.bio}</p>}
           </Card>
 
           <Button

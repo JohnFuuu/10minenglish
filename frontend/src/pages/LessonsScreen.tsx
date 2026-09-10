@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Input } from '../components';
+import { Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import {
   ApiError,
   cancelLesson,
   fetchBuddySlots,
+  fetchNotifications,
   fetchUserLessons,
   rescheduleLesson,
   type LessonWithBuddy,
 } from '../lib/api';
 import type { BookLessonPrefill } from './BookLesson';
+import { formatDateTime } from '../lib/formatDateTime';
+import { initialsOf } from '../lib/initials';
 
 // Mirrors the backend's CANCELLATION_REFUND_CUTOFF_HOURS (lessonBooking.ts),
 // which both the cancellation-refund rule and the reschedule rule read from
@@ -48,15 +51,6 @@ function formatSlotTime(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString([], {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
 
 function timeOfDayValue(iso: string): string {
   const d = new Date(iso);
@@ -75,14 +69,22 @@ function previousStatusLabel(lesson: LessonWithBuddy): string {
   return 'Past';
 }
 
+const PREVIOUS_STATUS_STYLE: Record<string, string> = {
+  Cancelled: 'bg-error/10 text-error',
+  Completed: 'bg-accent-lime-light text-brand-secondary',
+  Past: 'bg-border text-text-secondary',
+};
+
 export function LessonsScreen() {
   const { token, account, setCredits } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
+  const [tab, setTab] = useState<'upcoming' | 'previous'>('upcoming');
   const [upcoming, setUpcoming] = useState<LessonWithBuddy[]>([]);
   const [previous, setPrevious] = useState<LessonWithBuddy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
@@ -103,6 +105,11 @@ export function LessonsScreen() {
       .catch(() => showToast('Could not load your lessons.', 'error'))
       .finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
   }, [token]);
 
   useEffect(() => {
@@ -183,32 +190,66 @@ export function LessonsScreen() {
     }
   }
 
-  const hasNoLessons = !isLoading && upcoming.length === 0 && previous.length === 0;
-
   return (
-    <main className="mx-auto max-w-3xl px-8 py-12">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-body">Lessons</h1>
-        <Button variant="secondary" size="sm" onClick={() => navigate('/dashboard')}>
-          Back to Dashboard
-        </Button>
+    <main className={`mx-auto max-w-3xl ${NAV_CLEARANCE_CLASS}`}>
+      <div className="px-5 pb-2 pt-8">
+        <h1 className="font-display text-2xl font-black text-text-heading">My Lessons</h1>
       </div>
 
-      {isLoading && <p className="text-text-secondary">Loading your lessons…</p>}
-      {hasNoLessons && <p className="text-text-secondary">No lessons booked</p>}
+      <div className="mb-5 flex gap-3 px-5 pt-4">
+        {(['upcoming', 'previous'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={
+              tab === t
+                ? 'flex-1 rounded-md border-2 border-b-4 border-brand-primary-border bg-brand-primary py-3 text-xs font-bold tracking-widest text-text-inverse'
+                : 'flex-1 rounded-md border-2 border-b-4 border-border bg-bg-surface py-3 text-xs font-bold tracking-widest text-text-secondary'
+            }
+          >
+            {t === 'upcoming' ? `UPCOMING (${upcoming.length})` : 'PREVIOUS'}
+          </button>
+        ))}
+      </div>
 
-      {upcoming.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Upcoming</h2>
+      {isLoading && <p className="px-5 text-text-secondary">Loading your lessons…</p>}
+
+      {!isLoading && tab === 'upcoming' && upcoming.length === 0 && (
+        <div className="px-5 py-16 text-center">
+          <p className="mb-3 text-5xl">📅</p>
+          <p className="mb-1 text-sm font-bold uppercase tracking-widest text-text-heading">No upcoming lessons</p>
+          <p className="mb-5 text-sm text-text-secondary">Book a session with a Buddy.</p>
+          <Button onClick={() => navigate('/buddies')}>Browse buddies</Button>
+        </div>
+      )}
+
+      {!isLoading && tab === 'previous' && previous.length === 0 && (
+        <div className="px-5 py-16 text-center">
+          <p className="mb-3 text-5xl">📅</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-text-heading">No past lessons</p>
+          <p className="text-sm text-text-secondary">Completed lessons appear here.</p>
+        </div>
+      )}
+
+      {tab === 'upcoming' && upcoming.length > 0 && (
+        <section className="px-5">
           <div className="flex flex-col gap-3">
             {upcoming.map((lesson) => (
               <Card key={lesson.id}>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-text-body">{lesson.buddyName}</p>
-                    <p className="text-sm text-text-secondary">{formatDateTime(lesson.startTime)}</p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar initials={initialsOf(lesson.buddyName)} size={40} />
+                    <div className="min-w-0">
+                      <p className="truncate font-bold text-text-heading">{lesson.buddyName}</p>
+                      <p className="text-sm text-text-secondary">{formatDateTime(lesson.startTime)}</p>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
+                  <span className="shrink-0 rounded-md bg-success-bg px-2.5 py-1 text-xs font-bold tracking-widest text-success">
+                    UPCOMING
+                  </span>
+                </div>
+                <div className="mt-3 flex gap-2">
                     {isJoinable(lesson) && ZOOM_LINK_PATTERN.test(lesson.zoomLink) && (
                       <Button size="sm" tone="blue" onClick={() => window.open(lesson.zoomLink, '_blank', 'noopener')}>
                         Join lesson
@@ -229,7 +270,6 @@ export function LessonsScreen() {
                     >
                       Cancel
                     </Button>
-                  </div>
                 </div>
 
                 {confirmingId === lesson.id && (
@@ -309,19 +349,23 @@ export function LessonsScreen() {
         </section>
       )}
 
-      {previous.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Previous</h2>
+      {tab === 'previous' && previous.length > 0 && (
+        <section className="px-5">
           <div className="flex flex-col gap-3">
             {previous.map((lesson) => (
-              <Card key={lesson.id} className="opacity-80">
+              <Card key={lesson.id}>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-text-body">{lesson.buddyName}</p>
-                    <p className="text-sm text-text-secondary">{formatDateTime(lesson.startTime)}</p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar initials={initialsOf(lesson.buddyName)} size={40} />
+                    <div className="min-w-0">
+                      <p className="truncate font-bold text-text-heading">{lesson.buddyName}</p>
+                      <p className="text-sm text-text-secondary">{formatDateTime(lesson.startTime)}</p>
+                    </div>
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-wide text-text-secondary">
-                    {previousStatusLabel(lesson)}
+                  <span
+                    className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-bold tracking-widest ${PREVIOUS_STATUS_STYLE[previousStatusLabel(lesson)]}`}
+                  >
+                    {previousStatusLabel(lesson).toUpperCase()}
                   </span>
                 </div>
                 <div className="mt-3 flex gap-2">
@@ -353,6 +397,8 @@ export function LessonsScreen() {
           </div>
         </section>
       )}
+
+      <BottomNav unreadCount={unreadCount} />
     </main>
   );
 }
