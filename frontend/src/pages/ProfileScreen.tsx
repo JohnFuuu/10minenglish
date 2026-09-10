@@ -3,7 +3,6 @@ import { Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS } from '../
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import { initialsOf } from '../lib/initials';
-import { LEARNING_GOALS } from '../lib/learningGoals';
 import {
   ApiError,
   changePassword,
@@ -14,16 +13,17 @@ import {
   type UserProfile,
 } from '../lib/api';
 
+// Phone/date of birth/learning-goals were dropped from this screen — kept
+// optional on the Account schema and in UserProfileUpdate, just no longer
+// shown or editable here. The backend only touches fields it's actually
+// sent (see routes/me.ts's `if (x !== undefined)` guards), so omitting them
+// from the save payload leaves whatever a user already had untouched.
 interface ProfileForm {
   name: string;
   email: string;
   picture: string;
-  phoneNumber: string;
   location: string;
   nationality: string;
-  dateOfBirth: string;
-  learningGoals: string[];
-  learningGoalOther: string;
 }
 
 function toForm(profile: UserProfile): ProfileForm {
@@ -31,12 +31,8 @@ function toForm(profile: UserProfile): ProfileForm {
     name: profile.name ?? '',
     email: profile.email,
     picture: profile.picture ?? '',
-    phoneNumber: profile.phoneNumber ?? '',
     location: profile.location ?? '',
     nationality: profile.nationality ?? '',
-    dateOfBirth: profile.dateOfBirth ?? '',
-    learningGoals: profile.learningGoals,
-    learningGoalOther: profile.learningGoalOther ?? '',
   };
 }
 
@@ -99,19 +95,6 @@ export function ProfileScreen() {
     }
   }
 
-  function toggleGoal(goal: string) {
-    setForm((prev) => {
-      if (!prev) return prev;
-      const selected = prev.learningGoals.includes(goal);
-      return {
-        ...prev,
-        learningGoals: selected
-          ? prev.learningGoals.filter((g) => g !== goal)
-          : [...prev.learningGoals, goal],
-      };
-    });
-  }
-
   // Edits aren't applied until "Save changes" is pressed, so the button stays
   // disabled while the form still matches what the server returned.
   const isDirty = Boolean(profile && form) && JSON.stringify(toForm(profile!)) !== JSON.stringify(form);
@@ -126,12 +109,8 @@ export function ProfileScreen() {
         name: form.name,
         email: form.email,
         picture: form.picture,
-        phoneNumber: form.phoneNumber,
         location: form.location,
         nationality: form.nationality,
-        dateOfBirth: form.dateOfBirth,
-        learningGoals: form.learningGoals,
-        learningGoalOther: form.learningGoals.includes('Other') ? form.learningGoalOther : '',
       });
       setProfile(updated);
       setForm(toForm(updated));
@@ -227,122 +206,36 @@ export function ProfileScreen() {
           <form onSubmit={handleSave}>
             <Card className="mb-6">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={FIELD_LABEL} htmlFor="profile-name">
-                    Name
-                  </label>
-                  <Input
-                    id="profile-name"
-                    value={form.name}
-                    onChange={(e) => updateField('name')(e.target.value)}
-                    required
-                  />
-                </div>
+                <Input
+                  id="profile-name"
+                  label="Name"
+                  value={form.name}
+                  onChange={(e) => updateField('name')(e.target.value)}
+                  required
+                />
 
-                <div>
-                  <label className={FIELD_LABEL} htmlFor="profile-email">
-                    Email
-                  </label>
-                  <Input
-                    id="profile-email"
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => updateField('email')(e.target.value)}
-                    required
-                  />
-                </div>
+                <Input
+                  id="profile-email"
+                  type="email"
+                  label="Email"
+                  value={form.email}
+                  onChange={(e) => updateField('email')(e.target.value)}
+                  required
+                />
 
-                <div>
-                  <label className={FIELD_LABEL} htmlFor="profile-phone">
-                    Phone number
-                  </label>
-                  <Input
-                    id="profile-phone"
-                    value={form.phoneNumber}
-                    onChange={(e) => updateField('phoneNumber')(e.target.value)}
-                    required
-                  />
-                </div>
+                <Input
+                  id="profile-nationality"
+                  label="Nationality"
+                  value={form.nationality}
+                  onChange={(e) => updateField('nationality')(e.target.value)}
+                />
 
-                <div>
-                  <label className={FIELD_LABEL} htmlFor="profile-location">
-                    Location
-                  </label>
-                  <Input
-                    id="profile-location"
-                    value={form.location}
-                    onChange={(e) => updateField('location')(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className={FIELD_LABEL} htmlFor="profile-nationality">
-                    Nationality
-                  </label>
-                  <Input
-                    id="profile-nationality"
-                    value={form.nationality}
-                    onChange={(e) => updateField('nationality')(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className={FIELD_LABEL} htmlFor="profile-dob">
-                    Date of birth
-                  </label>
-                  <Input
-                    id="profile-dob"
-                    type="date"
-                    value={form.dateOfBirth}
-                    onChange={(e) => updateField('dateOfBirth')(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className={FIELD_LABEL} htmlFor="profile-picture">
-                    Profile picture URL
-                  </label>
-                  <Input
-                    id="profile-picture"
-                    placeholder="https://…"
-                    value={form.picture}
-                    onChange={(e) => updateField('picture')(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <p className={FIELD_LABEL}>What are you hoping to get from 10ME?</p>
-                <div className="flex flex-wrap gap-2">
-                  {LEARNING_GOALS.map((goal) => {
-                    const selected = form.learningGoals.includes(goal);
-                    return (
-                      <button
-                        type="button"
-                        key={goal}
-                        onClick={() => toggleGoal(goal)}
-                        className={
-                          selected
-                            ? 'rounded-md border-2 border-brand-primary bg-brand-primary px-4 py-2 text-sm font-bold text-text-inverse'
-                            : 'rounded-md border-2 border-border px-4 py-2 text-sm font-bold text-text-secondary'
-                        }
-                      >
-                        {goal}
-                      </button>
-                    );
-                  })}
-                </div>
-                {form.learningGoals.includes('Other') && (
-                  <Input
-                    className="mt-2"
-                    placeholder="Tell us more"
-                    value={form.learningGoalOther}
-                    onChange={(e) => updateField('learningGoalOther')(e.target.value)}
-                  />
-                )}
+                <Input
+                  id="profile-location"
+                  label="Location"
+                  value={form.location}
+                  onChange={(e) => updateField('location')(e.target.value)}
+                />
               </div>
             </Card>
 

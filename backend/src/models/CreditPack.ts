@@ -21,11 +21,14 @@ const creditPackSchema = new Schema<CreditPackDocument>({
 
 export const CreditPack = mongoose.model<CreditPackDocument>('CreditPack', creditPackSchema);
 
+// Flat $1 (NZD) per credit — no bulk discount. Still just the starter price
+// for a fresh install; an Admin can change any of these afterward without a
+// deploy (see routes/creditPacks.ts's PATCH /api/admin/credit-packs/:size).
 const DEFAULT_PRICES_CENTS: Record<CreditPackSize, number> = {
-  1: 2500,
-  10: 22000,
-  20: 40000,
-  30: 55000,
+  1: 100,
+  10: 1000,
+  20: 2000,
+  30: 3000,
 };
 
 // Seeds any missing pack sizes with a starter price — keeps GET /api/credit-packs

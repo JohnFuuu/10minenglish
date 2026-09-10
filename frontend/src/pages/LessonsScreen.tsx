@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarX } from 'lucide-react';
+import { CalendarX, Video } from 'lucide-react';
 import { Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
@@ -250,6 +250,19 @@ export function LessonsScreen() {
                     UPCOMING
                   </span>
                 </div>
+
+                {ZOOM_LINK_PATTERN.test(lesson.zoomLink) && (
+                  <a
+                    href={lesson.zoomLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 flex items-center gap-1.5 text-xs font-bold text-brand-secondary"
+                  >
+                    <Video size={14} />
+                    Zoom link
+                  </a>
+                )}
+
                 <div className="mt-3 flex gap-2">
                     {isJoinable(lesson) && ZOOM_LINK_PATTERN.test(lesson.zoomLink) && (
                       <Button size="sm" tone="blue" onClick={() => window.open(lesson.zoomLink, '_blank', 'noopener')}>

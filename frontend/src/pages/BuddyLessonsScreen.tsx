@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarX } from 'lucide-react';
+import { CalendarX, Video } from 'lucide-react';
 import { Avatar, BottomNav, Button, Card, NAV_CLEARANCE_CLASS } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
@@ -124,6 +124,18 @@ export function BuddyLessonsScreen() {
                     UPCOMING
                   </span>
                 </div>
+
+                {lesson.zoomLink?.startsWith('https://') && (
+                  <a
+                    href={lesson.zoomLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 flex items-center gap-1.5 text-xs font-bold text-brand-secondary"
+                  >
+                    <Video size={14} />
+                    Zoom link
+                  </a>
+                )}
 
                 <div className="mt-3">
                   <Button
