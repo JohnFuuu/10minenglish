@@ -17,15 +17,8 @@
 - On success → **Login success** → Home page → Dashboard
 
 ### Sign up
-- Fields: Name, Email, Password, Phone number, Location, Nationality, Date of birth, "What are you hoping to get from 10ME?"
-- Goal options (single/multi-select, with free text): 
-  - Build confidence speaking English
-  - Improve my pronunciation
-  - Practise real-life conversations
-  - Fix common grammar mistakes
-  - Expand my vocabulary
-  - Not sure yet – I'm exploring!
-  - Other (free text entry)
+- Fields: Name, Email, Password, Confirm password — kept intentionally minimal to reduce signup friction.
+- Phone number, Location, Nationality, Date of birth, and "What are you hoping to get from 10ME?" (with its goal-option list, unchanged) are no longer collected at signup — they're optional on the Account and filled in later via Profile edit (Section 5). `POST /auth/signup` only requires Name, Email, Password; the rest of `Account` was already optional at the schema level.
 - On success → **Sign up success** message → external action: confirmation email sent
 - User must confirm email by clicking link in email → unlocks Dashboard access
 

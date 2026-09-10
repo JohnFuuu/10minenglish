@@ -6,7 +6,6 @@ import { BackArrow, LegalText, OrDivider } from '../auth/AuthPrimitives';
 import { PasswordVisibilityToggle } from '../auth/PasswordVisibilityToggle';
 import { useAuth, type AccountRole } from '../auth/AuthContext';
 import { ApiError, fetchMe, loginWithGoogle, signup } from '../lib/api';
-import { LEARNING_GOALS } from '../lib/learningGoals';
 
 export function Signup() {
   const { setSession } = useAuth();
@@ -16,23 +15,12 @@ export function Signup() {
     name: '',
     email: '',
     password: '',
-    phoneNumber: '',
-    location: '',
-    nationality: '',
-    dateOfBirth: '',
+    confirmPassword: '',
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
-  const [goalOther, setGoalOther] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  function toggleGoal(goal: string) {
-    setSelectedGoals((prev) =>
-      prev.includes(goal) ? prev.filter((g) => g !== goal) : [...prev, goal],
-    );
-  }
 
   function updateField(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -42,14 +30,15 @@ export function Signup() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setIsSubmitting(true);
 
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      await signup({
-        ...form,
-        learningGoals: selectedGoals,
-        learningGoalOther: selectedGoals.includes('Other') ? goalOther : undefined,
-      });
+      await signup({ name: form.name, email: form.email, password: form.password });
       setSubmitted(true);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
@@ -111,9 +100,10 @@ export function Signup() {
           <div className="flex flex-col gap-3">
             <Input
               variant="filled"
-              placeholder="Name (optional)"
+              placeholder="Name"
               value={form.name}
               onChange={updateField('name')}
+              required
             />
             <Input
               variant="filled"
@@ -139,72 +129,17 @@ export function Signup() {
             />
             <Input
               variant="filled"
-              placeholder="Phone number"
-              value={form.phoneNumber}
-              onChange={updateField('phoneNumber')}
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Confirm password"
+              value={form.confirmPassword}
+              onChange={updateField('confirmPassword')}
               required
             />
-            <Input
-              variant="filled"
-              placeholder="Location"
-              value={form.location}
-              onChange={updateField('location')}
-              required
-            />
-            <Input
-              variant="filled"
-              placeholder="Nationality"
-              value={form.nationality}
-              onChange={updateField('nationality')}
-              required
-            />
-            <Input
-              variant="filled"
-              type="date"
-              placeholder="Date of birth"
-              value={form.dateOfBirth}
-              onChange={updateField('dateOfBirth')}
-              required
-            />
-          </div>
-
-          <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-text-secondary">
-              What are you hoping to get from 10ME?
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {LEARNING_GOALS.map((goal) => {
-                const selected = selectedGoals.includes(goal);
-                return (
-                  <button
-                    type="button"
-                    key={goal}
-                    onClick={() => toggleGoal(goal)}
-                    className={
-                      selected
-                        ? 'rounded-md border-2 border-brand-primary bg-brand-primary px-4 py-2 text-sm font-bold text-text-inverse'
-                        : 'rounded-md border-2 border-border px-4 py-2 text-sm font-bold text-text-secondary'
-                    }
-                  >
-                    {goal}
-                  </button>
-                );
-              })}
-            </div>
-            {selectedGoals.includes('Other') && (
-              <Input
-                variant="filled"
-                className="mt-2"
-                placeholder="Tell us more"
-                value={goalOther}
-                onChange={(e) => setGoalOther(e.target.value)}
-              />
-            )}
           </div>
 
           {error && <p className="text-center text-sm font-bold text-error">{error}</p>}
 
-          <Button type="submit" tone="blue" disabled={isSubmitting || selectedGoals.length === 0}>
+          <Button type="submit" tone="blue" disabled={isSubmitting}>
             Create Account
           </Button>
 

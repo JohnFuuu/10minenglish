@@ -34,17 +34,7 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       learningGoalOther,
     } = req.body ?? {};
 
-    if (
-      !name ||
-      !email ||
-      !password ||
-      !phoneNumber ||
-      !location ||
-      !nationality ||
-      !dateOfBirth ||
-      !Array.isArray(learningGoals) ||
-      learningGoals.length === 0
-    ) {
+    if (!name || !email || !password) {
       res.status(400).json({ error: 'Missing required signup fields' });
       return;
     }
@@ -59,6 +49,9 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
     const emailConfirmationToken = generateToken();
     const emailConfirmationExpires = new Date(Date.now() + EMAIL_CONFIRMATION_TTL_MS);
 
+    // Phone/location/nationality/date of birth/learning goal are no longer
+    // collected at signup — kept optional here so an already-confirmed
+    // account can still fill them in later via Profile edit (#4).
     const account = await Account.create({
       role: 'user',
       name,
@@ -67,7 +60,7 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       phoneNumber,
       location,
       nationality,
-      dateOfBirth: new Date(dateOfBirth),
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
       learningGoals,
       learningGoalOther,
       emailConfirmed: false,

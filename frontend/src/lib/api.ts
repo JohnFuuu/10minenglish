@@ -29,11 +29,11 @@ export interface SignupPayload {
   name: string;
   email: string;
   password: string;
-  phoneNumber: string;
-  location: string;
-  nationality: string;
-  dateOfBirth: string;
-  learningGoals: string[];
+  phoneNumber?: string;
+  location?: string;
+  nationality?: string;
+  dateOfBirth?: string;
+  learningGoals?: string[];
   learningGoalOther?: string;
 }
 
