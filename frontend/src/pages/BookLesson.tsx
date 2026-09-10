@@ -483,7 +483,8 @@ export function BookLesson() {
           <div className="rounded-md border-2 border-accent-lime bg-accent-lime-light p-4">
             <p className="text-xs font-bold uppercase tracking-widest text-success">Balance after booking</p>
             <p className="mt-0.5 text-base font-bold text-text-heading">
-              {account.credits - (bookingType === 'single' ? 1 : occurrenceCount)} credits remaining (worst case)
+              {account.credits - (bookingType === 'single' ? 1 : occurrenceCount)} credits remaining
+              {bookingType === 'recurring' && ' if all sessions book'}
             </p>
           </div>
 

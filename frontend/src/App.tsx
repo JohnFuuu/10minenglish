@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
+import { RequireAuth } from './auth/RequireAuth';
 import { ToastProvider } from './toast/ToastContext';
 import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
@@ -30,17 +31,21 @@ function App() {
             <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/credits" element={<CreditsScreen />} />
-            <Route path="/credits/return" element={<CreditsReturn />} />
-            <Route path="/book" element={<BookLesson />} />
-            <Route path="/lessons" element={<LessonsScreen />} />
-            <Route path="/notifications" element={<NotificationsScreen />} />
-            <Route path="/profile" element={<ProfileScreen />} />
-            <Route path="/buddies" element={<BuddiesScreen />} />
-            <Route path="/buddies/:id" element={<BuddyScreen />} />
+            <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
+            <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+            <Route path="/credits" element={<RequireAuth><CreditsScreen /></RequireAuth>} />
+            <Route path="/credits/return" element={<RequireAuth><CreditsReturn /></RequireAuth>} />
+            <Route path="/book" element={<RequireAuth><BookLesson /></RequireAuth>} />
+            <Route path="/lessons" element={<RequireAuth><LessonsScreen /></RequireAuth>} />
+            <Route path="/notifications" element={<RequireAuth><NotificationsScreen /></RequireAuth>} />
+            <Route path="/profile" element={<RequireAuth><ProfileScreen /></RequireAuth>} />
+            <Route path="/buddies" element={<RequireAuth><BuddiesScreen /></RequireAuth>} />
+            <Route path="/buddies/:id" element={<RequireAuth><BuddyScreen /></RequireAuth>} />
             <Route path="/playground" element={<ComponentPlayground />} />
+            {/* Unmatched paths fall through to /dashboard, which already does the
+                right thing either way: RequireAuth sends a signed-out visitor to
+                /login, a signed-in one lands on their role's dashboard. */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

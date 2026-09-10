@@ -56,7 +56,11 @@ const DEFAULT_TYPE_CONFIG = {
 };
 
 export function NotificationsScreen() {
-  const { token } = useAuth();
+  const { token, account } = useAuth();
+  // The bottom nav's other tabs (Buddies, Lessons, Profile) are User-only
+  // screens/endpoints — Buddies and Admins also land here (from their own
+  // dashboard's Notifications link), but must not be offered tabs that 403.
+  const showBottomNav = account?.role === 'user';
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -98,11 +102,16 @@ export function NotificationsScreen() {
   }
 
   return (
-    <main className={`mx-auto max-w-3xl ${NAV_CLEARANCE_CLASS}`}>
-      <div className="px-5 pb-2 pt-8">
+    <main className={`mx-auto max-w-3xl ${showBottomNav ? NAV_CLEARANCE_CLASS : ''}`}>
+      <div className="flex items-center justify-between px-5 pb-2 pt-8">
         <h1 className="font-display text-2xl font-black text-text-heading">
           {unreadCount > 0 ? `Alerts (${unreadCount})` : 'Alerts'}
         </h1>
+        {!showBottomNav && (
+          <Button variant="secondary" size="sm" onClick={() => navigate('/dashboard')}>
+            Back to Dashboard
+          </Button>
+        )}
       </div>
 
       <div className="mt-4 flex flex-col gap-2 px-5">
@@ -180,7 +189,7 @@ export function NotificationsScreen() {
           })}
       </div>
 
-      <BottomNav unreadCount={unreadCount} />
+      {showBottomNav && <BottomNav unreadCount={unreadCount} />}
     </main>
   );
 }

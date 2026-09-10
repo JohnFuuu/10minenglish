@@ -22,7 +22,11 @@ export function Toast({ message, type, onDismiss }: ToastProps) {
   const isError = type === 'error';
 
   return (
-    <div className="fixed inset-x-0 bottom-6 z-50 flex justify-center px-5">
+    // bottom-24 matches components/BottomNav.tsx's NAV_CLEARANCE_CLASS
+    // (pb-24) — this toast is a single app-wide instance (rendered once in
+    // ToastProvider) that can't tell whether the current page has a bottom
+    // nav, so it always clears the tallest thing that could be there.
+    <div className="fixed inset-x-0 bottom-24 z-50 flex justify-center px-5">
       <button
         type="button"
         onClick={onDismiss}
