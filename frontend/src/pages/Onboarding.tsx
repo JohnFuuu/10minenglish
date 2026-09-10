@@ -1,11 +1,25 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import {
+  Flame,
+  Footprints,
+  MessageCircle,
+  Newspaper,
+  Play,
+  Search,
+  Share2,
+  Smartphone,
+  Turtle,
+  Tv,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { submitOnboarding } from '../lib/api';
 
 interface Option {
   label: string;
-  icon?: string;
+  icon?: LucideIcon;
   bars?: number;
 }
 
@@ -18,68 +32,64 @@ const steps: OnboardingStep[] = [
   {
     question: 'How did you hear about 10 Minute English?',
     options: [
-      { icon: '👨‍👩‍👧', label: 'Friends or family' },
-      { icon: '📱', label: 'TikTok' },
-      { icon: '📺', label: 'TV' },
-      { icon: '📰', label: 'News / article / blog' },
-      { icon: '▶️', label: 'YouTube' },
-      { icon: '🔍', label: 'Google Search' },
-      { icon: '📘', label: 'Facebook / Instagram' },
-      { icon: '💬', label: 'Other' },
+      { icon: Users, label: 'Friends or family' },
+      { icon: Smartphone, label: 'TikTok' },
+      { icon: Tv, label: 'TV' },
+      { icon: Newspaper, label: 'News / article / blog' },
+      { icon: Play, label: 'YouTube' },
+      { icon: Search, label: 'Google Search' },
+      { icon: Share2, label: 'Facebook / Instagram' },
+      { icon: MessageCircle, label: 'Other' },
     ],
   },
   {
-    question: "Okay, we'll build on what you know!",
+    question: "What's your current level?",
     options: [
-      { bars: 1, label: "I'm new to English" },
-      { bars: 2, label: 'I know some common words' },
-      { bars: 3, label: 'I can have basic conversations' },
-      { bars: 4, label: 'I can talk about various topics' },
-      { bars: 5, label: 'I can discuss most topics in detail' },
+      { bars: 1, label: 'Just Starting Out — learning my first words' },
+      { bars: 2, label: 'Finding My Words — can manage simple greetings' },
+      { bars: 3, label: 'Getting Comfortable — basic everyday chat' },
+      { bars: 4, label: 'Ready to Chat — comfortable with casual conversation' },
+      { bars: 5, label: 'Confident Conversations — can talk about most things' },
+      { bars: 6, label: 'Almost Fluent — nearly there, just polishing' },
+      { bars: 7, label: 'Deep Conversations — ready for anything, nuance and all' },
     ],
   },
   {
-    question: 'Why are you learning English?',
+    question: 'How many 10 minute conversations per week?',
     options: [
-      { icon: '💼', label: 'Work or career' },
-      { icon: '✈️', label: 'Travel' },
-      { icon: '🎓', label: 'Study or exams' },
-      { icon: '🌏', label: 'Moving abroad' },
-      { icon: '🧠', label: 'Personal growth' },
-      { icon: '💬', label: 'Other' },
-    ],
-  },
-  {
-    question: 'How many lessons per week?',
-    options: [
-      { icon: '🐢', label: '1–2 lessons — casual pace' },
-      { icon: '🚶', label: '3–4 lessons — steady progress' },
-      { icon: '🏃', label: '5+ lessons — serious study' },
+      { icon: Turtle, label: '1–2 conversations — casual pace' },
+      { icon: Footprints, label: '3–4 conversations — steady progress' },
+      { icon: Flame, label: '5+ conversations — serious study' },
     ],
   },
 ];
 
-function SignalBars({ filled }: { filled: number }) {
-  const bars = [
-    { x: 2, height: 8, y: 14 },
-    { x: 8, height: 11, y: 11 },
-    { x: 14, height: 14, y: 8 },
-    { x: 20, height: 17, y: 5 },
-    { x: 26, height: 20, y: 2 },
-  ];
+// Bar count scales with `total` (5 for a coarse scale, 7 for the detailed
+// one) rather than a hardcoded 5-bar layout, so the same component works
+// for any step that uses `bars`.
+function SignalBars({ filled, total }: { filled: number; total: number }) {
+  const barWidth = 4;
+  const gap = 2;
+  const minHeight = 7;
+  const maxHeight = 20;
+  const svgWidth = total * barWidth + (total - 1) * gap;
+
   return (
-    <svg width="32" height="24" viewBox="0 0 32 24" fill="none">
-      {bars.map((b, i) => (
-        <rect
-          key={i}
-          x={b.x}
-          y={b.y}
-          width="5"
-          height={b.height}
-          rx="1.5"
-          fill={i < filled ? '#1cb0f6' : '#d0e8f5'}
-        />
-      ))}
+    <svg width={svgWidth} height="24" viewBox={`0 0 ${svgWidth} 24`} fill="none">
+      {Array.from({ length: total }, (_, i) => {
+        const height = minHeight + ((maxHeight - minHeight) * i) / (total - 1);
+        return (
+          <rect
+            key={i}
+            x={i * (barWidth + gap)}
+            y={22 - height}
+            width={barWidth}
+            height={height}
+            rx="1.5"
+            fill={i < filled ? '#1cb0f6' : '#d0e8f5'}
+          />
+        );
+      })}
     </svg>
   );
 }
@@ -125,8 +135,7 @@ export function Onboarding() {
       await submitOnboarding(token!, {
         referralSource: selections[0]!,
         selfRatedLevel: levelOption?.bars ?? 1,
-        motivation: selections[2]!,
-        lessonsPerWeekGoal: selections[3]!,
+        lessonsPerWeekGoal: selections[2]!,
       });
       completeOnboarding();
       navigate('/dashboard');
@@ -163,8 +172,8 @@ export function Onboarding() {
       </div>
 
       <div className="flex items-center gap-3 px-5 pb-7 pt-1">
-        <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full bg-[#f0f0f0] text-5xl">
-          🦉
+        <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full bg-white">
+          <img src="/kiwi-mascot.png" alt="" className="h-20 w-20 animate-breathe object-contain" />
         </div>
         <div className="relative flex-1 rounded-2xl border-2 border-border bg-bg-surface px-4 py-3.5">
           <p className="text-lg font-bold leading-snug text-text-body">{step.question}</p>
@@ -191,7 +200,11 @@ export function Onboarding() {
                     : 'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md bg-[#f0f0f0] text-xl'
                 }
               >
-                {opt.bars !== undefined ? <SignalBars filled={opt.bars} /> : opt.icon}
+                {opt.bars !== undefined ? (
+                  <SignalBars filled={opt.bars} total={step.options.length} />
+                ) : (
+                  opt.icon && <opt.icon size={20} strokeWidth={2.2} />
+                )}
               </span>
               <span
                 className={

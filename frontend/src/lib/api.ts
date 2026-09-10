@@ -57,7 +57,6 @@ export function login(email: string, password: string) {
 export interface OnboardingAnswers {
   referralSource: string;
   selfRatedLevel: number;
-  motivation: string;
   lessonsPerWeekGoal: string;
 }
 

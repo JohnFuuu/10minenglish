@@ -7,7 +7,7 @@ export const onboardingRouter = Router();
 onboardingRouter.post('/api/onboarding', requireAuth, async (req, res) => {
   const { referralSource, selfRatedLevel, motivation, lessonsPerWeekGoal } = req.body ?? {};
 
-  if (!referralSource || !selfRatedLevel || !motivation || !lessonsPerWeekGoal) {
+  if (!referralSource || !selfRatedLevel || !lessonsPerWeekGoal) {
     res.status(400).json({ error: 'Missing required onboarding answers' });
     return;
   }
@@ -20,7 +20,9 @@ onboardingRouter.post('/api/onboarding', requireAuth, async (req, res) => {
 
   account.referralSource = referralSource;
   account.selfRatedLevel = selfRatedLevel;
-  account.motivation = motivation;
+  // No longer asked in Onboarding (dropped in favor of a more detailed
+  // self-rated level) — stays optional so it's a no-op unless still sent.
+  if (motivation !== undefined) account.motivation = motivation;
   account.lessonsPerWeekGoal = lessonsPerWeekGoal;
   account.onboardingCompleted = true;
   await account.save();

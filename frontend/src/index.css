@@ -42,3 +42,17 @@ body {
   font-family: var(--font-sans);
   letter-spacing: 0.03em;
 }
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.animate-breathe {
+  animation: breathe 2.8s ease-in-out infinite;
+}

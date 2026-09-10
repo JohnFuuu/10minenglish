@@ -15,8 +15,7 @@ beforeEach(clearTestDb);
 const validAnswers = {
   referralSource: 'YouTube',
   selfRatedLevel: 3,
-  motivation: 'Work or career',
-  lessonsPerWeekGoal: '3–4 lessons — steady progress',
+  lessonsPerWeekGoal: '3–4 conversations — steady progress',
 };
 
 describe('POST /api/onboarding', () => {
@@ -44,8 +43,23 @@ describe('POST /api/onboarding', () => {
     expect(updated!.onboardingCompleted).toBe(true);
     expect(updated!.referralSource).toBe('YouTube');
     expect(updated!.selfRatedLevel).toBe(3);
-    expect(updated!.motivation).toBe('Work or career');
-    expect(updated!.lessonsPerWeekGoal).toBe('3–4 lessons — steady progress');
+    expect(updated!.motivation).toBeUndefined();
+    expect(updated!.lessonsPerWeekGoal).toBe('3–4 conversations — steady progress');
+  });
+
+  it('accepts a selfRatedLevel up to 7 (the new 7-tier scale)', async () => {
+    const account = await Account.create({ role: 'user', email: 'sarah@example.com' });
+    const token = signAccountToken({ accountId: account.id, role: account.role });
+
+    const app = createApp();
+    const res = await request(app)
+      .post('/api/onboarding')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ ...validAnswers, selfRatedLevel: 7 });
+
+    expect(res.status).toBe(200);
+    const updated = await Account.findById(account.id);
+    expect(updated!.selfRatedLevel).toBe(7);
   });
 
   it('rejects a request missing required answers', async () => {

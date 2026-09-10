@@ -102,7 +102,7 @@ const accountSchema = new Schema<AccountDocument>({
   lockedUntil: { type: Date },
   onboardingCompleted: { type: Boolean, required: true, default: false },
   referralSource: { type: String },
-  selfRatedLevel: { type: Number, min: 1, max: 5 },
+  selfRatedLevel: { type: Number, min: 1, max: 7 },
   motivation: { type: String },
   lessonsPerWeekGoal: { type: String },
   credits: { type: Number, required: true, default: 0 },
