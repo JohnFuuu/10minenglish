@@ -7,6 +7,7 @@ import type {
   StripeClient,
 } from '../src/services/stripeClient.js';
 import type { PoliClient, PoliTransaction, PoliTransactionStatus } from '../src/services/poliClient.js';
+import type { MediaStorage } from '../src/services/mediaStorage.js';
 
 export class FakeEmailSender implements EmailSender {
   sent: EmailMessage[] = [];
@@ -72,11 +73,21 @@ export class FakePoliClient implements PoliClient {
   }
 }
 
+export class FakeMediaStorage implements MediaStorage {
+  uploaded: { key: string; contentType: string }[] = [];
+
+  async upload({ key, contentType }: { key: string; body: Buffer; contentType: string }) {
+    this.uploaded.push({ key, contentType });
+    return { url: `https://fake-r2.test/${key}` };
+  }
+}
+
 export function createTestApp() {
   const emailSender = new FakeEmailSender();
   const googleTokenVerifier = new FakeGoogleTokenVerifier();
   const stripeClient = new FakeStripeClient();
   const poliClient = new FakePoliClient();
-  const app = createApp({ emailSender, googleTokenVerifier, stripeClient, poliClient });
-  return { app, emailSender, googleTokenVerifier, stripeClient, poliClient };
+  const mediaStorage = new FakeMediaStorage();
+  const app = createApp({ emailSender, googleTokenVerifier, stripeClient, poliClient, mediaStorage });
+  return { app, emailSender, googleTokenVerifier, stripeClient, poliClient, mediaStorage };
 }

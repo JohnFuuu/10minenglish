@@ -57,10 +57,10 @@ const DEFAULT_TYPE_CONFIG = {
 
 export function NotificationsScreen() {
   const { token, account } = useAuth();
-  // The bottom nav's other tabs (Buddies, Lessons, Profile) are User-only
-  // screens/endpoints — Buddies and Admins also land here (from their own
-  // dashboard's Notifications link), but must not be offered tabs that 403.
-  const showBottomNav = account?.role === 'user';
+  // BottomNav renders the right tab set for User/Buddy on its own and
+  // renders nothing for Admin (no tab set of its own) — so Admin needs an
+  // explicit way back, same as before it had a bottom nav to rely on.
+  const showBottomNav = account?.role === 'user' || account?.role === 'buddy';
   const { showToast } = useToast();
   const navigate = useNavigate();
 

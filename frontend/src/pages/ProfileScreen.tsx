@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
@@ -10,6 +10,7 @@ import {
   fetchNotifications,
   fetchProfile,
   updateProfile,
+  uploadPicture,
   type UserProfile,
 } from '../lib/api';
 
@@ -50,6 +51,8 @@ export function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isUploadingPicture, setIsUploadingPicture] = useState(false);
+  const pictureInputRef = useRef<HTMLInputElement>(null);
 
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [isSavingPassword, setIsSavingPassword] = useState(false);
@@ -73,6 +76,27 @@ export function ProfileScreen() {
 
   function updateField<K extends keyof ProfileForm>(field: K) {
     return (value: ProfileForm[K]) => setForm((prev) => (prev ? { ...prev, [field]: value } : prev));
+  }
+
+  // Uploads immediately (not gated behind "Save changes") — the endpoint
+  // saves it straight onto the Account, so form/profile are both updated
+  // here to match rather than waiting for the next full-form save.
+  async function handlePictureFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !token) return;
+
+    setIsUploadingPicture(true);
+    try {
+      const { picture } = await uploadPicture(token, file);
+      setForm((prev) => (prev ? { ...prev, picture } : prev));
+      setProfile((prev) => (prev ? { ...prev, picture } : prev));
+      showToast('Photo uploaded.', 'success');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not upload that photo.', 'error');
+    } finally {
+      setIsUploadingPicture(false);
+    }
   }
 
   function toggleGoal(goal: string) {
@@ -160,25 +184,44 @@ export function ProfileScreen() {
 
       {!isLoading && profile && form && (
         <>
-          <Card className="mb-6 flex items-center gap-4">
-            {form.picture ? (
-              <img
-                src={form.picture}
-                alt={form.name}
-                className="h-14 w-14 shrink-0 rounded-full border-2 border-accent-lime object-cover"
-              />
-            ) : (
-              <Avatar initials={initialsOf(form.name)} size={56} />
-            )}
-            <div className="min-w-0">
-              <p className="truncate text-lg font-bold text-text-body">{profile.name}</p>
-              <p className="truncate text-sm text-text-secondary">{profile.email}</p>
-              {profile.pendingEmail && (
-                <p className="mt-1 text-xs font-bold text-brand-secondary">
-                  Pending: {profile.pendingEmail} — confirm it from your inbox to switch.
-                </p>
+          <Card className="mb-6">
+            <div className="flex items-center gap-4">
+              {form.picture ? (
+                <img
+                  src={form.picture}
+                  alt={form.name}
+                  className="h-14 w-14 shrink-0 rounded-full border-2 border-accent-lime object-cover"
+                />
+              ) : (
+                <Avatar initials={initialsOf(form.name)} size={56} />
               )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-lg font-bold text-text-body">{profile.name}</p>
+                <p className="truncate text-sm text-text-secondary">{profile.email}</p>
+                {profile.pendingEmail && (
+                  <p className="mt-1 text-xs font-bold text-brand-secondary">
+                    Pending: {profile.pendingEmail} — confirm it from your inbox to switch.
+                  </p>
+                )}
+              </div>
             </div>
+            <input
+              ref={pictureInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={handlePictureFile}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="mt-3 w-full"
+              disabled={isUploadingPicture}
+              onClick={() => pictureInputRef.current?.click()}
+            >
+              {isUploadingPicture ? 'Uploading…' : 'Upload photo'}
+            </Button>
           </Card>
 
           <form onSubmit={handleSave}>

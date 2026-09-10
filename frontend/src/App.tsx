@@ -14,9 +14,11 @@ import { CreditsReturn } from './pages/CreditsReturn';
 import { BookLesson } from './pages/BookLesson';
 import { LessonsScreen } from './pages/LessonsScreen';
 import { NotificationsScreen } from './pages/NotificationsScreen';
-import { ProfileScreen } from './pages/ProfileScreen';
+import { ProfileRoute } from './pages/ProfileRoute';
 import { BuddiesScreen } from './pages/BuddiesScreen';
 import { BuddyScreen } from './pages/BuddyScreen';
+import { BuddyLessonsScreen } from './pages/BuddyLessonsScreen';
+import { BuddyAvailabilityScreen } from './pages/BuddyAvailabilityScreen';
 import { ComponentPlayground } from './pages/ComponentPlayground';
 
 function App() {
@@ -38,9 +40,11 @@ function App() {
             <Route path="/book" element={<RequireAuth><BookLesson /></RequireAuth>} />
             <Route path="/lessons" element={<RequireAuth><LessonsScreen /></RequireAuth>} />
             <Route path="/notifications" element={<RequireAuth><NotificationsScreen /></RequireAuth>} />
-            <Route path="/profile" element={<RequireAuth><ProfileScreen /></RequireAuth>} />
+            <Route path="/profile" element={<RequireAuth><ProfileRoute /></RequireAuth>} />
             <Route path="/buddies" element={<RequireAuth><BuddiesScreen /></RequireAuth>} />
             <Route path="/buddies/:id" element={<RequireAuth><BuddyScreen /></RequireAuth>} />
+            <Route path="/teaching" element={<RequireAuth><BuddyLessonsScreen /></RequireAuth>} />
+            <Route path="/availability" element={<RequireAuth><BuddyAvailabilityScreen /></RequireAuth>} />
             <Route path="/playground" element={<ComponentPlayground />} />
             {/* Unmatched paths fall through to /dashboard, which already does the
                 right thing either way: RequireAuth sends a signed-out visitor to

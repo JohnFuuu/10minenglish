@@ -11,16 +11,19 @@ import { createPaymentsRouter } from './routes/payments.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createLessonsRouter } from './routes/lessons.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { createMediaRouter } from './routes/media.js';
 import { consoleEmailSender, type EmailSender } from './services/email.js';
 import { realGoogleTokenVerifier, type GoogleTokenVerifier } from './services/googleAuth.js';
 import { realStripeClient, type StripeClient } from './services/stripeClient.js';
 import { realPoliClient, type PoliClient } from './services/poliClient.js';
+import { r2MediaStorage, type MediaStorage } from './services/mediaStorage.js';
 
 export interface AppDependencies {
   emailSender?: EmailSender;
   googleTokenVerifier?: GoogleTokenVerifier;
   stripeClient?: StripeClient;
   poliClient?: PoliClient;
+  mediaStorage?: MediaStorage;
 }
 
 export function createApp(deps: AppDependencies = {}) {
@@ -28,6 +31,7 @@ export function createApp(deps: AppDependencies = {}) {
   const googleTokenVerifier = deps.googleTokenVerifier ?? realGoogleTokenVerifier;
   const stripeClient = deps.stripeClient ?? realStripeClient;
   const poliClient = deps.poliClient ?? realPoliClient;
+  const mediaStorage = deps.mediaStorage ?? r2MediaStorage;
 
   const app = express();
   app.use(cors({ origin: process.env.FRONTEND_URL ?? 'http://localhost:5173' }));
@@ -42,6 +46,7 @@ export function createApp(deps: AppDependencies = {}) {
   app.use(createPaymentsRouter({ stripeClient, poliClient }));
   app.use(createAuthRouter({ emailSender, googleTokenVerifier }));
   app.use(createLessonsRouter({ emailSender }));
+  app.use(createMediaRouter({ mediaStorage }));
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err);

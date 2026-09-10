@@ -12,10 +12,13 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  // FormData bodies (file uploads) need the browser to set its own
+  // multipart Content-Type with boundary — setting one ourselves breaks it.
+  const isFormData = options.body instanceof FormData;
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...options.headers,
     },
   });
@@ -395,6 +398,18 @@ export interface UserProfileUpdate {
   dateOfBirth?: string;
   learningGoals?: string[];
   learningGoalOther?: string;
+}
+
+// Shared across roles — POST /api/me/picture uploads to Cloudflare R2 and
+// saves the returned URL on the caller's own Account, whether User or Buddy.
+export function uploadPicture(token: string, file: File) {
+  const formData = new FormData();
+  formData.append('picture', file);
+  return request<{ picture: string }>('/api/me/picture', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
 }
 
 export function fetchProfile(token: string) {

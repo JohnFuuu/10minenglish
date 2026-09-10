@@ -14,6 +14,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1129.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
@@ -22,6 +23,7 @@
     "jsonwebtoken": "^9.0.3",
     "luxon": "^3.7.2",
     "mongoose": "^9.9.1",
+    "multer": "^2.3.0",
     "stripe": "^22.5.0"
   },
   "devDependencies": {
@@ -30,6 +32,7 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/luxon": "^3.7.4",
+    "@types/multer": "^2.2.0",
     "@types/node": "^26.1.2",
     "@types/supertest": "^7.2.1",
     "mongodb-memory-server": "^11.2.0",
