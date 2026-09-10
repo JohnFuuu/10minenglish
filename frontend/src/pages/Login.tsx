@@ -74,7 +74,12 @@ export function Login() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <BackArrow onPress={() => navigate('/signup')} />
+      <div className="relative flex h-[45vh] min-h-[280px] items-center justify-center bg-bg-surface px-10 py-6">
+        <img src="/logo.png" alt="10 Minute English" className="h-full w-full object-contain" />
+        <div className="absolute right-0 top-0">
+          <BackArrow onPress={() => navigate('/signup')} />
+        </div>
+      </div>
 
       <div className="flex flex-1 flex-col justify-center gap-5 px-5 pb-8">
         <h1 className="text-center text-2xl font-bold text-text-body">Log in</h1>
