@@ -7,6 +7,7 @@ import {
   REMINDER_SWEEP_INTERVAL_MS,
   sendDueLessonReminders,
 } from './services/lessonReminders.js';
+import { COMPLETION_SWEEP_INTERVAL_MS, completeDueLessons } from './services/lessonCompletion.js';
 import { mockPoliClient, mockStripeClient } from './services/mockPaymentClients.js';
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
@@ -43,6 +44,16 @@ async function main() {
     });
   }, REMINDER_SWEEP_INTERVAL_MS);
   console.log(`Lesson reminders sweeping every ${REMINDER_SWEEP_INTERVAL_MS / 1000}s, ${REMINDER_LEAD_MINUTES}min ahead of each lesson.`);
+
+  // Same rationale as the reminder sweep above: there's no external signal
+  // for "the Zoom call ended", so completion is driven by this timer instead
+  // of a request.
+  setInterval(() => {
+    completeDueLessons().catch((err) => {
+      console.error('Lesson completion sweep failed', err);
+    });
+  }, COMPLETION_SWEEP_INTERVAL_MS);
+  console.log(`Lesson completion sweeping every ${COMPLETION_SWEEP_INTERVAL_MS / 1000}s.`);
 }
 
 main().catch((err) => {
