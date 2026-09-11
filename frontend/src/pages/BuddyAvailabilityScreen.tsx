@@ -4,11 +4,11 @@ import { BottomNav, Button, NAV_CLEARANCE_CLASS, PageHeader } from '../component
 import { useAuth } from '../auth/AuthContext';
 import {
   fetchBuddyProfile,
-  fetchNotifications,
   updateBuddyAvailability,
   type AvailabilityBlock,
   type BuddyProfile,
 } from '../lib/api';
+import { useUnreadCount } from '../lib/useUnreadCount';
 
 const DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const HOURS = Array.from({ length: 10 }, (_, i) => 8 + i); // 8am - 6pm, 1h slots
@@ -35,7 +35,7 @@ export function BuddyAvailabilityScreen() {
   // selectedHours underneath, this just controls what's rendered, so a
   // 7-day-by-10-hour grid never has to fit sideways on a phone screen.
   const [activeDay, setActiveDay] = useState(() => new Date().getDay());
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useUnreadCount(token);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -46,11 +46,6 @@ export function BuddyAvailabilityScreen() {
       setProfile(p);
       setSelectedHours(new Set(p.availabilityBlocks.map((b) => blockKey(b.dayOfWeek, hourFromBlock(b)))));
     });
-  }, [token]);
-
-  useEffect(() => {
-    if (!token) return;
-    fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
   }, [token]);
 
   function toggleHour(dayOfWeek: number, hour: number) {

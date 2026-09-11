@@ -4,7 +4,6 @@ import { Bell, Calendar, CalendarDays, CalendarX, ChevronDown, ChevronUp, Gem, R
 import { useAuth } from '../auth/AuthContext';
 import { Avatar, BottomNav, Button, Card, Modal, NAV_CLEARANCE_CLASS } from '../components';
 import {
-  fetchNotifications,
   fetchPaymentHistory,
   fetchUserLessons,
   type LessonWithBuddy,
@@ -12,6 +11,7 @@ import {
 } from '../lib/api';
 import { formatDateTime } from '../lib/formatDateTime';
 import { initialsOf } from '../lib/initials';
+import { useUnreadCount } from '../lib/useUnreadCount';
 
 const PAYMENT_STATUS_STYLE: Record<PaymentHistoryEntry['status'], string> = {
   succeeded: 'bg-success-bg text-success',
@@ -35,7 +35,7 @@ function greeting(): string {
 export function UserDashboard() {
   const { account, token } = useAuth();
   const navigate = useNavigate();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useUnreadCount(token);
   const [upcoming, setUpcoming] = useState<LessonWithBuddy[] | null>(null);
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryEntry[] | null>(null);
@@ -43,7 +43,6 @@ export function UserDashboard() {
 
   useEffect(() => {
     if (!token) return;
-    fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
     fetchUserLessons(token).then((res) => setUpcoming(res.upcoming));
   }, [token]);
 

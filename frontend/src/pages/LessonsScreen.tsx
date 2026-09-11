@@ -8,7 +8,6 @@ import {
   ApiError,
   cancelLesson,
   fetchBuddySlots,
-  fetchNotifications,
   fetchUserLessons,
   rescheduleLesson,
   type LessonWithBuddy,
@@ -16,7 +15,8 @@ import {
 import type { BookLessonPrefill } from './BookLesson';
 import { formatDateTime } from '../lib/formatDateTime';
 import { initialsOf } from '../lib/initials';
-import { readSessionCache, writeSessionCache } from '../lib/sessionCache';
+import { useCachedFetch } from '../lib/useCachedFetch';
+import { useUnreadCount } from '../lib/useUnreadCount';
 
 const LESSONS_CACHE_KEY = '10me.cache.lessons';
 
@@ -81,26 +81,21 @@ const PREVIOUS_STATUS_STYLE: Record<string, string> = {
 
 type LessonsCache = { upcoming: LessonWithBuddy[]; previous: LessonWithBuddy[] };
 
-// Module-level cache (not React state), seeded from sessionStorage, so
-// re-entering this screen — via BottomNav or a hard page reload — shows the
-// last known lessons immediately instead of flashing "Loading your
-// lessons…". Refetched silently in the background.
-let lessonsCache: LessonsCache | null = readSessionCache<LessonsCache>(LESSONS_CACHE_KEY);
-function setLessonsCache(next: LessonsCache) {
-  lessonsCache = next;
-  writeSessionCache(LESSONS_CACHE_KEY, next);
-}
-
 export function LessonsScreen() {
   const { token, account, setCredits } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [tab, setTab] = useState<'upcoming' | 'previous'>('upcoming');
-  const [upcoming, setUpcoming] = useState<LessonWithBuddy[]>(lessonsCache?.upcoming ?? []);
-  const [previous, setPrevious] = useState<LessonWithBuddy[]>(lessonsCache?.previous ?? []);
-  const [isLoading, setIsLoading] = useState(lessonsCache === null);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [lessons, setLessons, isLoading] = useCachedFetch<LessonsCache>(
+    LESSONS_CACHE_KEY,
+    () => fetchUserLessons(token!),
+    [token],
+    { enabled: Boolean(token), onError: () => showToast('Could not load your lessons.', 'error') },
+  );
+  const upcoming = lessons?.upcoming ?? [];
+  const previous = lessons?.previous ?? [];
+  const unreadCount = useUnreadCount(token);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
@@ -110,24 +105,6 @@ export function LessonsScreen() {
   // null until the first tick fires — before that we fall back to the
   // server-computed `joinable` snapshot from the initial fetch.
   const [tickNow, setTickNow] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!token) return;
-    fetchUserLessons(token)
-      .then((res) => {
-        setLessonsCache({ upcoming: res.upcoming, previous: res.previous });
-        setUpcoming(res.upcoming);
-        setPrevious(res.previous);
-      })
-      .catch(() => showToast('Could not load your lessons.', 'error'))
-      .finally(() => setIsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
-  useEffect(() => {
-    if (!token) return;
-    fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
-  }, [token]);
 
   useEffect(() => {
     const id = setInterval(() => setTickNow(Date.now()), JOINABLE_RECHECK_INTERVAL_MS);
@@ -174,12 +151,12 @@ export function LessonsScreen() {
     setSavingRescheduleId(lesson.id);
     try {
       const res = await rescheduleLesson(token!, lesson.id, startTime);
-      setUpcoming((current) => {
-        const next = [
-          ...current.map((l) => (l.id === lesson.id ? { ...l, startTime: res.lesson.startTime } : l)),
+      setLessons((current) => {
+        if (!current) return current;
+        const nextUpcoming = [
+          ...current.upcoming.map((l) => (l.id === lesson.id ? { ...l, startTime: res.lesson.startTime } : l)),
         ].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-        if (lessonsCache) setLessonsCache({ ...lessonsCache, upcoming: next });
-        return next;
+        return { ...current, upcoming: nextUpcoming };
       });
       setReschedulingId(null);
       showToast('Lesson moved. Your buddy has been notified.', 'success');
@@ -194,15 +171,12 @@ export function LessonsScreen() {
     setCancellingId(lesson.id);
     try {
       const res = await cancelLesson(token!, lesson.id);
-      setUpcoming((current) => {
-        const next = current.filter((l) => l.id !== lesson.id);
-        if (lessonsCache) setLessonsCache({ ...lessonsCache, upcoming: next });
-        return next;
-      });
-      setPrevious((current) => {
-        const next = [{ ...lesson, status: res.lesson.status }, ...current];
-        if (lessonsCache) setLessonsCache({ ...lessonsCache, previous: next });
-        return next;
+      setLessons((current) => {
+        if (!current) return current;
+        return {
+          upcoming: current.upcoming.filter((l) => l.id !== lesson.id),
+          previous: [{ ...lesson, status: res.lesson.status }, ...current.previous],
+        };
       });
       setCredits(res.creditsRemaining);
       setConfirmingId(null);

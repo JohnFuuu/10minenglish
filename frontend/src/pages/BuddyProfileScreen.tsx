@@ -8,11 +8,11 @@ import { initialsOf } from '../lib/initials';
 import {
   ApiError,
   fetchBuddyProfile,
-  fetchNotifications,
   updateBuddyProfile,
   uploadPicture,
   type BuddyProfile,
 } from '../lib/api';
+import { useUnreadCount } from '../lib/useUnreadCount';
 
 interface BuddyProfileForm {
   name: string;
@@ -39,7 +39,7 @@ export function BuddyProfileScreen() {
   const { showToast } = useToast();
   const [profile, setProfile] = useState<BuddyProfile | null>(null);
   const [form, setForm] = useState<BuddyProfileForm | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useUnreadCount(token);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,11 +52,6 @@ export function BuddyProfileScreen() {
       setProfile(p);
       setForm(toForm(p));
     });
-  }, [token]);
-
-  useEffect(() => {
-    if (!token) return;
-    fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
   }, [token]);
 
   function updateField<K extends keyof BuddyProfileForm>(field: K) {

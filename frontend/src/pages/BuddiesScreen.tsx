@@ -8,12 +8,12 @@ import { useToast } from '../toast/ToastContext';
 import {
   fetchBookableBuddies,
   fetchFavouriteBuddies,
-  fetchNotifications,
   fetchRecentBuddies,
   setBuddyFavourite,
   type DirectoryBuddy,
 } from '../lib/api';
 import { readSessionCache, writeSessionCache } from '../lib/sessionCache';
+import { useUnreadCount } from '../lib/useUnreadCount';
 import type { BookLessonPrefill } from './BookLesson';
 
 type Tab = 'all' | 'recent' | 'favourite';
@@ -52,7 +52,7 @@ export function BuddiesScreen() {
   const [search, setSearch] = useState('');
   const [buddies, setBuddies] = useState<DirectoryBuddy[]>(buddiesCache.all ?? []);
   const [isLoading, setIsLoading] = useState(buddiesCache.all === undefined);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useUnreadCount(token);
   const activeTabRef = useRef<Tab>(tab);
 
   const load = useCallback(
@@ -92,11 +92,6 @@ export function BuddiesScreen() {
     activeTabRef.current = tab;
     load(tab);
   }, [load, tab]);
-
-  useEffect(() => {
-    if (!token) return;
-    fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
-  }, [token]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

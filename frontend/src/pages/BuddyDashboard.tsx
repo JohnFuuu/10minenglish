@@ -4,8 +4,9 @@ import { AlertTriangle, Bell, CalendarDays, Clock, User } from 'lucide-react';
 import { Avatar, BottomNav, Card, NAV_CLEARANCE_CLASS } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { initialsOf } from '../lib/initials';
-import { fetchBuddyProfile, fetchNotifications, fetchTeachingLessons, type BuddyProfile, type LessonWithUser } from '../lib/api';
+import { fetchBuddyProfile, fetchTeachingLessons, type BuddyProfile, type LessonWithUser } from '../lib/api';
 import { formatDateTime } from '../lib/formatDateTime';
+import { useUnreadCount } from '../lib/useUnreadCount';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -24,17 +25,12 @@ export function BuddyDashboard() {
   const { token } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<BuddyProfile | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useUnreadCount(token);
   const [nextLesson, setNextLesson] = useState<LessonWithUser | null>(null);
 
   useEffect(() => {
     if (!token) return;
     fetchBuddyProfile(token).then(setProfile);
-  }, [token]);
-
-  useEffect(() => {
-    if (!token) return;
-    fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
   }, [token]);
 
   useEffect(() => {

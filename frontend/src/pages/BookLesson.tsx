@@ -15,6 +15,7 @@ import {
   type Lesson,
   type RecurringFrequency,
 } from '../lib/api';
+import { formatDateTime } from '../lib/formatDateTime';
 
 type Step = 'entry' | 'buddy-pick' | 'buddy-day' | 'buddy-time' | 'time-pick' | 'time-buddy' | 'options' | 'confirm' | 'success';
 type FrequencyType = 'daily' | 'weekly' | 'everyXDays';
@@ -57,10 +58,6 @@ function nextDays(count: number): Date[] {
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
-
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 function buddyLabel(buddy: BookableBuddy | null): string {

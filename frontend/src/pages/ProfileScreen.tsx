@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { AutocompleteInput, Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
@@ -8,13 +8,14 @@ import { initialsOf } from '../lib/initials';
 import {
   ApiError,
   changePassword,
-  fetchNotifications,
   fetchProfile,
   updateProfile,
   uploadPicture,
   type UserProfile,
 } from '../lib/api';
-import { readSessionCache, writeSessionCache } from '../lib/sessionCache';
+import { readSessionCache } from '../lib/sessionCache';
+import { useCachedFetch } from '../lib/useCachedFetch';
+import { useUnreadCount } from '../lib/useUnreadCount';
 
 const PROFILE_CACHE_KEY = '10me.cache.profile';
 
@@ -41,25 +42,26 @@ function toForm(profile: UserProfile): ProfileForm {
   };
 }
 
-// Module-level cache (not React state), seeded from sessionStorage, so
-// re-entering this screen — via BottomNav or a hard page reload — shows the
-// last known profile immediately instead of flashing "Loading your
-// profile…". Refetched silently in the background.
-let profileCache: UserProfile | null = readSessionCache<UserProfile>(PROFILE_CACHE_KEY);
-function setProfileCache(next: UserProfile) {
-  profileCache = next;
-  writeSessionCache(PROFILE_CACHE_KEY, next);
-}
-
 export function ProfileScreen() {
   const { token, refreshAccount, logout } = useAuth();
   const { showToast } = useToast();
 
-  const [profile, setProfile] = useState<UserProfile | null>(profileCache);
-  const [form, setForm] = useState<ProfileForm | null>(profileCache ? toForm(profileCache) : null);
-  const [isLoading, setIsLoading] = useState(profileCache === null);
+  const [form, setForm] = useState<ProfileForm | null>(() => {
+    const cached = readSessionCache<UserProfile>(PROFILE_CACHE_KEY);
+    return cached ? toForm(cached) : null;
+  });
+  const [profile, setProfile, isLoading] = useCachedFetch<UserProfile>(
+    PROFILE_CACHE_KEY,
+    () => fetchProfile(token!),
+    [token],
+    {
+      enabled: Boolean(token),
+      onSuccess: (p) => setForm(toForm(p)),
+      onError: () => showToast('Could not load your profile.', 'error'),
+    },
+  );
   const [isSaving, setIsSaving] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useUnreadCount(token);
   const [isUploadingPicture, setIsUploadingPicture] = useState(false);
   const pictureInputRef = useRef<HTMLInputElement>(null);
 
@@ -77,24 +79,6 @@ export function ProfileScreen() {
     passwordForm.confirmPassword.length > 0 &&
     passwordForm.newPassword !== passwordForm.confirmPassword;
 
-  useEffect(() => {
-    if (!token) return;
-    fetchProfile(token)
-      .then((p) => {
-        setProfileCache(p);
-        setProfile(p);
-        setForm(toForm(p));
-      })
-      .catch(() => showToast('Could not load your profile.', 'error'))
-      .finally(() => setIsLoading(false));
-    // showToast is stable (useCallback in ToastProvider); profile is fetched once per token.
-  }, [token, showToast]);
-
-  useEffect(() => {
-    if (!token) return;
-    fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
-  }, [token]);
-
   function updateField<K extends keyof ProfileForm>(field: K) {
     return (value: ProfileForm[K]) => setForm((prev) => (prev ? { ...prev, [field]: value } : prev));
   }
@@ -111,11 +95,7 @@ export function ProfileScreen() {
     try {
       const { picture } = await uploadPicture(token, file);
       setForm((prev) => (prev ? { ...prev, picture } : prev));
-      setProfile((prev) => {
-        const next = prev ? { ...prev, picture } : prev;
-        if (next) setProfileCache(next);
-        return next;
-      });
+      setProfile((prev) => (prev ? { ...prev, picture } : prev));
       showToast('Photo uploaded.', 'success');
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Could not upload that photo.', 'error');
@@ -141,7 +121,6 @@ export function ProfileScreen() {
         location: form.location,
         nationality: form.nationality,
       });
-      setProfileCache(updated);
       setProfile(updated);
       setForm(toForm(updated));
       // Location feeds isNZLocated on the session, which gates the POLi option.

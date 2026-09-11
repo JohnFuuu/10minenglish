@@ -1,18 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { CalendarX, Video } from 'lucide-react';
 import { Avatar, BottomNav, Button, Card, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
-import {
-  ApiError,
-  buddyCancelLesson,
-  fetchNotifications,
-  fetchTeachingLessons,
-  type LessonWithUser,
-} from '../lib/api';
+import { ApiError, buddyCancelLesson, fetchTeachingLessons, type LessonWithUser } from '../lib/api';
 import { formatDateTime } from '../lib/formatDateTime';
 import { initialsOf } from '../lib/initials';
-import { readSessionCache, writeSessionCache } from '../lib/sessionCache';
+import { useCachedFetch } from '../lib/useCachedFetch';
+import { useUnreadCount } from '../lib/useUnreadCount';
 
 const TEACHING_LESSONS_CACHE_KEY = '10me.cache.teachingLessons';
 
@@ -27,61 +22,33 @@ const PREVIOUS_STATUS_STYLE: Record<string, string> = {
 
 type TeachingLessonsCache = { upcoming: LessonWithUser[]; previous: LessonWithUser[] };
 
-// Module-level cache (not React state), seeded from sessionStorage, so
-// re-entering this screen — via BottomNav or a hard page reload — shows the
-// last known lessons immediately instead of flashing "Loading your
-// lessons…". Refetched silently in the background.
-let teachingLessonsCache: TeachingLessonsCache | null = readSessionCache<TeachingLessonsCache>(
-  TEACHING_LESSONS_CACHE_KEY,
-);
-function setTeachingLessonsCache(next: TeachingLessonsCache) {
-  teachingLessonsCache = next;
-  writeSessionCache(TEACHING_LESSONS_CACHE_KEY, next);
-}
-
 export function BuddyLessonsScreen() {
   const { token } = useAuth();
   const { showToast } = useToast();
 
   const [tab, setTab] = useState<'upcoming' | 'previous'>('upcoming');
-  const [upcoming, setUpcoming] = useState<LessonWithUser[]>(teachingLessonsCache?.upcoming ?? []);
-  const [previous, setPrevious] = useState<LessonWithUser[]>(teachingLessonsCache?.previous ?? []);
-  const [isLoading, setIsLoading] = useState(teachingLessonsCache === null);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [lessons, setLessons, isLoading] = useCachedFetch<TeachingLessonsCache>(
+    TEACHING_LESSONS_CACHE_KEY,
+    () => fetchTeachingLessons(token!),
+    [token],
+    { enabled: Boolean(token), onError: () => showToast('Could not load your lessons.', 'error') },
+  );
+  const upcoming = lessons?.upcoming ?? [];
+  const previous = lessons?.previous ?? [];
+  const unreadCount = useUnreadCount(token);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!token) return;
-    fetchTeachingLessons(token)
-      .then((res) => {
-        setTeachingLessonsCache({ upcoming: res.upcoming, previous: res.previous });
-        setUpcoming(res.upcoming);
-        setPrevious(res.previous);
-      })
-      .catch(() => showToast('Could not load your lessons.', 'error'))
-      .finally(() => setIsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
-  useEffect(() => {
-    if (!token) return;
-    fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
-  }, [token]);
 
   async function handleCancel(lesson: LessonWithUser) {
     setCancellingId(lesson.id);
     try {
       await buddyCancelLesson(token!, lesson.id);
-      setUpcoming((current) => {
-        const next = current.filter((l) => l.id !== lesson.id);
-        if (teachingLessonsCache) setTeachingLessonsCache({ ...teachingLessonsCache, upcoming: next });
-        return next;
-      });
-      setPrevious((current) => {
-        const next = [{ ...lesson, status: 'cancelled' as const }, ...current];
-        if (teachingLessonsCache) setTeachingLessonsCache({ ...teachingLessonsCache, previous: next });
-        return next;
+      setLessons((current) => {
+        if (!current) return current;
+        return {
+          upcoming: current.upcoming.filter((l) => l.id !== lesson.id),
+          previous: [{ ...lesson, status: 'cancelled' as const }, ...current.previous],
+        };
       });
       setConfirmingId(null);
       showToast("Lesson cancelled — the User's credit was refunded.", 'success');

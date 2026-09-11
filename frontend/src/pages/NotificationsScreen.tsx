@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BellOff } from 'lucide-react';
 import { BottomNav, Button, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
@@ -6,7 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import { ApiError, fetchNotifications, markNotificationRead, type AppNotification } from '../lib/api';
 import { formatDateTime } from '../lib/formatDateTime';
-import { readSessionCache, writeSessionCache } from '../lib/sessionCache';
+import { useCachedFetch } from '../lib/useCachedFetch';
 
 const NOTIFICATIONS_CACHE_KEY = '10me.cache.notifications';
 
@@ -59,18 +59,6 @@ const DEFAULT_TYPE_CONFIG = {
   ),
 };
 
-// Module-level cache (not React state), seeded from sessionStorage, so
-// re-entering this screen — via BottomNav or a hard page reload — shows the
-// last known list immediately instead of flashing back to a loading state.
-// Refetched silently in the background.
-let notificationsCache: AppNotification[] | null = readSessionCache<AppNotification[]>(
-  NOTIFICATIONS_CACHE_KEY,
-);
-function setNotificationsCache(next: AppNotification[]) {
-  notificationsCache = next;
-  writeSessionCache(NOTIFICATIONS_CACHE_KEY, next);
-}
-
 export function NotificationsScreen() {
   const { token, account } = useAuth();
   // BottomNav renders the right tab set for User/Buddy on its own and
@@ -80,21 +68,14 @@ export function NotificationsScreen() {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  const [notifications, setNotifications] = useState<AppNotification[]>(notificationsCache ?? []);
-  const [isLoading, setIsLoading] = useState(notificationsCache === null);
+  const [notificationsOrNull, setNotifications, isLoading] = useCachedFetch<AppNotification[]>(
+    NOTIFICATIONS_CACHE_KEY,
+    () => fetchNotifications(token!).then((res) => res.notifications),
+    [token],
+    { enabled: Boolean(token), onError: () => showToast('Could not load your notifications.', 'error') },
+  );
+  const notifications = notificationsOrNull ?? [];
   const [dismissingId, setDismissingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!token) return;
-    fetchNotifications(token)
-      .then((res) => {
-        setNotificationsCache(res.notifications);
-        setNotifications(res.notifications);
-      })
-      .catch(() => showToast('Could not load your notifications.', 'error'))
-      .finally(() => setIsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
 
   if (!token) return null;
 
@@ -105,11 +86,9 @@ export function NotificationsScreen() {
     setDismissingId(notification.id);
     try {
       await markNotificationRead(token!, notification.id);
-      setNotifications((current) => {
-        const next = current.map((n) => (n.id === notification.id ? { ...n, read: true } : n));
-        setNotificationsCache(next);
-        return next;
-      });
+      setNotifications((current) =>
+        (current ?? []).map((n) => (n.id === notification.id ? { ...n, read: true } : n)),
+      );
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Could not update this notification.', 'error');
     } finally {
