@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarX, Video } from 'lucide-react';
-import { Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS } from '../components';
+import { Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import {
@@ -219,9 +219,7 @@ export function LessonsScreen() {
 
   return (
     <main className={`mx-auto max-w-3xl ${NAV_CLEARANCE_CLASS}`}>
-      <div className="px-5 pb-2 pt-8">
-        <h1 className="font-display text-2xl font-black text-text-heading">My Lessons</h1>
-      </div>
+      <PageHeader title="My Lessons" />
 
       <div className="mb-5 flex gap-3 px-5 pt-4">
         {(['upcoming', 'previous'] as const).map((t) => (

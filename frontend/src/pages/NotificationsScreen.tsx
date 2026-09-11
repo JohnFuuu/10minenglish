@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BellOff } from 'lucide-react';
-import { BottomNav, Button, NAV_CLEARANCE_CLASS } from '../components';
+import { BottomNav, Button, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import { ApiError, fetchNotifications, markNotificationRead, type AppNotification } from '../lib/api';
@@ -124,16 +124,16 @@ export function NotificationsScreen() {
 
   return (
     <main className={`mx-auto max-w-3xl ${showBottomNav ? NAV_CLEARANCE_CLASS : ''}`}>
-      <div className="flex items-center justify-between px-5 pb-2 pt-8">
-        <h1 className="font-display text-2xl font-black text-text-heading">
-          {unreadCount > 0 ? `Alerts (${unreadCount})` : 'Alerts'}
-        </h1>
-        {!showBottomNav && (
-          <Button variant="secondary" size="sm" onClick={() => navigate('/dashboard')}>
-            Back to Dashboard
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={unreadCount > 0 ? `Alerts (${unreadCount})` : 'Alerts'}
+        right={
+          !showBottomNav && (
+            <Button variant="secondary" size="sm" onClick={() => navigate('/dashboard')}>
+              Back to Dashboard
+            </Button>
+          )
+        }
+      />
 
       <div className="mt-4 flex flex-col gap-2 px-5">
         {isLoading && <p className="text-text-secondary">Loading your notifications…</p>}

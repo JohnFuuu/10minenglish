@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { Avatar, BottomNav, Button, Input, NAV_CLEARANCE_CLASS } from '../components';
+import { Avatar, BottomNav, Button, Input, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import { initialsOf } from '../lib/initials';
@@ -105,12 +105,15 @@ export function BuddyProfileScreen() {
 
   return (
     <main className={`mx-auto max-w-3xl px-5 ${NAV_CLEARANCE_CLASS}`}>
-      <div className="flex items-center justify-between pb-2 pt-8">
-        <h1 className="font-display text-2xl font-black text-text-heading">Profile</h1>
-        <Button variant="secondary" size="sm" onClick={logout}>
-          Log out
-        </Button>
-      </div>
+      <PageHeader
+        title="Profile"
+        className="pb-2 pt-8"
+        right={
+          <Button variant="secondary" size="sm" onClick={logout}>
+            Log out
+          </Button>
+        }
+      />
 
       <div className="my-4 rounded-md border-2 border-b-[5px] border-brand-primary-border bg-brand-primary p-4">
         <div className="flex items-center gap-3">

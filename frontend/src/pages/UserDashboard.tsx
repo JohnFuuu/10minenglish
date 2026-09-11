@@ -66,8 +66,8 @@ export function UserDashboard() {
     <main className={`mx-auto max-w-3xl ${NAV_CLEARANCE_CLASS}`}>
       <div className="flex items-center justify-between border-b-2 border-border px-5 pb-4 pt-8">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="" className="h-8 w-8" />
-          <span className="font-display text-lg font-black text-brand-primary">10ME</span>
+          <img src="/logo.png" alt="" className="h-11 w-11" />
+          <span className="font-display text-xl font-black text-brand-primary">10ME</span>
         </div>
         <div className="flex items-center gap-3">
           <button

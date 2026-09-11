@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
-import { BottomNav, Button, NAV_CLEARANCE_CLASS } from '../components';
+import { BottomNav, Button, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import {
   fetchBuddyProfile,
@@ -94,9 +94,7 @@ export function BuddyAvailabilityScreen() {
 
   return (
     <main className={`mx-auto max-w-3xl px-5 ${NAV_CLEARANCE_CLASS}`}>
-      <div className="pb-2 pt-8">
-        <h1 className="font-display text-2xl font-black text-text-heading">Availability</h1>
-      </div>
+      <PageHeader title="Availability" className="pb-2 pt-8" />
 
       <div className="mb-2 mt-4 flex items-center justify-between">
         <h2 className="text-xs font-bold uppercase tracking-wide text-text-secondary">Weekly schedule</h2>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CalendarX, Video } from 'lucide-react';
-import { Avatar, BottomNav, Button, Card, NAV_CLEARANCE_CLASS } from '../components';
+import { Avatar, BottomNav, Button, Card, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import {
@@ -94,9 +94,7 @@ export function BuddyLessonsScreen() {
 
   return (
     <main className={`mx-auto max-w-3xl ${NAV_CLEARANCE_CLASS}`}>
-      <div className="px-5 pb-2 pt-8">
-        <h1 className="font-display text-2xl font-black text-text-heading">Teaching</h1>
-      </div>
+      <PageHeader title="Teaching" />
 
       <div className="mb-5 flex gap-3 px-5 pt-4">
         {(['upcoming', 'previous'] as const).map((t) => (

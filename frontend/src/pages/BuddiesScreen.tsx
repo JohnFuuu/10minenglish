@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, UsersRound } from 'lucide-react';
-import { Avatar, BottomNav, Button, NAV_CLEARANCE_CLASS } from '../components';
+import { Avatar, BottomNav, Button, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { initialsOf } from '../lib/initials';
 import { useToast } from '../toast/ToastContext';
@@ -148,9 +148,7 @@ export function BuddiesScreen() {
 
   return (
     <main className={`mx-auto max-w-3xl ${NAV_CLEARANCE_CLASS}`}>
-      <div className="px-5 pb-2 pt-8">
-        <h1 className="font-display text-2xl font-black text-text-heading">Buddies</h1>
-      </div>
+      <PageHeader title="Buddies" />
 
       <div className="mb-4 px-5">
         <div className="flex items-center gap-2 rounded-md border-2 border-b-[3px] border-border bg-bg-surface px-4 py-3">

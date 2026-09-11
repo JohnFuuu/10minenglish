@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS } from '../components';
+import { Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
+import { PasswordVisibilityToggle } from '../auth/PasswordVisibilityToggle';
 import { initialsOf } from '../lib/initials';
 import {
   ApiError,
@@ -39,8 +40,6 @@ function toForm(profile: UserProfile): ProfileForm {
   };
 }
 
-const FIELD_LABEL = 'mb-2 block text-xs font-bold uppercase tracking-wide text-text-secondary';
-
 // Module-level cache (not React state), seeded from sessionStorage, so
 // re-entering this screen — via BottomNav or a hard page reload — shows the
 // last known profile immediately instead of flashing "Loading your
@@ -63,8 +62,19 @@ export function ProfileScreen() {
   const [isUploadingPicture, setIsUploadingPicture] = useState(false);
   const pictureInputRef = useRef<HTMLInputElement>(null);
 
-  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+  const passwordsMismatch =
+    passwordForm.newPassword.length > 0 &&
+    passwordForm.confirmPassword.length > 0 &&
+    passwordForm.newPassword !== passwordForm.confirmPassword;
 
   useEffect(() => {
     if (!token) return;
@@ -153,12 +163,12 @@ export function ProfileScreen() {
 
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
-    if (!token) return;
+    if (!token || passwordsMismatch) return;
 
     setIsSavingPassword(true);
     try {
       await changePassword(token, passwordForm.currentPassword, passwordForm.newPassword);
-      setPasswordForm({ currentPassword: '', newPassword: '' });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       showToast('Password updated.', 'success');
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Could not change your password.', 'error');
@@ -169,14 +179,15 @@ export function ProfileScreen() {
 
   return (
     <main className={`mx-auto max-w-3xl px-8 pt-12 ${NAV_CLEARANCE_CLASS}`}>
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="font-display text-2xl font-black text-text-heading">Profile</h1>
-        <div className="flex gap-2">
+      <PageHeader
+        title="Profile"
+        className="mb-8"
+        right={
           <Button variant="secondary" size="sm" onClick={logout}>
             Log out
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {isLoading && <p className="text-text-secondary">Loading your profile…</p>}
 
@@ -267,35 +278,54 @@ export function ProfileScreen() {
             <form onSubmit={handleChangePassword} className="mt-10">
               <h2 className="mb-4 text-lg font-bold text-text-body">Change password</h2>
               <Card className="mb-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className={FIELD_LABEL} htmlFor="current-password">
-                      Current password
-                    </label>
-                    <Input
-                      id="current-password"
-                      type="password"
-                      autoComplete="current-password"
-                      value={passwordForm.currentPassword}
-                      onChange={(e) =>
-                        setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))
-                      }
-                      required
-                    />
-                  </div>
+                <div className="flex flex-col gap-4">
+                  <Input
+                    id="current-password"
+                    label="Current password"
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={passwordForm.currentPassword}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))
+                    }
+                    required
+                    right={
+                      <PasswordVisibilityToggle
+                        visible={showCurrentPassword}
+                        onToggle={() => setShowCurrentPassword((v) => !v)}
+                      />
+                    }
+                  />
 
-                  <div>
-                    <label className={FIELD_LABEL} htmlFor="new-password">
-                      New password
-                    </label>
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <Input
                       id="new-password"
-                      type="password"
+                      label="New password"
+                      type={showNewPassword ? 'text' : 'password'}
                       autoComplete="new-password"
                       value={passwordForm.newPassword}
                       onChange={(e) =>
                         setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
                       }
+                      required
+                      right={
+                        <PasswordVisibilityToggle
+                          visible={showNewPassword}
+                          onToggle={() => setShowNewPassword((v) => !v)}
+                        />
+                      }
+                    />
+
+                    <Input
+                      id="confirm-new-password"
+                      label="Confirm new password"
+                      type={showNewPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      value={passwordForm.confirmPassword}
+                      onChange={(e) =>
+                        setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                      }
+                      error={passwordsMismatch ? "Passwords don't match" : undefined}
                       required
                     />
                   </div>
@@ -308,7 +338,11 @@ export function ProfileScreen() {
                 size="md"
                 className="w-full"
                 disabled={
-                  isSavingPassword || !passwordForm.currentPassword || !passwordForm.newPassword
+                  isSavingPassword ||
+                  !passwordForm.currentPassword ||
+                  !passwordForm.newPassword ||
+                  !passwordForm.confirmPassword ||
+                  passwordsMismatch
                 }
               >
                 {isSavingPassword ? 'Updating…' : 'Update password'}

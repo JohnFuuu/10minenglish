@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, CalendarDays, Clock, User } from 'lucide-react';
+import { AlertTriangle, Bell, CalendarDays, Clock, User } from 'lucide-react';
 import { Avatar, BottomNav, Card, NAV_CLEARANCE_CLASS } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { initialsOf } from '../lib/initials';
@@ -46,7 +46,26 @@ export function BuddyDashboard() {
 
   return (
     <main className={`mx-auto max-w-3xl px-5 ${NAV_CLEARANCE_CLASS}`}>
-      <div className="pb-2 pt-8">
+      <div className="flex items-center justify-between border-b-2 border-border pb-4 pt-8">
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="" className="h-11 w-11" />
+          <span className="font-display text-xl font-black text-brand-primary">10ME</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/notifications')}
+          className="relative flex h-9 w-9 items-center justify-center rounded-md border-2 border-b-[3px] border-border"
+        >
+          <Bell size={18} color="#3c3c3c" strokeWidth={2.5} />
+          {unreadCount > 0 && (
+            <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[9px] font-bold text-text-inverse">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      <div className="pb-2 pt-5">
         <p className="text-xs font-bold uppercase tracking-widest text-text-secondary">{greeting()},</p>
         <h1 className="font-display text-3xl font-black text-text-heading">
           {(profile.name || 'there').split(' ')[0]}!
