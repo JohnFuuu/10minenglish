@@ -230,6 +230,21 @@ export function confirmPoliPayment(token: string, poliToken: string) {
   );
 }
 
+export interface PaymentHistoryEntry {
+  id: string;
+  provider: 'stripe' | 'poli';
+  packSize: number;
+  priceCentsAtPurchase: number;
+  status: 'pending' | 'succeeded' | 'failed';
+  createdAt: string;
+}
+
+export function fetchPaymentHistory(token: string) {
+  return request<{ payments: PaymentHistoryEntry[] }>('/api/payments/history', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export interface BookableBuddy {
   id: string;
   name?: string;

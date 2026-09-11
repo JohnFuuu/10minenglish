@@ -1,11 +1,29 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Calendar, CalendarDays, CalendarX, Gem, Users } from 'lucide-react';
+import { Bell, Calendar, CalendarDays, CalendarX, ChevronDown, ChevronUp, Gem, Receipt, Users } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
-import { Avatar, BottomNav, Button, Card, NAV_CLEARANCE_CLASS } from '../components';
-import { fetchNotifications, fetchUserLessons, type LessonWithBuddy } from '../lib/api';
+import { Avatar, BottomNav, Button, Card, Modal, NAV_CLEARANCE_CLASS } from '../components';
+import {
+  fetchNotifications,
+  fetchPaymentHistory,
+  fetchUserLessons,
+  type LessonWithBuddy,
+  type PaymentHistoryEntry,
+} from '../lib/api';
 import { formatDateTime } from '../lib/formatDateTime';
 import { initialsOf } from '../lib/initials';
+
+const PAYMENT_STATUS_STYLE: Record<PaymentHistoryEntry['status'], string> = {
+  succeeded: 'bg-success-bg text-success',
+  pending: 'bg-warning/10 text-warning',
+  failed: 'bg-error/10 text-error',
+};
+
+function formatPrice(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+const COLLAPSED_HISTORY_COUNT = 5;
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -19,12 +37,20 @@ export function UserDashboard() {
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [upcoming, setUpcoming] = useState<LessonWithBuddy[] | null>(null);
+  const [isWalletOpen, setIsWalletOpen] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryEntry[] | null>(null);
+  const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
 
   useEffect(() => {
     if (!token) return;
     fetchNotifications(token).then((res) => setUnreadCount(res.unreadCount));
     fetchUserLessons(token).then((res) => setUpcoming(res.upcoming));
   }, [token]);
+
+  useEffect(() => {
+    if (!isWalletOpen || !token) return;
+    fetchPaymentHistory(token).then((res) => setPaymentHistory(res.payments));
+  }, [isWalletOpen, token]);
 
   const hasCredits = (account?.credits ?? 0) > 0;
   const [nextLesson, ...restUpcoming] = upcoming ?? [];
@@ -44,9 +70,16 @@ export function UserDashboard() {
           <span className="font-display text-lg font-black text-brand-primary">10ME</span>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 rounded-md border-2 border-b-[3px] border-accent-lime px-3 py-1.5 text-sm font-bold text-brand-primary">
+          <button
+            type="button"
+            onClick={() => {
+              setIsHistoryExpanded(false);
+              setIsWalletOpen(true);
+            }}
+            className="flex items-center gap-1 rounded-md border-2 border-b-[3px] border-accent-lime px-3 py-1.5 text-sm font-bold text-brand-primary"
+          >
             <Gem size={14} /> {account?.credits ?? 0}
-          </div>
+          </button>
           <button
             type="button"
             onClick={() => navigate('/notifications')}
@@ -175,6 +208,73 @@ export function UserDashboard() {
           <p className="mb-5 text-sm text-text-secondary">Find a Buddy and book your first session.</p>
           <Button onClick={() => navigate('/buddies')}>Browse buddies</Button>
         </div>
+      )}
+
+      {isWalletOpen && (
+        <Modal title="Your wallet" onClose={() => setIsWalletOpen(false)}>
+          <div className="mb-5 rounded-md border-2 border-b-[3px] border-brand-primary-border bg-brand-primary p-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-accent-lime-light">Current balance</p>
+            <p className="font-display text-3xl font-black text-text-inverse">{account?.credits ?? 0}</p>
+            <p className="text-xs font-bold text-accent-lime-light">lessons available</p>
+          </div>
+
+          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Top-up history</p>
+
+          {paymentHistory === null && <p className="text-sm text-text-secondary">Loading…</p>}
+
+          {paymentHistory !== null && paymentHistory.length === 0 && (
+            <div className="py-8 text-center">
+              <Receipt size={32} className="mx-auto mb-2 text-text-secondary" />
+              <p className="text-sm text-text-secondary">No top-ups yet.</p>
+            </div>
+          )}
+
+          {paymentHistory !== null && paymentHistory.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {(isHistoryExpanded ? paymentHistory : paymentHistory.slice(0, COLLAPSED_HISTORY_COUNT)).map(
+                (payment) => (
+                  <div
+                    key={payment.id}
+                    className="flex items-center justify-between rounded-md border-2 border-border bg-bg-page p-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-bold text-text-heading">{payment.packSize} credits</p>
+                      <p className="text-xs text-text-secondary">{formatDateTime(payment.createdAt)}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="text-sm font-bold text-text-body">
+                        {formatPrice(payment.priceCentsAtPurchase)}
+                      </span>
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${PAYMENT_STATUS_STYLE[payment.status]}`}
+                      >
+                        {payment.status}
+                      </span>
+                    </div>
+                  </div>
+                ),
+              )}
+
+              {paymentHistory.length > COLLAPSED_HISTORY_COUNT && (
+                <button
+                  type="button"
+                  onClick={() => setIsHistoryExpanded((current) => !current)}
+                  className="mt-1 flex items-center justify-center gap-1 py-2 text-xs font-bold tracking-widest text-brand-secondary"
+                >
+                  {isHistoryExpanded ? (
+                    <>
+                      Show less <ChevronUp size={14} />
+                    </>
+                  ) : (
+                    <>
+                      Show {paymentHistory.length - COLLAPSED_HISTORY_COUNT} more <ChevronDown size={14} />
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
+        </Modal>
       )}
 
       <BottomNav unreadCount={unreadCount} />

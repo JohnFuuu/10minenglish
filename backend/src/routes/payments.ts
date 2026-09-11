@@ -149,6 +149,20 @@ export function createPaymentsRouter(deps: PaymentsRouterDependencies): Router {
     res.status(200).json({ navigateUrl: transaction.navigateUrl, token: transaction.token });
   });
 
+  router.get('/api/payments/history', requireAuth, requireRole('user'), async (req, res) => {
+    const payments = await Payment.find({ accountId: req.account!.accountId }).sort({ createdAt: -1 });
+    res.status(200).json({
+      payments: payments.map((p) => ({
+        id: p.id,
+        provider: p.provider,
+        packSize: p.packSize,
+        priceCentsAtPurchase: p.priceCentsAtPurchase,
+        status: p.status,
+        createdAt: p.createdAt,
+      })),
+    });
+  });
+
   router.post('/api/payments/poli/confirm', requireAuth, async (req, res) => {
     const { token } = req.body ?? {};
     if (!token) {
