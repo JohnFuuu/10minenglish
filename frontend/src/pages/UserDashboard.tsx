@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Calendar, CalendarDays, Gem, Users } from 'lucide-react';
+import { Bell, Calendar, CalendarDays, CalendarX, Gem, Users } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar, BottomNav, Button, Card, NAV_CLEARANCE_CLASS } from '../components';
 import { fetchNotifications, fetchUserLessons, type LessonWithBuddy } from '../lib/api';
@@ -165,6 +165,15 @@ export function UserDashboard() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {upcoming !== null && upcoming.length === 0 && (
+        <div className="px-5 py-12 text-center">
+          <CalendarX size={36} className="mx-auto mb-3 text-text-secondary" />
+          <p className="mb-1 text-sm font-bold uppercase tracking-widest text-text-heading">No lessons booked</p>
+          <p className="mb-5 text-sm text-text-secondary">Find a Buddy and book your first session.</p>
+          <Button onClick={() => navigate('/buddies')}>Browse buddies</Button>
         </div>
       )}
 

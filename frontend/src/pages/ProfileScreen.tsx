@@ -12,6 +12,9 @@ import {
   uploadPicture,
   type UserProfile,
 } from '../lib/api';
+import { readSessionCache, writeSessionCache } from '../lib/sessionCache';
+
+const PROFILE_CACHE_KEY = '10me.cache.profile';
 
 // Phone/date of birth/learning-goals were dropped from this screen — kept
 // optional on the Account schema and in UserProfileUpdate, just no longer
@@ -38,13 +41,23 @@ function toForm(profile: UserProfile): ProfileForm {
 
 const FIELD_LABEL = 'mb-2 block text-xs font-bold uppercase tracking-wide text-text-secondary';
 
+// Module-level cache (not React state), seeded from sessionStorage, so
+// re-entering this screen — via BottomNav or a hard page reload — shows the
+// last known profile immediately instead of flashing "Loading your
+// profile…". Refetched silently in the background.
+let profileCache: UserProfile | null = readSessionCache<UserProfile>(PROFILE_CACHE_KEY);
+function setProfileCache(next: UserProfile) {
+  profileCache = next;
+  writeSessionCache(PROFILE_CACHE_KEY, next);
+}
+
 export function ProfileScreen() {
   const { token, refreshAccount, logout } = useAuth();
   const { showToast } = useToast();
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [form, setForm] = useState<ProfileForm | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(profileCache);
+  const [form, setForm] = useState<ProfileForm | null>(profileCache ? toForm(profileCache) : null);
+  const [isLoading, setIsLoading] = useState(profileCache === null);
   const [isSaving, setIsSaving] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isUploadingPicture, setIsUploadingPicture] = useState(false);
@@ -57,6 +70,7 @@ export function ProfileScreen() {
     if (!token) return;
     fetchProfile(token)
       .then((p) => {
+        setProfileCache(p);
         setProfile(p);
         setForm(toForm(p));
       })
@@ -86,7 +100,11 @@ export function ProfileScreen() {
     try {
       const { picture } = await uploadPicture(token, file);
       setForm((prev) => (prev ? { ...prev, picture } : prev));
-      setProfile((prev) => (prev ? { ...prev, picture } : prev));
+      setProfile((prev) => {
+        const next = prev ? { ...prev, picture } : prev;
+        if (next) setProfileCache(next);
+        return next;
+      });
       showToast('Photo uploaded.', 'success');
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Could not upload that photo.', 'error');
@@ -112,6 +130,7 @@ export function ProfileScreen() {
         location: form.location,
         nationality: form.nationality,
       });
+      setProfileCache(updated);
       setProfile(updated);
       setForm(toForm(updated));
       // Location feeds isNZLocated on the session, which gates the POLi option.

@@ -12,6 +12,9 @@ import {
 } from '../lib/api';
 import { formatDateTime } from '../lib/formatDateTime';
 import { initialsOf } from '../lib/initials';
+import { readSessionCache, writeSessionCache } from '../lib/sessionCache';
+
+const TEACHING_LESSONS_CACHE_KEY = '10me.cache.teachingLessons';
 
 function previousStatusLabel(lesson: LessonWithUser): string {
   return lesson.status === 'cancelled' ? 'Cancelled' : 'Taught';
@@ -22,14 +25,28 @@ const PREVIOUS_STATUS_STYLE: Record<string, string> = {
   Taught: 'bg-accent-lime-light text-brand-secondary',
 };
 
+type TeachingLessonsCache = { upcoming: LessonWithUser[]; previous: LessonWithUser[] };
+
+// Module-level cache (not React state), seeded from sessionStorage, so
+// re-entering this screen — via BottomNav or a hard page reload — shows the
+// last known lessons immediately instead of flashing "Loading your
+// lessons…". Refetched silently in the background.
+let teachingLessonsCache: TeachingLessonsCache | null = readSessionCache<TeachingLessonsCache>(
+  TEACHING_LESSONS_CACHE_KEY,
+);
+function setTeachingLessonsCache(next: TeachingLessonsCache) {
+  teachingLessonsCache = next;
+  writeSessionCache(TEACHING_LESSONS_CACHE_KEY, next);
+}
+
 export function BuddyLessonsScreen() {
   const { token } = useAuth();
   const { showToast } = useToast();
 
   const [tab, setTab] = useState<'upcoming' | 'previous'>('upcoming');
-  const [upcoming, setUpcoming] = useState<LessonWithUser[]>([]);
-  const [previous, setPrevious] = useState<LessonWithUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [upcoming, setUpcoming] = useState<LessonWithUser[]>(teachingLessonsCache?.upcoming ?? []);
+  const [previous, setPrevious] = useState<LessonWithUser[]>(teachingLessonsCache?.previous ?? []);
+  const [isLoading, setIsLoading] = useState(teachingLessonsCache === null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -38,6 +55,7 @@ export function BuddyLessonsScreen() {
     if (!token) return;
     fetchTeachingLessons(token)
       .then((res) => {
+        setTeachingLessonsCache({ upcoming: res.upcoming, previous: res.previous });
         setUpcoming(res.upcoming);
         setPrevious(res.previous);
       })
@@ -55,8 +73,16 @@ export function BuddyLessonsScreen() {
     setCancellingId(lesson.id);
     try {
       await buddyCancelLesson(token!, lesson.id);
-      setUpcoming((current) => current.filter((l) => l.id !== lesson.id));
-      setPrevious((current) => [{ ...lesson, status: 'cancelled' }, ...current]);
+      setUpcoming((current) => {
+        const next = current.filter((l) => l.id !== lesson.id);
+        if (teachingLessonsCache) setTeachingLessonsCache({ ...teachingLessonsCache, upcoming: next });
+        return next;
+      });
+      setPrevious((current) => {
+        const next = [{ ...lesson, status: 'cancelled' as const }, ...current];
+        if (teachingLessonsCache) setTeachingLessonsCache({ ...teachingLessonsCache, previous: next });
+        return next;
+      });
       setConfirmingId(null);
       showToast("Lesson cancelled — the User's credit was refunded.", 'success');
     } catch (err) {

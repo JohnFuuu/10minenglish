@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, UsersRound } from 'lucide-react';
 import { Avatar, BottomNav, Button, NAV_CLEARANCE_CLASS } from '../components';
@@ -13,6 +13,7 @@ import {
   setBuddyFavourite,
   type DirectoryBuddy,
 } from '../lib/api';
+import { readSessionCache, writeSessionCache } from '../lib/sessionCache';
 import type { BookLessonPrefill } from './BookLesson';
 
 type Tab = 'all' | 'recent' | 'favourite';
@@ -29,6 +30,19 @@ const EMPTY_MESSAGE: Record<Tab, string> = {
   favourite: 'No favourites yet — star a buddy to keep them here.',
 };
 
+const BUDDIES_CACHE_KEY = '10me.cache.buddies';
+
+// Module-level cache per tab (not React state), seeded from sessionStorage,
+// so switching between ALL/RECENT/FAV — or leaving and re-entering this
+// screen, including via a hard page reload — shows the last known list for
+// that tab immediately instead of blanking out to "Loading buddies…" every
+// time. Refetched silently in the background.
+const buddiesCache: Partial<Record<Tab, DirectoryBuddy[]>> =
+  readSessionCache<Partial<Record<Tab, DirectoryBuddy[]>>>(BUDDIES_CACHE_KEY) ?? {};
+function persistBuddiesCache() {
+  writeSessionCache(BUDDIES_CACHE_KEY, buddiesCache);
+}
+
 export function BuddiesScreen() {
   const { token } = useAuth();
   const { showToast } = useToast();
@@ -36,14 +50,21 @@ export function BuddiesScreen() {
 
   const [tab, setTab] = useState<Tab>('all');
   const [search, setSearch] = useState('');
-  const [buddies, setBuddies] = useState<DirectoryBuddy[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [buddies, setBuddies] = useState<DirectoryBuddy[]>(buddiesCache.all ?? []);
+  const [isLoading, setIsLoading] = useState(buddiesCache.all === undefined);
   const [unreadCount, setUnreadCount] = useState(0);
+  const activeTabRef = useRef<Tab>(tab);
 
   const load = useCallback(
     async (which: Tab) => {
       if (!token) return;
-      setIsLoading(true);
+      const cached = buddiesCache[which];
+      if (cached) {
+        setBuddies(cached);
+        setIsLoading(false);
+      } else {
+        setIsLoading(true);
+      }
       try {
         const fetcher =
           which === 'all'
@@ -52,17 +73,23 @@ export function BuddiesScreen() {
               ? fetchRecentBuddies
               : fetchFavouriteBuddies;
         const res = await fetcher(token);
+        buddiesCache[which] = res.buddies;
+        persistBuddiesCache();
+        // A slower fetch for a tab the user has already switched away from
+        // shouldn't clobber what's currently on screen.
+        if (activeTabRef.current !== which) return;
         setBuddies(res.buddies);
       } catch {
         showToast('Could not load buddies.', 'error');
       } finally {
-        setIsLoading(false);
+        if (activeTabRef.current === which) setIsLoading(false);
       }
     },
     [token, showToast],
   );
 
   useEffect(() => {
+    activeTabRef.current = tab;
     load(tab);
   }, [load, tab]);
 
@@ -99,6 +126,17 @@ export function BuddiesScreen() {
           current.map((b) => (b.id === buddy.id ? { ...b, isFavourite: next } : b)),
         );
       }
+      // Keep every cached tab's copy of this buddy consistent, so switching
+      // tabs afterwards doesn't briefly show the pre-toggle star/list.
+      for (const cachedTab of Object.keys(buddiesCache) as Tab[]) {
+        const list = buddiesCache[cachedTab];
+        if (!list) continue;
+        buddiesCache[cachedTab] =
+          cachedTab === 'favourite' && !next
+            ? list.filter((b) => b.id !== buddy.id)
+            : list.map((b) => (b.id === buddy.id ? { ...b, isFavourite: next } : b));
+      }
+      persistBuddiesCache();
     } catch {
       showToast('Could not update your favourites.', 'error');
     }

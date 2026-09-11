@@ -16,6 +16,9 @@ import {
 import type { BookLessonPrefill } from './BookLesson';
 import { formatDateTime } from '../lib/formatDateTime';
 import { initialsOf } from '../lib/initials';
+import { readSessionCache, writeSessionCache } from '../lib/sessionCache';
+
+const LESSONS_CACHE_KEY = '10me.cache.lessons';
 
 // Mirrors the backend's CANCELLATION_REFUND_CUTOFF_HOURS (lessonBooking.ts),
 // which both the cancellation-refund rule and the reschedule rule read from
@@ -76,15 +79,27 @@ const PREVIOUS_STATUS_STYLE: Record<string, string> = {
   Past: 'bg-border text-text-secondary',
 };
 
+type LessonsCache = { upcoming: LessonWithBuddy[]; previous: LessonWithBuddy[] };
+
+// Module-level cache (not React state), seeded from sessionStorage, so
+// re-entering this screen — via BottomNav or a hard page reload — shows the
+// last known lessons immediately instead of flashing "Loading your
+// lessons…". Refetched silently in the background.
+let lessonsCache: LessonsCache | null = readSessionCache<LessonsCache>(LESSONS_CACHE_KEY);
+function setLessonsCache(next: LessonsCache) {
+  lessonsCache = next;
+  writeSessionCache(LESSONS_CACHE_KEY, next);
+}
+
 export function LessonsScreen() {
   const { token, account, setCredits } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [tab, setTab] = useState<'upcoming' | 'previous'>('upcoming');
-  const [upcoming, setUpcoming] = useState<LessonWithBuddy[]>([]);
-  const [previous, setPrevious] = useState<LessonWithBuddy[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [upcoming, setUpcoming] = useState<LessonWithBuddy[]>(lessonsCache?.upcoming ?? []);
+  const [previous, setPrevious] = useState<LessonWithBuddy[]>(lessonsCache?.previous ?? []);
+  const [isLoading, setIsLoading] = useState(lessonsCache === null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -100,6 +115,7 @@ export function LessonsScreen() {
     if (!token) return;
     fetchUserLessons(token)
       .then((res) => {
+        setLessonsCache({ upcoming: res.upcoming, previous: res.previous });
         setUpcoming(res.upcoming);
         setPrevious(res.previous);
       })
@@ -158,11 +174,13 @@ export function LessonsScreen() {
     setSavingRescheduleId(lesson.id);
     try {
       const res = await rescheduleLesson(token!, lesson.id, startTime);
-      setUpcoming((current) =>
-        [...current.map((l) => (l.id === lesson.id ? { ...l, startTime: res.lesson.startTime } : l))].sort(
-          (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
-        ),
-      );
+      setUpcoming((current) => {
+        const next = [
+          ...current.map((l) => (l.id === lesson.id ? { ...l, startTime: res.lesson.startTime } : l)),
+        ].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        if (lessonsCache) setLessonsCache({ ...lessonsCache, upcoming: next });
+        return next;
+      });
       setReschedulingId(null);
       showToast('Lesson moved. Your buddy has been notified.', 'success');
     } catch (err) {
@@ -176,8 +194,16 @@ export function LessonsScreen() {
     setCancellingId(lesson.id);
     try {
       const res = await cancelLesson(token!, lesson.id);
-      setUpcoming((current) => current.filter((l) => l.id !== lesson.id));
-      setPrevious((current) => [{ ...lesson, status: res.lesson.status }, ...current]);
+      setUpcoming((current) => {
+        const next = current.filter((l) => l.id !== lesson.id);
+        if (lessonsCache) setLessonsCache({ ...lessonsCache, upcoming: next });
+        return next;
+      });
+      setPrevious((current) => {
+        const next = [{ ...lesson, status: res.lesson.status }, ...current];
+        if (lessonsCache) setLessonsCache({ ...lessonsCache, previous: next });
+        return next;
+      });
       setCredits(res.creditsRemaining);
       setConfirmingId(null);
       showToast(

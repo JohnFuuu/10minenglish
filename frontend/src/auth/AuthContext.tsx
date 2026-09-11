@@ -25,6 +25,10 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const TOKEN_STORAGE_KEY = '10me.token';
+// Persisted (not just in-memory) so a hard page reload can render the
+// signed-in shell immediately instead of RequireAuth blanking the screen
+// while the token re-verifies — see readSessionCache's doc comment.
+const ACCOUNT_STORAGE_KEY = '10me.cachedAccount';
 
 export function toAccount(me: Awaited<ReturnType<typeof fetchMe>>): Account {
   return {
@@ -37,13 +41,35 @@ export function toAccount(me: Awaited<ReturnType<typeof fetchMe>>): Account {
   };
 }
 
+function readCachedAccount(): Account | null {
+  try {
+    const raw = localStorage.getItem(ACCOUNT_STORAGE_KEY);
+    return raw !== null ? (JSON.parse(raw) as Account) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedAccount(account: Account | null): void {
+  try {
+    if (account === null) localStorage.removeItem(ACCOUNT_STORAGE_KEY);
+    else localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(account));
+  } catch {
+    // Storage can be full or unavailable — caching is a nice-to-have.
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [account, setAccount] = useState<Account | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [storedToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY));
+  // Seeded from cache so a hard reload shows the signed-in shell right away;
+  // fetchMe below re-verifies and corrects it in the background.
+  const [account, setAccount] = useState<Account | null>(() =>
+    storedToken ? readCachedAccount() : null,
+  );
+  const [token, setToken] = useState<string | null>(storedToken);
+  const [isLoading, setIsLoading] = useState(Boolean(storedToken) && account === null);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
     if (!storedToken) {
       setIsLoading(false);
       return;
@@ -51,33 +77,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     fetchMe(storedToken)
       .then((me) => {
+        const nextAccount = toAccount(me);
         setToken(storedToken);
-        setAccount(toAccount(me));
+        setAccount(nextAccount);
+        writeCachedAccount(nextAccount);
       })
       .catch(() => {
         localStorage.removeItem(TOKEN_STORAGE_KEY);
+        writeCachedAccount(null);
+        setToken(null);
+        setAccount(null);
       })
       .finally(() => setIsLoading(false));
+    // Runs once on mount against the token captured at load — logging out
+    // or setSession afterwards update `token` state directly instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function setSession(newToken: string, newAccount: Account) {
     localStorage.setItem(TOKEN_STORAGE_KEY, newToken);
+    writeCachedAccount(newAccount);
     setToken(newToken);
     setAccount(newAccount);
   }
 
   function logout() {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
+    writeCachedAccount(null);
     setToken(null);
     setAccount(null);
   }
 
   function completeOnboarding() {
-    setAccount((prev) => (prev ? { ...prev, onboardingCompleted: true } : prev));
+    setAccount((prev) => {
+      const next = prev ? { ...prev, onboardingCompleted: true } : prev;
+      if (next) writeCachedAccount(next);
+      return next;
+    });
   }
 
   function setCredits(credits: number) {
-    setAccount((prev) => (prev ? { ...prev, credits } : prev));
+    setAccount((prev) => {
+      const next = prev ? { ...prev, credits } : prev;
+      if (next) writeCachedAccount(next);
+      return next;
+    });
   }
 
   // Profile edits can change values the session carries — editing Location
@@ -85,7 +129,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // has to be re-read rather than patched field by field.
   const refreshAccount = useCallback(async () => {
     if (!token) return;
-    setAccount(toAccount(await fetchMe(token)));
+    const next = toAccount(await fetchMe(token));
+    writeCachedAccount(next);
+    setAccount(next);
   }, [token]);
 
   return (
