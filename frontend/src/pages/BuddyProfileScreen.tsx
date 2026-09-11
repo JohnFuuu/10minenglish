@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { Avatar, BottomNav, Button, Input, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
+import { AutocompleteInput, Avatar, BottomNav, Button, Input, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
+import { COUNTRY_NAMES, flagCodeForCountry } from '../lib/countries';
 import { initialsOf } from '../lib/initials';
 import {
   ApiError,
@@ -169,11 +170,13 @@ export function BuddyProfileScreen() {
       <form onSubmit={handleSave} className="flex flex-col gap-3">
         <Input label="Name" placeholder="Name" value={form.name} onChange={(e) => updateField('name')(e.target.value)} />
         <Input label="Bio" placeholder="Bio" value={form.bio} onChange={(e) => updateField('bio')(e.target.value)} />
-        <Input
+        <AutocompleteInput
           label="Location"
           placeholder="Location"
           value={form.location}
-          onChange={(e) => updateField('location')(e.target.value)}
+          onChange={updateField('location')}
+          options={COUNTRY_NAMES}
+          getFlagCode={flagCodeForCountry}
         />
         <Input
           label="Timezone"

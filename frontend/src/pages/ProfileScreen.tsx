@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
+import { AutocompleteInput, Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import { PasswordVisibilityToggle } from '../auth/PasswordVisibilityToggle';
+import { COUNTRY_NAMES, flagCodeForCountry, flagCodeForNationality, NATIONALITIES } from '../lib/countries';
 import { initialsOf } from '../lib/initials';
 import {
   ApiError,
@@ -253,18 +254,22 @@ export function ProfileScreen() {
                   required
                 />
 
-                <Input
+                <AutocompleteInput
                   id="profile-nationality"
                   label="Nationality"
                   value={form.nationality}
-                  onChange={(e) => updateField('nationality')(e.target.value)}
+                  onChange={updateField('nationality')}
+                  options={NATIONALITIES}
+                  getFlagCode={flagCodeForNationality}
                 />
 
-                <Input
+                <AutocompleteInput
                   id="profile-location"
                   label="Location"
                   value={form.location}
-                  onChange={(e) => updateField('location')(e.target.value)}
+                  onChange={updateField('location')}
+                  options={COUNTRY_NAMES}
+                  getFlagCode={flagCodeForCountry}
                 />
               </div>
             </Card>
