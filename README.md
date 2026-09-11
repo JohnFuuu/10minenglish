@@ -43,6 +43,7 @@ A web app connecting English learners (Users) with volunteer conversation partne
    - `FRONTEND_URL` — used for links in outbound emails (defaults to `http://localhost:5173`)
    - `GOOGLE_CLIENT_ID` — only needed if you're testing the Google OAuth signup/login path
    - `PAYMENTS_MOCK` — set to `true` for local dev to auto-succeed Stripe/POLi checkout without real provider credentials
+   - `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ENDPOINT`, `R2_PUBLIC_URL`, `R2_BUCKET` — only needed if you're testing profile picture upload; a Cloudflare R2 (S3-compatible) bucket. Leave unset for local dev without picture uploads — the upload route 502s with a clear message instead of the process failing to boot.
 
 3. Start MongoDB (see Prerequisites above).
 
@@ -76,4 +77,4 @@ cd frontend && npm run build  # tsc + vite build — the frontend's correctness 
 
 ## Working on a ticket
 
-Tickets live as GitHub Issues (see `docs/agents/issue-tracker.md` and `docs/agents/triage-labels.md`). The established pattern for this repo, per recent merged PRs, is one isolated git branch/worktree per ticket, a written implementation plan, then execution and a PR back into `fza/dev` — see the git history for examples (search commit/PR titles for "ticket-").
+Tickets live as GitHub Issues (see `docs/agents/issue-tracker.md` and `docs/agents/triage-labels.md`). The established pattern for this repo is one isolated git branch/worktree per ticket, a written implementation plan, then execution and a PR back into `develop` — see the git history for examples (search commit/PR titles for "ticket-"). `develop` is the default/shared integration branch; `fza/dev` is a maintainer's personal branch — don't base new ticket work on it or merge into it.

@@ -20,7 +20,9 @@ Single-context repo:
 │   ├── 0001-partial-fill-recurring-bookings.md
 │   ├── 0002-buddy-supplied-zoom-links-not-api-generated.md
 │   ├── 0003-single-app-role-based-ui-for-users-and-buddies.md
-│   └── 0004-dual-payment-providers-stripe-and-poli.md
+│   ├── 0004-dual-payment-providers-stripe-and-poli.md
+│   ├── 0005-reschedule-cutoff-matches-cancellation-refund-window.md
+│   └── 0006-lesson-completion-is-time-based-not-attendance-verified.md
 ├── backend/
 └── frontend/
 ```

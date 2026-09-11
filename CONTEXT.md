@@ -1,6 +1,6 @@
 # 10ME
 
-An English-speaking practice platform. Users buy lesson credits and book 1:1 speaking sessions over Google Meet.
+An English-speaking practice platform. Users buy lesson credits and book 1:1 speaking sessions over Zoom (see ADR 0002 for why the source spec's Google Meet was replaced).
 
 ## Language
 
@@ -13,7 +13,7 @@ The person a User books a 1:1 session with. Single canonical role — the spec's
 _Avoid_: Teacher, practice partner, tutor
 
 **Lesson**:
-A single booked 1:1 slot between a User and a Buddy at a specific time, consuming one credit. A recurring booking creates multiple independent Lessons up front rather than one grouping/series object — there is no separate "Session" concept.
+A single booked 1:1 slot between a User and a Buddy at a specific time, consuming one credit. A recurring booking creates multiple independent Lessons up front rather than one grouping/series object — there is no separate "Session" concept. A Lesson's status is `upcoming` until either it's cancelled or its scheduled time elapses, at which point it's automatically marked `completed` — there is no verified-attendance concept (see ADR 0006).
 _Avoid_: Session, meeting, booking (booking is the act, Lesson is the resulting record)
 
 **Credit**:
