@@ -13,13 +13,13 @@ afterAll(stopTestDb, 30000);
 beforeEach(clearTestDb);
 
 describe('GET /api/buddies', () => {
-  it('excludes Buddies with no Zoom link set', async () => {
+  it('excludes Buddies with no meeting link set', async () => {
     await Account.create({ role: 'buddy', email: 'no-link@example.com', name: 'No Link' });
     await Account.create({
       role: 'buddy',
       email: 'bookable@example.com',
       name: 'Bookable',
-      zoomLink: 'https://zoom.us/j/1234567890',
+      meetingLink: 'https://zoom.us/j/1234567890',
     });
     const requester = await Account.create({ role: 'user', email: 'sarah@example.com' });
     const token = signAccountToken({ accountId: requester.id, role: requester.role });

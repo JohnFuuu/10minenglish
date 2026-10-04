@@ -17,7 +17,7 @@ beforeAll(async () => {
 afterAll(stopTestDb, 30000);
 beforeEach(clearTestDb);
 
-const ZOOM_LINK = 'https://zoom.us/j/1234567890';
+const MEETING_LINK = 'https://zoom.us/j/1234567890';
 
 async function createPair() {
   const user = await Account.create({ role: 'user', email: 'sarah@example.com', name: 'Sarah' });
@@ -25,7 +25,7 @@ async function createPair() {
     role: 'buddy',
     email: 'maria@example.com',
     name: 'Maria',
-    zoomLink: ZOOM_LINK,
+    meetingLink: MEETING_LINK,
   });
   return {
     user,
@@ -51,7 +51,7 @@ async function createLesson(
     startTime,
     durationMinutes: 10,
     status,
-    zoomLink: ZOOM_LINK,
+    meetingLink: MEETING_LINK,
   });
 }
 

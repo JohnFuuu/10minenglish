@@ -84,11 +84,11 @@ export function BuddyDashboard() {
         </div>
       </div>
 
-      {!profile.zoomLink && (
+      {!profile.meetingLink && (
         <div className="mb-5 flex items-center gap-2 rounded-md border-2 border-warning bg-warning/10 px-3 py-2">
           <AlertTriangle size={16} className="shrink-0 text-warning" />
           <p className="text-xs font-bold uppercase tracking-wide text-text-body">
-            Add a Zoom link — Users cannot book you without it.
+            Add a meeting link — Users cannot book you without it.
           </p>
         </div>
       )}

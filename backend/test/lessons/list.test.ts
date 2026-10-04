@@ -25,7 +25,7 @@ async function buddy(overrides: Record<string, unknown> = {}) {
     email: 'buddy@example.com',
     name: 'Kenji',
     timezone: 'Asia/Tokyo',
-    zoomLink: 'https://zoom.us/j/123',
+    meetingLink: 'https://zoom.us/j/123',
     ...overrides,
   });
 }
@@ -60,21 +60,21 @@ describe('GET /api/lessons', () => {
       userId: account.id,
       buddyId: b.id,
       startTime: now.plus({ days: 1 }).toJSDate(),
-      zoomLink: b.zoomLink,
+      meetingLink: b.meetingLink,
       status: 'upcoming',
     });
     const pastNeverCompleted = await Lesson.create({
       userId: account.id,
       buddyId: b.id,
       startTime: now.minus({ days: 1 }).toJSDate(),
-      zoomLink: b.zoomLink,
+      meetingLink: b.meetingLink,
       status: 'upcoming',
     });
     const cancelledButFuture = await Lesson.create({
       userId: account.id,
       buddyId: b.id,
       startTime: now.plus({ days: 2 }).toJSDate(),
-      zoomLink: b.zoomLink,
+      meetingLink: b.meetingLink,
       status: 'cancelled',
     });
     const { app } = createTestApp();
@@ -98,14 +98,14 @@ describe('GET /api/lessons', () => {
       userId: account.id,
       buddyId: b.id,
       startTime: now.plus({ minutes: 5 }).toJSDate(),
-      zoomLink: b.zoomLink,
+      meetingLink: b.meetingLink,
       status: 'upcoming',
     });
     const tooEarly = await Lesson.create({
       userId: account.id,
       buddyId: b.id,
       startTime: now.plus({ minutes: 30 }).toJSDate(),
-      zoomLink: b.zoomLink,
+      meetingLink: b.meetingLink,
       status: 'upcoming',
     });
     const { app } = createTestApp();
@@ -127,7 +127,7 @@ describe('GET /api/lessons', () => {
       buddyId: b.id,
       startTime: now.minus({ minutes: 40 }).toJSDate(),
       durationMinutes: 10,
-      zoomLink: b.zoomLink,
+      meetingLink: b.meetingLink,
       status: 'upcoming',
     });
     const { app } = createTestApp();
@@ -149,21 +149,21 @@ describe('GET /api/lessons', () => {
       userId: account.id,
       buddyId: b.id,
       startTime: now.minus({ days: 5 }).toJSDate(),
-      zoomLink: b.zoomLink,
+      meetingLink: b.meetingLink,
       status: 'completed',
     });
     const middle = await Lesson.create({
       userId: account.id,
       buddyId: b.id,
       startTime: now.minus({ days: 2 }).toJSDate(),
-      zoomLink: b.zoomLink,
+      meetingLink: b.meetingLink,
       status: 'cancelled',
     });
     const mostRecent = await Lesson.create({
       userId: account.id,
       buddyId: b.id,
       startTime: now.minus({ hours: 3 }).toJSDate(),
-      zoomLink: b.zoomLink,
+      meetingLink: b.meetingLink,
       status: 'completed',
     });
     const { app } = createTestApp();

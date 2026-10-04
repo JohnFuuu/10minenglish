@@ -34,7 +34,7 @@ const JOIN_WINDOW_MINUTES_BEFORE = 10;
 // without requiring a page reload.
 const JOINABLE_RECHECK_INTERVAL_MS = 30_000;
 
-const ZOOM_LINK_PATTERN = /^https:\/\//;
+const MEETING_LINK_PATTERN = /^https:\/\//;
 
 // Matches the backend's reschedule rule: a Lesson can only be moved while it is
 // still outside the same window that governs cancellation refunds.
@@ -249,21 +249,21 @@ export function LessonsScreen() {
                   </span>
                 </div>
 
-                {ZOOM_LINK_PATTERN.test(lesson.zoomLink) && (
+                {MEETING_LINK_PATTERN.test(lesson.meetingLink) && (
                   <a
-                    href={lesson.zoomLink}
+                    href={lesson.meetingLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 flex items-center gap-1.5 text-xs font-bold text-brand-secondary"
                   >
                     <Video size={14} />
-                    Zoom link
+                    Meeting link
                   </a>
                 )}
 
                 <div className="mt-3 flex gap-2">
-                    {isJoinable(lesson) && ZOOM_LINK_PATTERN.test(lesson.zoomLink) && (
-                      <Button size="sm" tone="blue" onClick={() => window.open(lesson.zoomLink, '_blank', 'noopener')}>
+                    {isJoinable(lesson) && MEETING_LINK_PATTERN.test(lesson.meetingLink) && (
+                      <Button size="sm" tone="blue" onClick={() => window.open(lesson.meetingLink, '_blank', 'noopener')}>
                         Join lesson
                       </Button>
                     )}

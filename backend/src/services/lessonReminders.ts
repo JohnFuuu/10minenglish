@@ -14,7 +14,7 @@ export function buildLessonReminderNotification(params: {
   recipientEmail: string;
   otherPartyName: string;
   startTime: Date;
-  zoomLink: string;
+  meetingLink: string;
 }): { message: string; email: EmailMessage } {
   const startTimeText = params.startTime.toISOString();
   return {
@@ -22,7 +22,7 @@ export function buildLessonReminderNotification(params: {
     email: {
       to: params.recipientEmail,
       subject: 'Your 10ME lesson is coming up',
-      body: `Your lesson with ${params.otherPartyName} starts at ${startTimeText}. Join here: ${params.zoomLink}`,
+      body: `Your lesson with ${params.otherPartyName} starts at ${startTimeText}. Join here: ${params.meetingLink}`,
     },
   };
 }
@@ -48,7 +48,7 @@ async function remindBothParties(
       recipientEmail: account.email,
       otherPartyName,
       startTime: lesson.startTime,
-      zoomLink: lesson.zoomLink,
+      meetingLink: lesson.meetingLink,
     });
     await createNotification({
       emailSender,

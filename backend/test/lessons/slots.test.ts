@@ -32,7 +32,7 @@ async function bookableBuddy(overrides: Record<string, unknown> = {}) {
     email: 'buddy@example.com',
     name: 'Buddy',
     timezone: BUDDY_TZ,
-    zoomLink: 'https://zoom.us/j/123',
+    meetingLink: 'https://zoom.us/j/123',
     availabilityBlocks: [{ dayOfWeek: anchor.weekday % 7, startTime: '09:00', endTime: '17:00' }],
     ...overrides,
   });
@@ -73,7 +73,7 @@ describe('GET /api/buddies/:id/slots', () => {
       userId: (await Account.create({ role: 'user', email: 'other@example.com' })).id,
       buddyId: buddy.id,
       startTime: anchor.toJSDate(),
-      zoomLink: buddy.zoomLink,
+      meetingLink: buddy.meetingLink,
     });
 
     const app = createApp();
@@ -116,7 +116,7 @@ describe('GET /api/buddies/available', () => {
       userId: (await Account.create({ role: 'user', email: 'other2@example.com' })).id,
       buddyId: busy.id,
       startTime: anchor.toJSDate(),
-      zoomLink: busy.zoomLink,
+      meetingLink: busy.meetingLink,
     });
     const { token } = await userToken();
 

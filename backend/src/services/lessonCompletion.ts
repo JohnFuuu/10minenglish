@@ -1,7 +1,7 @@
 import { Lesson } from '../models/Lesson.js';
 
 // How often the server sweeps for Lessons whose scheduled time has fully
-// elapsed. The class itself happens on a Buddy-supplied Zoom/Meet link (see
+// elapsed. The class itself happens on a Buddy-supplied meeting link (see
 // ADR 0002) that the app has no visibility into, so there's no way to verify
 // attendance — completion is purely time-based: once startTime +
 // durationMinutes has passed, an upcoming Lesson is auto-completed. Mirrors

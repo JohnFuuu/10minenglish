@@ -10,7 +10,7 @@ export interface LessonDocument extends mongoose.Document {
   startTime: Date;
   durationMinutes: number;
   status: LessonStatus;
-  zoomLink: string;
+  meetingLink: string;
   // Set when the pre-lesson reminder goes out; doubles as the claim that stops
   // a second sweep sending it again.
   reminderSentAt?: Date;
@@ -23,7 +23,7 @@ const lessonSchema = new Schema<LessonDocument>({
   startTime: { type: Date, required: true },
   durationMinutes: { type: Number, required: true, default: LESSON_DURATION_MINUTES },
   status: { type: String, required: true, enum: ['upcoming', 'cancelled', 'completed'], default: 'upcoming' },
-  zoomLink: { type: String, required: true },
+  meetingLink: { type: String, required: true },
   reminderSentAt: { type: Date },
   createdAt: { type: Date, required: true, default: Date.now },
 });

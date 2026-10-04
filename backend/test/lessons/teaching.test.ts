@@ -18,7 +18,7 @@ async function buddyToken(overrides: Record<string, unknown> = {}) {
   const account = await Account.create({
     role: 'buddy',
     email: 'buddy@example.com',
-    zoomLink: 'https://zoom.us/j/123',
+    meetingLink: 'https://zoom.us/j/123',
     ...overrides,
   });
   return { account, token: signAccountToken({ accountId: account.id, role: account.role }) };
@@ -54,14 +54,14 @@ describe('GET /api/lessons/teaching', () => {
       userId: student.id,
       buddyId: buddy.id,
       startTime: now.plus({ days: 1 }).toJSDate(),
-      zoomLink: buddy.zoomLink,
+      meetingLink: buddy.meetingLink,
       status: 'upcoming',
     });
     const past = await Lesson.create({
       userId: student.id,
       buddyId: buddy.id,
       startTime: now.minus({ days: 1 }).toJSDate(),
-      zoomLink: buddy.zoomLink,
+      meetingLink: buddy.meetingLink,
       status: 'upcoming',
     });
     const { app } = createTestApp();

@@ -141,7 +141,7 @@ export interface BuddyProfile {
   bio?: string;
   location?: string;
   timezone?: string;
-  zoomLink?: string;
+  meetingLink?: string;
   availabilityBlocks: AvailabilityBlock[];
 }
 
@@ -157,7 +157,7 @@ export interface BuddyProfileUpdate {
   bio?: string;
   location?: string;
   timezone?: string;
-  zoomLink?: string;
+  meetingLink?: string;
 }
 
 export function updateBuddyProfile(token: string, update: BuddyProfileUpdate) {
@@ -290,7 +290,7 @@ export interface Lesson {
   startTime: string;
   durationMinutes: number;
   status: 'upcoming' | 'cancelled' | 'completed';
-  zoomLink: string;
+  meetingLink: string;
 }
 
 export function bookLesson(token: string, buddyId: string, startTime: string) {
@@ -481,7 +481,7 @@ export interface AdminBuddy {
   name?: string;
   email: string;
   active: boolean;
-  hasZoomLink: boolean;
+  hasMeetingLink: boolean;
 }
 
 export function fetchAdminBuddies(token: string) {

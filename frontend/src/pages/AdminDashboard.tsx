@@ -145,7 +145,7 @@ function BuddyRoster({ refreshKey }: { refreshKey: number }) {
               <p className="truncate font-bold text-text-heading">{buddy.name ?? buddy.email}</p>
               <p className="truncate text-xs font-bold uppercase tracking-wide text-text-secondary">
                 {buddy.active ? 'Active' : 'Inactive'}
-                {buddy.active && !buddy.hasZoomLink && ' · no zoom link yet'}
+                {buddy.active && !buddy.hasMeetingLink && ' · no meeting link yet'}
               </p>
             </div>
 

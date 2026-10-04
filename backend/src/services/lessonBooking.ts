@@ -154,13 +154,13 @@ export async function hasConflict(
 }
 
 // One definition of "a Buddy a User may book": provisioned, in rotation, and
-// reachable (ADR-0002 — no Zoom link, no Lesson). Every list and every booking
+// reachable (ADR-0002 — no meeting link, no Lesson). Every list and every booking
 // path filters on this, so a deactivated Buddy disappears from all of them at
 // once.
 export const BOOKABLE_BUDDY_QUERY = {
   role: 'buddy',
   active: true,
-  zoomLink: { $exists: true, $nin: [null, ''] },
+  meetingLink: { $exists: true, $nin: [null, ''] },
 } as const;
 
 export async function isSlotBookable(
@@ -168,7 +168,7 @@ export async function isSlotBookable(
   instant: Date,
   excludeLessonId?: mongoose.Types.ObjectId | string,
 ): Promise<boolean> {
-  if (buddy.role !== 'buddy' || !buddy.active || !buddy.zoomLink || !buddy.timezone) return false;
+  if (buddy.role !== 'buddy' || !buddy.active || !buddy.meetingLink || !buddy.timezone) return false;
   if (!isWithinAvailability(instant, buddy.availabilityBlocks, buddy.timezone)) return false;
   return !(await hasConflict(buddy._id, instant, LESSON_DURATION_MINUTES, excludeLessonId));
 }
@@ -192,7 +192,7 @@ export async function bookLesson(params: {
     userId: user._id,
     buddyId: buddy._id,
     startTime,
-    zoomLink: buddy.zoomLink,
+    meetingLink: buddy.meetingLink,
   });
   user.credits -= 1;
   await user.save();
@@ -201,9 +201,9 @@ export async function bookLesson(params: {
 
 export function buildConfirmationEmail(
   to: string,
-  entries: { startTime: Date; buddyName: string; zoomLink: string }[],
+  entries: { startTime: Date; buddyName: string; meetingLink: string }[],
 ): EmailMessage {
-  const lines = entries.map((e) => `${e.startTime.toISOString()} with ${e.buddyName} — ${e.zoomLink}`);
+  const lines = entries.map((e) => `${e.startTime.toISOString()} with ${e.buddyName} — ${e.meetingLink}`);
   return {
     to,
     subject: entries.length > 1 ? `Your ${entries.length} 10ME lessons are booked` : 'Your 10ME lesson is booked',
@@ -241,7 +241,7 @@ export function buildLessonRescheduledNotification(params: {
     email: {
       to: params.buddyEmail,
       subject: 'A 10ME lesson was moved',
-      body: `${params.userName} moved your lesson from ${from} to ${to}. Your Zoom link is unchanged.`,
+      body: `${params.userName} moved your lesson from ${from} to ${to}. Your meeting link is unchanged.`,
     },
   };
 }

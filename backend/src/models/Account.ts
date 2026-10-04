@@ -36,7 +36,7 @@ export interface AccountDocument extends mongoose.Document {
   picture?: string;
   bio?: string;
   timezone?: string;
-  zoomLink?: string;
+  meetingLink?: string;
   availabilityBlocks: AvailabilityBlock[];
   // Buddies this User has favourited. Only ever set on User accounts.
   favouriteBuddyIds: mongoose.Types.ObjectId[];
@@ -74,7 +74,7 @@ const accountSchema = new Schema<AccountDocument>({
   picture: { type: String },
   bio: { type: String },
   timezone: { type: String },
-  zoomLink: { type: String },
+  meetingLink: { type: String },
   availabilityBlocks: {
     type: [
       {

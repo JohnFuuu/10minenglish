@@ -46,7 +46,7 @@ async function main() {
   console.log(`Lesson reminders sweeping every ${REMINDER_SWEEP_INTERVAL_MS / 1000}s, ${REMINDER_LEAD_MINUTES}min ahead of each lesson.`);
 
   // Same rationale as the reminder sweep above: there's no external signal
-  // for "the Zoom call ended", so completion is driven by this timer instead
+  // for "the call ended", so completion is driven by this timer instead
   // of a request.
   setInterval(() => {
     completeDueLessons().catch((err) => {

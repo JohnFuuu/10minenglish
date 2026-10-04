@@ -33,7 +33,7 @@ async function everyDayBuddy(overrides: Record<string, unknown> = {}) {
     email: 'buddy@example.com',
     name: 'Buddy',
     timezone: BUDDY_TZ,
-    zoomLink: 'https://zoom.us/j/123',
+    meetingLink: 'https://zoom.us/j/123',
     availabilityBlocks: Array.from({ length: 7 }, (_, dayOfWeek) => ({ dayOfWeek, startTime: '00:00', endTime: '23:50' })),
     ...overrides,
   });
@@ -102,7 +102,7 @@ describe('POST /api/lessons/recurring', () => {
       userId: otherUser.id,
       buddyId: buddy.id,
       startTime: secondOccurrence.toJSDate(),
-      zoomLink: buddy.zoomLink,
+      meetingLink: buddy.meetingLink,
     });
 
     const { account, token } = await userToken();
@@ -139,7 +139,7 @@ describe('POST /api/lessons/recurring', () => {
     const busy = await everyDayBuddy({ email: 'busy@example.com', name: 'Busy' });
     const free = await everyDayBuddy({ email: 'free@example.com', name: 'Free' });
     const otherUser = await Account.create({ role: 'user', email: 'other@example.com' });
-    await Lesson.create({ userId: otherUser.id, buddyId: busy.id, startTime: anchor.toJSDate(), zoomLink: busy.zoomLink });
+    await Lesson.create({ userId: otherUser.id, buddyId: busy.id, startTime: anchor.toJSDate(), meetingLink: busy.meetingLink });
 
     const { token } = await userToken();
     const { app } = createTestApp();

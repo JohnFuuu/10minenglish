@@ -57,6 +57,12 @@ A web app connecting English learners (Users) with volunteer conversation partne
    - a User (`demo-user@10me.test` / `DemoPass123!`) with 10 Credits already on the account
    - a Buddy (`demo-buddy@10me.test` / `DemoPass123!`) bookable 07:00–22:00 every day (Pacific/Auckland), so most times you pick in the booking flow should show as available
 
+   **Existing database from before the meeting-link rename?** Run this once so Buddies and Lessons keep their links (safe to re-run):
+
+   ```bash
+   cd backend && npx tsx scripts/migrate-zoom-link-to-meeting-link.ts
+   ```
+
 5. Run both dev servers (separate terminals):
 
    ```bash

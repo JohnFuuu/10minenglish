@@ -50,13 +50,13 @@ buddyRouter.get('/api/buddy/profile', requireAuth, requireRole('buddy'), async (
     bio: account.bio,
     location: account.location,
     timezone: account.timezone,
-    zoomLink: account.zoomLink,
+    meetingLink: account.meetingLink,
     availabilityBlocks: account.availabilityBlocks,
   });
 });
 
 buddyRouter.patch('/api/buddy/profile', requireAuth, requireRole('buddy'), async (req, res) => {
-  const { name, picture, bio, location, timezone, zoomLink } = req.body ?? {};
+  const { name, picture, bio, location, timezone, meetingLink } = req.body ?? {};
 
   if (timezone !== undefined && !isValidTimezone(timezone)) {
     res.status(400).json({ error: 'Unrecognized timezone' });
@@ -74,7 +74,7 @@ buddyRouter.patch('/api/buddy/profile', requireAuth, requireRole('buddy'), async
   if (bio !== undefined) account.bio = bio;
   if (location !== undefined) account.location = location;
   if (timezone !== undefined) account.timezone = timezone;
-  if (zoomLink !== undefined) account.zoomLink = zoomLink;
+  if (meetingLink !== undefined) account.meetingLink = meetingLink;
   await account.save();
 
   res.status(200).json({
@@ -85,7 +85,7 @@ buddyRouter.patch('/api/buddy/profile', requireAuth, requireRole('buddy'), async
     bio: account.bio,
     location: account.location,
     timezone: account.timezone,
-    zoomLink: account.zoomLink,
+    meetingLink: account.meetingLink,
     availabilityBlocks: account.availabilityBlocks,
   });
 });
@@ -262,6 +262,6 @@ buddyRouter.get('/api/buddies/:id', requireAuth, async (req, res, next) => {
   const favourites = await favouriteIdsOf(req.account!.accountId);
   res.status(200).json({
     ...serializeBuddy(buddy, favourites.has(buddy.id)),
-    bookable: Boolean(buddy.zoomLink) && buddy.active,
+    bookable: Boolean(buddy.meetingLink) && buddy.active,
   });
 });

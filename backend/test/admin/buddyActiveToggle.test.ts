@@ -24,7 +24,7 @@ async function createBuddy() {
     role: 'buddy',
     email: 'maria@example.com',
     name: 'Maria',
-    zoomLink: 'https://zoom.us/j/1234567890',
+    meetingLink: 'https://zoom.us/j/1234567890',
     timezone: 'Pacific/Auckland',
     availabilityBlocks: [{ dayOfWeek: 1, startTime: '00:00', endTime: '23:59' }],
   });
@@ -42,7 +42,7 @@ async function createUpcomingLesson(userId: string, buddyId: string, daysAhead =
     startTime: new Date(Date.now() + daysAhead * 24 * 60 * 60 * 1000),
     durationMinutes: 10,
     status: 'upcoming',
-    zoomLink: 'https://zoom.us/j/1234567890',
+    meetingLink: 'https://zoom.us/j/1234567890',
   });
 }
 
@@ -136,7 +136,7 @@ describe('PATCH /api/admin/buddies/:id', () => {
       startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
       durationMinutes: 10,
       status: 'upcoming',
-      zoomLink: 'https://zoom.us/j/1234567890',
+      meetingLink: 'https://zoom.us/j/1234567890',
     });
     const cancelled = await Lesson.create({
       userId: user.id,
@@ -144,7 +144,7 @@ describe('PATCH /api/admin/buddies/:id', () => {
       startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
       durationMinutes: 10,
       status: 'cancelled',
-      zoomLink: 'https://zoom.us/j/1234567890',
+      meetingLink: 'https://zoom.us/j/1234567890',
     });
 
     const { app } = createTestApp();
@@ -264,6 +264,6 @@ describe('GET /api/admin/buddies', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.buddies).toHaveLength(1);
-    expect(res.body.buddies[0]).toMatchObject({ name: 'Maria', active: false, hasZoomLink: true });
+    expect(res.body.buddies[0]).toMatchObject({ name: 'Maria', active: false, hasMeetingLink: true });
   });
 });

@@ -116,15 +116,15 @@ export function BuddyLessonsScreen() {
                   </span>
                 </div>
 
-                {lesson.zoomLink?.startsWith('https://') && (
+                {lesson.meetingLink?.startsWith('https://') && (
                   <a
-                    href={lesson.zoomLink}
+                    href={lesson.meetingLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 flex items-center gap-1.5 text-xs font-bold text-brand-secondary"
                   >
                     <Video size={14} />
-                    Zoom link
+                    Meeting link
                   </a>
                 )}
 

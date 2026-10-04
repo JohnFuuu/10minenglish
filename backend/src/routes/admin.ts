@@ -37,6 +37,9 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
       // Admin-provisioned accounts are curated, not self-signed-up — no
       // need for the email-ownership verification that public signup uses.
       emailConfirmed: true,
+      // Onboarding (referral source, self-rated level, lessons/week goal) is
+      // a User-only concept — a Buddy should never be routed through it.
+      onboardingCompleted: true,
     });
 
     res.status(201).json({ id: buddy.id, email: buddy.email, role: buddy.role });
@@ -54,7 +57,7 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
         name: b.name,
         email: b.email,
         active: b.active,
-        hasZoomLink: Boolean(b.zoomLink),
+        hasMeetingLink: Boolean(b.meetingLink),
       })),
     });
   });

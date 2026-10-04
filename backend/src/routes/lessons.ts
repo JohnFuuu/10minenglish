@@ -33,7 +33,7 @@ function serializeLesson(lesson: LessonDocument) {
     startTime: lesson.startTime.toISOString(),
     durationMinutes: lesson.durationMinutes,
     status: lesson.status,
-    zoomLink: lesson.zoomLink,
+    meetingLink: lesson.meetingLink,
   };
 }
 
@@ -141,7 +141,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
 
     const lesson = await bookLesson({ user, buddy, startTime: instant });
     await emailSender.send(
-      buildConfirmationEmail(user.email, [{ startTime: instant, buddyName: buddy.name ?? 'your Buddy', zoomLink: buddy.zoomLink! }]),
+      buildConfirmationEmail(user.email, [{ startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: buddy.meetingLink! }]),
     );
 
     res.status(201).json({ lesson: serializeLesson(lesson), creditsRemaining: user.credits });
@@ -210,7 +210,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
           booked.map(({ lesson, buddy }) => ({
             startTime: lesson.startTime,
             buddyName: buddy.name ?? 'your Buddy',
-            zoomLink: buddy.zoomLink!,
+            meetingLink: buddy.meetingLink!,
           })),
         ),
       );
@@ -327,7 +327,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       // the booking one. The Buddy didn't, so they get a Notification.
       await emailSender.send(
         buildConfirmationEmail(user.email, [
-          { startTime: instant, buddyName: buddy.name ?? 'your Buddy', zoomLink: lesson.zoomLink },
+          { startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: lesson.meetingLink },
         ]),
       );
 

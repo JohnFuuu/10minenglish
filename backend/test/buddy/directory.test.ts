@@ -26,7 +26,7 @@ async function createBuddy(name: string, overrides: Record<string, unknown> = {}
     bio: `${name} loves teaching.`,
     location: 'Lisbon, Portugal',
     picture: `https://example.com/${name.toLowerCase()}.jpg`,
-    zoomLink: 'https://zoom.us/j/1234567890',
+    meetingLink: 'https://zoom.us/j/1234567890',
     ...overrides,
   });
 }
@@ -38,7 +38,7 @@ async function createPastLesson(userId: string, buddyId: string, daysAgo: number
     startTime: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000),
     durationMinutes: 10,
     status: 'completed',
-    zoomLink: 'https://zoom.us/j/1234567890',
+    meetingLink: 'https://zoom.us/j/1234567890',
   });
 }
 
@@ -59,10 +59,10 @@ describe('GET /api/buddies', () => {
     expect(byName.Tom.isFavourite).toBe(false);
   });
 
-  it('still excludes Buddies with no Zoom link', async () => {
+  it('still excludes Buddies with no meeting link', async () => {
     const { token } = await createUser();
     await createBuddy('Maria');
-    await createBuddy('Nolink', { zoomLink: '' });
+    await createBuddy('Nolink', { meetingLink: '' });
 
     const app = createApp();
     const res = await request(app).get('/api/buddies').set('Authorization', `Bearer ${token}`);
@@ -115,7 +115,7 @@ describe('GET /api/buddies/recent', () => {
       startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
       durationMinutes: 10,
       status: 'cancelled',
-      zoomLink: 'https://zoom.us/j/1234567890',
+      meetingLink: 'https://zoom.us/j/1234567890',
     });
     await Lesson.create({
       userId: account.id,
@@ -123,7 +123,7 @@ describe('GET /api/buddies/recent', () => {
       startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
       durationMinutes: 10,
       status: 'upcoming',
-      zoomLink: 'https://zoom.us/j/1234567890',
+      meetingLink: 'https://zoom.us/j/1234567890',
     });
 
     const app = createApp();
@@ -227,9 +227,9 @@ describe('GET /api/buddies/:id', () => {
     });
   });
 
-  it('reports a Buddy with no Zoom link as not bookable', async () => {
+  it('reports a Buddy with no meeting link as not bookable', async () => {
     const { token } = await createUser();
-    const nolink = await createBuddy('Nolink', { zoomLink: '' });
+    const nolink = await createBuddy('Nolink', { meetingLink: '' });
 
     const app = createApp();
     const res = await request(app)

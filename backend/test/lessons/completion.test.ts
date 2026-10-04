@@ -11,7 +11,7 @@ beforeAll(async () => {
 afterAll(stopTestDb, 30000);
 beforeEach(clearTestDb);
 
-const ZOOM_LINK = 'https://zoom.us/j/1234567890';
+const MEETING_LINK = 'https://zoom.us/j/1234567890';
 
 async function createPair() {
   const user = await Account.create({ role: 'user', email: 'sarah@example.com', name: 'Sarah' });
@@ -36,7 +36,7 @@ async function createLesson(params: {
     startTime: params.startTime,
     durationMinutes: params.durationMinutes ?? 10,
     status: params.status ?? 'upcoming',
-    zoomLink: ZOOM_LINK,
+    meetingLink: MEETING_LINK,
   });
 }
 

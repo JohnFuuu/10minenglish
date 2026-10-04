@@ -131,10 +131,10 @@ export function UserDashboard() {
               <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-brand-primary" />
             </div>
             <div className="flex gap-2">
-              {nextLesson.joinable && nextLesson.zoomLink.startsWith('https://') && (
+              {nextLesson.joinable && nextLesson.meetingLink.startsWith('https://') && (
                 <Button
                   className="flex-1"
-                  onClick={() => window.open(nextLesson.zoomLink, '_blank', 'noopener')}
+                  onClick={() => window.open(nextLesson.meetingLink, '_blank', 'noopener')}
                 >
                   ▶ Join now
                 </Button>

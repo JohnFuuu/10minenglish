@@ -14,7 +14,7 @@ beforeAll(async () => {
 afterAll(stopTestDb, 30000);
 beforeEach(clearTestDb);
 
-const ZOOM_LINK = 'https://zoom.us/j/1234567890';
+const MEETING_LINK = 'https://zoom.us/j/1234567890';
 const HOUR_MS = 60 * 60 * 1000;
 
 async function createPair() {
@@ -28,7 +28,7 @@ async function createPair() {
     role: 'buddy',
     email: 'maria@example.com',
     name: 'Maria',
-    zoomLink: ZOOM_LINK,
+    meetingLink: MEETING_LINK,
     timezone: 'UTC',
     // Bookable around the clock, every day, so the tests can pick any instant.
     availabilityBlocks: [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
@@ -47,7 +47,7 @@ async function createLesson(userId: string, buddyId: string, hoursAhead: number)
     startTime: new Date(Date.now() + hoursAhead * HOUR_MS),
     durationMinutes: 10,
     status: 'upcoming',
-    zoomLink: ZOOM_LINK,
+    meetingLink: MEETING_LINK,
   });
 }
 

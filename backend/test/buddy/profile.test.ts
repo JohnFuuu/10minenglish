@@ -39,7 +39,7 @@ describe('GET /api/buddy/profile', () => {
 });
 
 describe('PATCH /api/buddy/profile', () => {
-  it('updates name, picture, bio, location, timezone, and zoom link', async () => {
+  it('updates name, picture, bio, location, timezone, and meeting link', async () => {
     const { account, token } = await buddyToken();
     const app = createApp();
 
@@ -52,7 +52,7 @@ describe('PATCH /api/buddy/profile', () => {
         bio: 'I love teaching conversational English!',
         location: 'Lisbon, Portugal',
         timezone: 'Europe/Lisbon',
-        zoomLink: 'https://zoom.us/j/1234567890',
+        meetingLink: 'https://zoom.us/j/1234567890',
       });
 
     expect(res.status).toBe(200);
@@ -64,7 +64,7 @@ describe('PATCH /api/buddy/profile', () => {
     expect(updated!.bio).toBe('I love teaching conversational English!');
     expect(updated!.location).toBe('Lisbon, Portugal');
     expect(updated!.timezone).toBe('Europe/Lisbon');
-    expect(updated!.zoomLink).toBe('https://zoom.us/j/1234567890');
+    expect(updated!.meetingLink).toBe('https://zoom.us/j/1234567890');
   });
 
   it('rejects an unrecognized IANA timezone', async () => {

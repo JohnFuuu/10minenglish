@@ -21,7 +21,7 @@ async function buddyToken(overrides: Record<string, unknown> = {}) {
     email: 'buddy@example.com',
     name: 'Kenji',
     timezone: 'Asia/Tokyo',
-    zoomLink: 'https://zoom.us/j/123',
+    meetingLink: 'https://zoom.us/j/123',
     ...overrides,
   });
   return { account, token: signAccountToken({ accountId: account.id, role: account.role }) };
@@ -35,7 +35,7 @@ describe('POST /api/lessons/:id/buddy-cancel', () => {
   it('rejects a non-buddy account', async () => {
     const u = await user();
     const token = signAccountToken({ accountId: u.id, role: u.role });
-    const lesson = await Lesson.create({ userId: u.id, buddyId: u.id, startTime: new Date(), zoomLink: 'https://zoom.us/j/1' });
+    const lesson = await Lesson.create({ userId: u.id, buddyId: u.id, startTime: new Date(), meetingLink: 'https://zoom.us/j/1' });
     const { app } = createTestApp();
 
     const res = await request(app).post(`/api/lessons/${lesson.id}/buddy-cancel`).set('Authorization', `Bearer ${token}`);
@@ -55,14 +55,14 @@ describe('POST /api/lessons/:id/buddy-cancel', () => {
   });
 
   it('403s when cancelling another Buddy\'s lesson', async () => {
-    const otherBuddy = await Account.create({ role: 'buddy', email: 'other-buddy@example.com', zoomLink: 'https://zoom.us/j/9' });
+    const otherBuddy = await Account.create({ role: 'buddy', email: 'other-buddy@example.com', meetingLink: 'https://zoom.us/j/9' });
     const u = await user();
     const { token } = await buddyToken();
     const lesson = await Lesson.create({
       userId: u.id,
       buddyId: otherBuddy.id,
       startTime: DateTime.now().plus({ days: 1 }).toJSDate(),
-      zoomLink: otherBuddy.zoomLink,
+      meetingLink: otherBuddy.meetingLink,
     });
     const { app } = createTestApp();
 
@@ -78,7 +78,7 @@ describe('POST /api/lessons/:id/buddy-cancel', () => {
       userId: u.id,
       buddyId: buddy.id,
       startTime: DateTime.now().plus({ days: 1 }).toJSDate(),
-      zoomLink: buddy.zoomLink,
+      meetingLink: buddy.meetingLink,
       status: 'cancelled',
     });
     const { app } = createTestApp();
@@ -95,7 +95,7 @@ describe('POST /api/lessons/:id/buddy-cancel', () => {
       userId: u.id,
       buddyId: buddy.id,
       startTime: DateTime.now().plus({ minutes: 30 }).toJSDate(),
-      zoomLink: buddy.zoomLink,
+      meetingLink: buddy.meetingLink,
     });
     const { app, emailSender } = createTestApp();
 
@@ -126,7 +126,7 @@ describe('POST /api/lessons/:id/buddy-cancel', () => {
       userId: u.id,
       buddyId: buddy.id,
       startTime: DateTime.now().plus({ hours: 6 }).toJSDate(),
-      zoomLink: buddy.zoomLink,
+      meetingLink: buddy.meetingLink,
     });
     const { app } = createTestApp();
 

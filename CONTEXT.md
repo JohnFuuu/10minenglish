@@ -1,6 +1,6 @@
 # 10ME
 
-An English-speaking practice platform. Users buy lesson credits and book 1:1 speaking sessions over Zoom (see ADR 0002 for why the source spec's Google Meet was replaced).
+An English-speaking practice platform. Users buy lesson credits and book 1:1 speaking sessions over a Buddy-supplied video call link — Zoom, Google Meet, or any provider a Buddy already uses (see ADR 0002 for why this is a static link rather than a platform-generated meeting).
 
 ## Language
 
@@ -9,7 +9,7 @@ A login identity with exactly one type — User, Buddy, or Admin, never more tha
 _Avoid_: Profile (Profile is the editable data on an Account, not the identity/role itself)
 
 **Buddy**:
-The person a User books a 1:1 session with. Single canonical role — the spec's "teacher" and "practice partner" are the same entity, just inconsistent naming from the source diagram. Each Buddy has one persistent Zoom link (their personal meeting room) set on their profile and reused for every Lesson they teach — the platform does not generate meeting links via the Zoom API. Buddies log into the same app as Users but see a distinct role-based view (their upcoming Lessons to teach, Availability Schedule editor, Zoom link setting) — this Buddy-side interface isn't described anywhere in the source flow spec, which only documents the User-facing flow. Buddies are volunteers, not paid staff or contractors — there is no compensation/earnings/payout concept anywhere in this domain. Profile fields: Name, picture, bio, location, timezone, Zoom link, Availability Schedule — all self-editable by the Buddy. The only Admin-controlled field is the active/inactive flag; Admin provisions the account but does not maintain its content afterward.
+The person a User books a 1:1 session with. Single canonical role — the spec's "teacher" and "practice partner" are the same entity, just inconsistent naming from the source diagram. Each Buddy has one persistent meeting link (Zoom, Google Meet, or any provider — their personal meeting room) set on their profile and reused for every Lesson they teach — the platform does not generate meeting links via any provider's API. Buddies log into the same app as Users but see a distinct role-based view (their upcoming Lessons to teach, Availability Schedule editor, meeting link setting) — this Buddy-side interface isn't described anywhere in the source flow spec, which only documents the User-facing flow. Buddies are volunteers, not paid staff or contractors — there is no compensation/earnings/payout concept anywhere in this domain. Profile fields: Name, picture, bio, location, timezone, meeting link, Availability Schedule — all self-editable by the Buddy. The only Admin-controlled field is the active/inactive flag; Admin provisions the account but does not maintain its content afterward.
 _Avoid_: Teacher, practice partner, tutor
 
 **Lesson**:

@@ -28,8 +28,9 @@ async function main() {
     name: 'Demo Buddy',
     passwordHash: await hashPassword(password),
     emailConfirmed: true,
+    onboardingCompleted: true,
     timezone: 'Pacific/Auckland',
-    zoomLink: 'https://zoom.us/j/demo123',
+    meetingLink: 'https://zoom.us/j/demo123',
     bio: 'Friendly demo Buddy, available almost any time for testing.',
     availabilityBlocks: Array.from({ length: 7 }, (_, dayOfWeek) => ({
       dayOfWeek,

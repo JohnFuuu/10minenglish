@@ -32,7 +32,7 @@ async function bookableBuddy(overrides: Record<string, unknown> = {}) {
     email: 'buddy@example.com',
     name: 'Buddy',
     timezone: BUDDY_TZ,
-    zoomLink: 'https://zoom.us/j/123',
+    meetingLink: 'https://zoom.us/j/123',
     availabilityBlocks: [{ dayOfWeek: anchor.weekday % 7, startTime: '09:00', endTime: '17:00' }],
     ...overrides,
   });
@@ -101,7 +101,7 @@ describe('POST /api/lessons', () => {
     const buddy = await bookableBuddy();
     const other = await Account.create({ role: 'user', email: 'other@example.com' });
     const anchor = anchorLocal();
-    await Lesson.create({ userId: other.id, buddyId: buddy.id, startTime: anchor.toJSDate(), zoomLink: buddy.zoomLink });
+    await Lesson.create({ userId: other.id, buddyId: buddy.id, startTime: anchor.toJSDate(), meetingLink: buddy.meetingLink });
 
     const { account, token } = await userToken();
     const { app } = createTestApp();
@@ -116,7 +116,7 @@ describe('POST /api/lessons', () => {
     expect(updated!.credits).toBe(3);
   });
 
-  it('books the lesson, deducts 1 credit, snapshots the Zoom link, and emails a confirmation', async () => {
+  it('books the lesson, deducts 1 credit, snapshots the meeting link, and emails a confirmation', async () => {
     const buddy = await bookableBuddy();
     const { account, token } = await userToken();
     const anchor = anchorLocal();
@@ -132,7 +132,7 @@ describe('POST /api/lessons', () => {
     expect(res.body.lesson).toMatchObject({
       buddyId: buddy.id,
       status: 'upcoming',
-      zoomLink: buddy.zoomLink,
+      meetingLink: buddy.meetingLink,
     });
 
     const updated = await Account.findById(account.id);
@@ -144,6 +144,6 @@ describe('POST /api/lessons', () => {
 
     expect(emailSender.sent).toHaveLength(1);
     expect(emailSender.sent[0].to).toBe('user@example.com');
-    expect(emailSender.sent[0].body).toContain(buddy.zoomLink);
+    expect(emailSender.sent[0].body).toContain(buddy.meetingLink);
   });
 });

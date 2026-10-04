@@ -20,7 +20,7 @@ interface BuddyProfileForm {
   bio: string;
   location: string;
   timezone: string;
-  zoomLink: string;
+  meetingLink: string;
 }
 
 function toForm(profile: BuddyProfile): BuddyProfileForm {
@@ -30,7 +30,7 @@ function toForm(profile: BuddyProfile): BuddyProfileForm {
     bio: profile.bio ?? '',
     location: profile.location ?? '',
     timezone: profile.timezone ?? '',
-    zoomLink: profile.zoomLink ?? '',
+    meetingLink: profile.meetingLink ?? '',
   };
 }
 
@@ -146,11 +146,11 @@ export function BuddyProfileScreen() {
         </Button>
       </div>
 
-      {!profile.zoomLink && (
+      {!profile.meetingLink && (
         <div className="mb-4 flex items-center gap-2 rounded-md border-2 border-warning bg-warning/10 px-3 py-2">
           <AlertTriangle size={16} className="shrink-0 text-warning" />
           <p className="text-xs font-bold uppercase tracking-wide text-text-body">
-            Add a Zoom link — Users cannot book you without it.
+            Add a meeting link — Users cannot book you without it.
           </p>
         </div>
       )}
@@ -180,10 +180,10 @@ export function BuddyProfileScreen() {
           onChange={(e) => updateField('timezone')(e.target.value)}
         />
         <Input
-          label="Zoom link"
-          placeholder="Zoom link"
-          value={form.zoomLink}
-          onChange={(e) => updateField('zoomLink')(e.target.value)}
+          label="Meeting link"
+          placeholder="Meeting link (Zoom, Google Meet, etc.)"
+          value={form.meetingLink}
+          onChange={(e) => updateField('meetingLink')(e.target.value)}
         />
         <Button type="submit" disabled={isSaving}>
           {isSaving ? 'Saving…' : 'Save profile'}
