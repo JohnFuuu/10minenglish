@@ -125,7 +125,7 @@ export function BuddyDashboard() {
         </div>
       </div>
 
-      <BottomNav unreadCount={unreadCount} />
+      <BottomNav />
     </main>
   );
 }

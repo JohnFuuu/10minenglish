@@ -7,7 +7,6 @@ import { ApiError, buddyCancelLesson, fetchTeachingLessons, type LessonWithUser 
 import { formatDateTime } from '../lib/formatDateTime';
 import { initialsOf } from '../lib/initials';
 import { useCachedFetch } from '../lib/useCachedFetch';
-import { useUnreadCount } from '../lib/useUnreadCount';
 
 const TEACHING_LESSONS_CACHE_KEY = '10me.cache.teachingLessons';
 
@@ -35,7 +34,6 @@ export function BuddyLessonsScreen() {
   );
   const upcoming = lessons?.upcoming ?? [];
   const previous = lessons?.previous ?? [];
-  const unreadCount = useUnreadCount(token);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
@@ -187,7 +185,7 @@ export function BuddyLessonsScreen() {
         </section>
       )}
 
-      <BottomNav unreadCount={unreadCount} />
+      <BottomNav />
     </main>
   );
 }

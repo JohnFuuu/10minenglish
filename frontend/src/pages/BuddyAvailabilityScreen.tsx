@@ -8,7 +8,6 @@ import {
   type AvailabilityBlock,
   type BuddyProfile,
 } from '../lib/api';
-import { useUnreadCount } from '../lib/useUnreadCount';
 
 const DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 const HOURS = Array.from({ length: 10 }, (_, i) => 8 + i); // 8am - 6pm, 1h slots
@@ -35,7 +34,6 @@ export function BuddyAvailabilityScreen() {
   // selectedHours underneath, this just controls what's rendered, so a
   // 7-day-by-10-hour grid never has to fit sideways on a phone screen.
   const [activeDay, setActiveDay] = useState(() => new Date().getDay());
-  const unreadCount = useUnreadCount(token);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -170,7 +168,7 @@ export function BuddyAvailabilityScreen() {
         </Button>
       </div>
 
-      <BottomNav unreadCount={unreadCount} />
+      <BottomNav />
     </main>
   );
 }

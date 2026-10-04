@@ -189,7 +189,7 @@ export function NotificationsScreen() {
           })}
       </div>
 
-      {showBottomNav && <BottomNav unreadCount={unreadCount} />}
+      {showBottomNav && <BottomNav />}
     </main>
   );
 }

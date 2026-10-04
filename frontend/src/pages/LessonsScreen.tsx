@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { CalendarX, Video } from 'lucide-react';
 import { Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
@@ -16,7 +16,6 @@ import type { BookLessonPrefill } from './BookLesson';
 import { formatDateTime } from '../lib/formatDateTime';
 import { initialsOf } from '../lib/initials';
 import { useCachedFetch } from '../lib/useCachedFetch';
-import { useUnreadCount } from '../lib/useUnreadCount';
 
 const LESSONS_CACHE_KEY = '10me.cache.lessons';
 
@@ -85,8 +84,21 @@ export function LessonsScreen() {
   const { token, account, setCredits } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [tab, setTab] = useState<'upcoming' | 'previous'>('upcoming');
+  // Arriving from the Dashboard's "Next lesson" card — briefly highlight and
+  // scroll to that lesson so it's obvious which one you clicked through for.
+  const [highlightId, setHighlightId] = useState<string | null>(
+    () => (location.state as { highlightLessonId?: string } | null)?.highlightLessonId ?? null,
+  );
+
+  useEffect(() => {
+    if (!highlightId) return;
+    document.getElementById(`lesson-${highlightId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const timeout = setTimeout(() => setHighlightId(null), 600);
+    return () => clearTimeout(timeout);
+  }, [highlightId]);
   const [lessons, setLessons, isLoading] = useCachedFetch<LessonsCache>(
     LESSONS_CACHE_KEY,
     () => fetchUserLessons(token!),
@@ -95,7 +107,6 @@ export function LessonsScreen() {
   );
   const upcoming = lessons?.upcoming ?? [];
   const previous = lessons?.previous ?? [];
-  const unreadCount = useUnreadCount(token);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
@@ -235,7 +246,12 @@ export function LessonsScreen() {
         <section className="px-5">
           <div className="flex flex-col gap-3">
             {upcoming.map((lesson) => (
-              <Card key={lesson.id}>
+              <div
+                key={lesson.id}
+                id={`lesson-${lesson.id}`}
+                className={highlightId === lesson.id ? 'animate-card-zoom' : ''}
+              >
+              <Card>
                 <div className="flex items-center justify-between">
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar initials={initialsOf(lesson.buddyName)} size={40} />
@@ -356,6 +372,7 @@ export function LessonsScreen() {
                   </div>
                 )}
               </Card>
+              </div>
             ))}
           </div>
         </section>
@@ -410,7 +427,7 @@ export function LessonsScreen() {
         </section>
       )}
 
-      <BottomNav unreadCount={unreadCount} />
+      <BottomNav />
     </main>
   );
 }

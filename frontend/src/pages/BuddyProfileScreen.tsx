@@ -4,6 +4,7 @@ import { AutocompleteInput, Avatar, BottomNav, Button, Input, NAV_CLEARANCE_CLAS
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import { COUNTRY_NAMES, flagCodeForCountry } from '../lib/countries';
+import { TIMEZONE_NAMES } from '../lib/timezones';
 import { initialsOf } from '../lib/initials';
 import {
   ApiError,
@@ -12,7 +13,6 @@ import {
   uploadPicture,
   type BuddyProfile,
 } from '../lib/api';
-import { useUnreadCount } from '../lib/useUnreadCount';
 
 interface BuddyProfileForm {
   name: string;
@@ -39,7 +39,6 @@ export function BuddyProfileScreen() {
   const { showToast } = useToast();
   const [profile, setProfile] = useState<BuddyProfile | null>(null);
   const [form, setForm] = useState<BuddyProfileForm | null>(null);
-  const unreadCount = useUnreadCount(token);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -173,11 +172,12 @@ export function BuddyProfileScreen() {
           options={COUNTRY_NAMES}
           getFlagCode={flagCodeForCountry}
         />
-        <Input
+        <AutocompleteInput
           label="Timezone"
           placeholder="Timezone (e.g. Pacific/Auckland)"
           value={form.timezone}
-          onChange={(e) => updateField('timezone')(e.target.value)}
+          onChange={updateField('timezone')}
+          options={TIMEZONE_NAMES}
         />
         <Input
           label="Meeting link"
@@ -190,7 +190,7 @@ export function BuddyProfileScreen() {
         </Button>
       </form>
 
-      <BottomNav unreadCount={unreadCount} />
+      <BottomNav />
     </main>
   );
 }

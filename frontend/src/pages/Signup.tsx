@@ -58,7 +58,7 @@ export function Signup() {
       const result = await loginWithGoogle(idToken);
       const me = await fetchMe(result.token);
       setSession(result.token, toAccount(me));
-      navigate(me.onboardingCompleted ? '/dashboard' : '/onboarding');
+      navigate('/dashboard');
     } catch {
       setError('Google sign-in failed.');
     }

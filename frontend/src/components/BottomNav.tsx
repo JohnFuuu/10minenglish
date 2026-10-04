@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { Badge } from './Badge';
 
 const ACTIVE = '#58cc02';
 const INACTIVE = '#777777';
@@ -44,13 +43,6 @@ const AVAILABILITY_ICON = (active: boolean) => (
   </svg>
 );
 
-const ALERTS_ICON = (active: boolean) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : INACTIVE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-  </svg>
-);
-
 const PROFILE_ICON = (active: boolean) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : INACTIVE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -62,7 +54,6 @@ const USER_TABS: NavTab[] = [
   { path: '/dashboard', label: 'HOME', icon: HOME_ICON },
   { path: '/buddies', label: 'BUDDIES', icon: BUDDIES_ICON },
   { path: '/lessons', label: 'LESSONS', icon: LESSONS_ICON },
-  { path: '/notifications', label: 'ALERTS', icon: ALERTS_ICON },
   { path: '/profile', label: 'PROFILE', icon: PROFILE_ICON },
 ];
 
@@ -70,20 +61,15 @@ const BUDDY_TABS: NavTab[] = [
   { path: '/dashboard', label: 'HOME', icon: HOME_ICON },
   { path: '/teaching', label: 'TEACHING', icon: LESSONS_ICON },
   { path: '/availability', label: 'AVAILABILITY', icon: AVAILABILITY_ICON },
-  { path: '/notifications', label: 'ALERTS', icon: ALERTS_ICON },
   { path: '/profile', label: 'PROFILE', icon: PROFILE_ICON },
 ];
-
-interface BottomNavProps {
-  unreadCount?: number;
-}
 
 // Persistent tab bar, shared across the signed-in screens it appears on.
 // Pages that render this need bottom padding (see NAV_CLEARANCE_CLASS) so
 // their own content doesn't sit underneath the fixed bar.
 export const NAV_CLEARANCE_CLASS = 'pb-24';
 
-export function BottomNav({ unreadCount = 0 }: BottomNavProps) {
+export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { account } = useAuth();
@@ -107,14 +93,7 @@ export function BottomNav({ unreadCount = 0 }: BottomNavProps) {
               onClick={() => navigate(tab.path)}
               className="relative flex flex-col items-center gap-0.5 px-2 py-1"
             >
-              <span className="relative flex">
-                {tab.icon(active)}
-                {tab.path === '/notifications' && unreadCount > 0 && (
-                  <span className="absolute -right-2 -top-2">
-                    <Badge count={unreadCount} />
-                  </span>
-                )}
-              </span>
+              <span className="relative flex">{tab.icon(active)}</span>
               <span
                 className={`text-[10px] font-bold tracking-widest ${active ? 'text-brand-primary' : 'text-text-secondary'}`}
               >

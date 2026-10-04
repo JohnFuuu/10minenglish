@@ -56,3 +56,42 @@ body {
 .animate-breathe {
   animation: breathe 2.8s ease-in-out infinite;
 }
+
+@keyframes card-zoom {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* One-shot pulse (e.g. "this is the lesson you clicked through for") —
+   plays once when the class is added, not a loop. */
+.animate-card-zoom {
+  animation: card-zoom 0.5s ease-in-out;
+}
+
+@keyframes confetti-burst {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)) scale(0.4);
+    opacity: 0;
+  }
+}
+
+/* One-shot burst — plays once on mount (e.g. a booking success screen) and
+   holds its faded-out end state via forwards, so it never loops or replays
+   on a re-render of the same mounted element. */
+.confetti-piece {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  animation: confetti-burst 850ms cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}

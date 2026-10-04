@@ -13,7 +13,6 @@ import {
   type DirectoryBuddy,
 } from '../lib/api';
 import { readSessionCache, writeSessionCache } from '../lib/sessionCache';
-import { useUnreadCount } from '../lib/useUnreadCount';
 import type { BookLessonPrefill } from './BookLesson';
 
 type Tab = 'all' | 'recent' | 'favourite';
@@ -52,7 +51,6 @@ export function BuddiesScreen() {
   const [search, setSearch] = useState('');
   const [buddies, setBuddies] = useState<DirectoryBuddy[]>(buddiesCache.all ?? []);
   const [isLoading, setIsLoading] = useState(buddiesCache.all === undefined);
-  const unreadCount = useUnreadCount(token);
   const activeTabRef = useRef<Tab>(tab);
 
   const load = useCallback(
@@ -243,7 +241,7 @@ export function BuddiesScreen() {
           ))}
       </div>
 
-      <BottomNav unreadCount={unreadCount} />
+      <BottomNav />
     </main>
   );
 }

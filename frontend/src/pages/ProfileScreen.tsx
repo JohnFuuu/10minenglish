@@ -15,7 +15,6 @@ import {
 } from '../lib/api';
 import { readSessionCache } from '../lib/sessionCache';
 import { useCachedFetch } from '../lib/useCachedFetch';
-import { useUnreadCount } from '../lib/useUnreadCount';
 
 const PROFILE_CACHE_KEY = '10me.cache.profile';
 
@@ -61,7 +60,6 @@ export function ProfileScreen() {
     },
   );
   const [isSaving, setIsSaving] = useState(false);
-  const unreadCount = useUnreadCount(token);
   const [isUploadingPicture, setIsUploadingPicture] = useState(false);
   const pictureInputRef = useRef<HTMLInputElement>(null);
 
@@ -336,7 +334,7 @@ export function ProfileScreen() {
         </>
       )}
 
-      <BottomNav unreadCount={unreadCount} />
+      <BottomNav />
     </main>
   );
 }

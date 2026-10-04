@@ -24,6 +24,7 @@ function formatPrice(cents: number): string {
 }
 
 const COLLAPSED_HISTORY_COUNT = 5;
+const DASHBOARD_UPCOMING_LIMIT = 5;
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -142,7 +143,7 @@ export function UserDashboard() {
               <Button
                 variant="secondary"
                 className={nextLesson.joinable ? '' : 'flex-1'}
-                onClick={() => navigate('/lessons')}
+                onClick={() => navigate('/lessons', { state: { highlightLessonId: nextLesson.id } })}
               >
                 Details
               </Button>
@@ -170,18 +171,9 @@ export function UserDashboard() {
 
       {restUpcoming.length > 0 && (
         <div className="px-5">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-widest text-text-secondary">Upcoming</p>
-            <button
-              type="button"
-              onClick={() => navigate('/lessons')}
-              className="text-xs font-bold tracking-widest text-brand-secondary"
-            >
-              SEE ALL →
-            </button>
-          </div>
+          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Upcoming</p>
           <div className="flex flex-col gap-3">
-            {restUpcoming.map((lesson) => (
+            {restUpcoming.slice(0, DASHBOARD_UPCOMING_LIMIT).map((lesson) => (
               <div
                 key={lesson.id}
                 className="flex items-center gap-3 rounded-md border-2 border-b-[3px] border-border bg-bg-surface p-3"
@@ -197,6 +189,16 @@ export function UserDashboard() {
               </div>
             ))}
           </div>
+
+          {restUpcoming.length > DASHBOARD_UPCOMING_LIMIT && (
+            <button
+              type="button"
+              onClick={() => navigate('/lessons')}
+              className="mt-3 w-full rounded-md border-2 border-dashed border-border py-2.5 text-center text-xs font-bold tracking-widest text-brand-secondary"
+            >
+              +{restUpcoming.length - DASHBOARD_UPCOMING_LIMIT} more — See all
+            </button>
+          )}
         </div>
       )}
 
@@ -276,7 +278,7 @@ export function UserDashboard() {
         </Modal>
       )}
 
-      <BottomNav unreadCount={unreadCount} />
+      <BottomNav />
     </main>
   );
 }

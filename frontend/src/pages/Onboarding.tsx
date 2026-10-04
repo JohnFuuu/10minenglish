@@ -106,11 +106,13 @@ export function Onboarding() {
   const [error, setError] = useState<string | null>(null);
 
   if (!account || !token) return <Navigate to="/login" replace />;
-  if (account.onboardingCompleted) return <Navigate to="/dashboard" replace />;
+  if (account.role !== 'user' || account.onboardingCompleted) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const step = steps[stepIndex];
   const selected = selections[stepIndex];
-  const progressPct = ((stepIndex + 1) / steps.length) * 100;
+  const progressPct = (stepIndex / steps.length) * 100;
   const isLast = stepIndex === steps.length - 1;
 
   function select(label: string) {

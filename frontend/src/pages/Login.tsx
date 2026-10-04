@@ -29,7 +29,8 @@ export function Login() {
       const result = await login(email, password);
       const me = await fetchMe(result.token);
       setSession(result.token, toAccount(me));
-      navigate(me.onboardingCompleted ? '/dashboard' : '/onboarding');
+      // Dashboard itself decides whether to bounce to /onboarding (User-only).
+      navigate('/dashboard');
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setNeedsConfirmation(true);
@@ -54,7 +55,7 @@ export function Login() {
       const result = await loginWithGoogle(idToken);
       const me = await fetchMe(result.token);
       setSession(result.token, toAccount(me));
-      navigate(me.onboardingCompleted ? '/dashboard' : '/onboarding');
+      navigate('/dashboard');
     } catch {
       setError('Google sign-in failed.');
     }
