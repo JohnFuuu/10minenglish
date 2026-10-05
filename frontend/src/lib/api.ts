@@ -516,3 +516,79 @@ export function rescheduleLesson(token: string, lessonId: string, startTime: str
     body: JSON.stringify({ startTime }),
   });
 }
+
+// Admin-only member tags — never fetched by any User-facing screen.
+export interface AdminTag {
+  id: string;
+  name: string;
+  memberCount: number;
+}
+
+export interface AdminMemberTag {
+  id: string;
+  name: string;
+  addedAt: string;
+  addedBy: { id: string; name: string };
+}
+
+export interface AdminMember {
+  id: string;
+  name?: string;
+  email?: string;
+  joinedAt: string;
+  credits: number;
+  tags: AdminMemberTag[];
+}
+
+export function fetchAdminTags(token: string) {
+  return request<{ tags: AdminTag[] }>('/api/admin/tags', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function createAdminTag(token: string, name: string) {
+  return request<AdminTag>('/api/admin/tags', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function renameAdminTag(token: string, tagId: string, name: string) {
+  return request<AdminTag>(`/api/admin/tags/${tagId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function deleteAdminTag(token: string, tagId: string) {
+  return request<{ removedFromMembers: number }>(`/api/admin/tags/${tagId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function fetchAdminMembers(token: string, filters: { q?: string; tagId?: string }) {
+  const params = new URLSearchParams();
+  if (filters.q) params.set('q', filters.q);
+  if (filters.tagId) params.set('tagId', filters.tagId);
+  return request<{ members: AdminMember[] }>(`/api/admin/members?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function addMemberTag(token: string, memberId: string, tagId: string) {
+  return request<AdminMember>(`/api/admin/members/${memberId}/tags`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ tagId }),
+  });
+}
+
+export function removeMemberTag(token: string, memberId: string, tagId: string) {
+  return request<AdminMember>(`/api/admin/members/${memberId}/tags/${tagId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
