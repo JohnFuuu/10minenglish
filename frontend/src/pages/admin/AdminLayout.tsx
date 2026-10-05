@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, ClipboardList } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { BottomNav, Button, NAV_CLEARANCE_CLASS } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
 
@@ -9,22 +8,14 @@ import { useAuth } from '../../auth/AuthContext';
 // reach Users straight away (Buddies, Pricing).
 export function AdminLayout({ title, liveChanges = false, children }: { title: string; liveChanges?: boolean; children: ReactNode }) {
   const { logout } = useAuth();
-  const navigate = useNavigate();
 
   return (
     <main className={`mx-auto max-w-lg px-5 pt-10 ${NAV_CLEARANCE_CLASS}`}>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-display text-2xl font-black text-text-heading">{title}</h1>
-        <div className="flex shrink-0 items-center gap-2">
-          {/* Reference, not a daily task, so it lives up here rather than in the tab bar. */}
-          <Button variant="secondary" size="sm" onClick={() => navigate('/admin/audit')} className="gap-1.5">
-            <ClipboardList size={14} aria-hidden="true" />
-            Audit log
-          </Button>
-          <Button variant="secondary" size="sm" onClick={logout}>
-            Log out
-          </Button>
-        </div>
+        <Button variant="secondary" size="sm" onClick={logout}>
+          Log out
+        </Button>
       </div>
 
       {liveChanges && (
