@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Button } from '../../components';
 import { useToast } from '../../toast/ToastContext';
-import { AddBuddyForm } from './AddBuddyForm';
+import { provisionBuddy } from '../../lib/api';
+import { NewAccountForm } from './NewAccountForm';
 import { AdminLayout } from './AdminLayout';
 import { BuddyRoster } from './BuddyRoster';
 
@@ -16,7 +17,11 @@ export function AdminBuddiesPage() {
   return (
     <AdminLayout title="Buddies" liveChanges>
       {isAdding ? (
-        <AddBuddyForm
+        <NewAccountForm
+          heading="Add Buddy account"
+          description="Buddies cannot self-register — use this form to create their account."
+          submitLabel="Create Buddy Account"
+          create={provisionBuddy}
           onCancel={() => setIsAdding(false)}
           onCreated={(email) => {
             setIsAdding(false);

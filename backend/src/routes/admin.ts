@@ -133,5 +133,44 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
     });
   });
 
+  router.get('/api/admin/admins', requireAuth, requireRole('admin'), async (_req, res) => {
+    const admins = await Account.find({ role: 'admin' }).sort({ name: 1 });
+    res.status(200).json({ admins: admins.map((a) => ({ id: a.id, name: a.name, email: a.email })) });
+  });
+
+  // Admins are created by another Admin, like Buddies — there is no self-signup.
+  router.post('/api/admin/admins', requireAuth, requireRole('admin'), async (req, res) => {
+    const { name, email, password } = req.body ?? {};
+    if (
+      typeof name !== 'string' || !name.trim() ||
+      typeof email !== 'string' || !email.trim() ||
+      typeof password !== 'string' || !password
+    ) {
+      res.status(400).json({ error: 'Missing required fields' });
+      return;
+    }
+
+    // Stored emails are lowercased, so compare the same way: one email, one
+    // Account, whatever its role.
+    const normalizedEmail = email.trim().toLowerCase();
+    if (await Account.findOne({ email: normalizedEmail })) {
+      res.status(409).json({ error: 'Email already registered' });
+      return;
+    }
+
+    const admin = await Account.create({
+      role: 'admin',
+      name: name.trim(),
+      email: normalizedEmail,
+      passwordHash: await hashPassword(password),
+      // Curated by an existing Admin, like a Buddy account.
+      emailConfirmed: true,
+      onboardingCompleted: true,
+    });
+    await recordAdminAction(req.account!.accountId, 'admin.created', { type: 'admin', id: String(admin._id), label: accountLabel(admin) });
+
+    res.status(201).json({ id: admin.id, email: admin.email, role: admin.role });
+  });
+
   return router;
 }
