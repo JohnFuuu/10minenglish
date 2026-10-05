@@ -127,19 +127,21 @@ export function createAdminMembersRouter(): Router {
       return;
     }
 
-    const previousName = tag.name;
-    tag.name = name;
-    tag.nameKey = tagNameKey(name);
+    // Conditional update returning the old document: only a request that
+    // actually changes the name is audited, even if two arrive at once.
+    let previous;
     try {
-      await tag.save();
+      previous = await Tag.findOneAndUpdate({ _id: tag._id, name: { $ne: name } }, { $set: { name, nameKey: tagNameKey(name) } });
     } catch (err) {
       if (!isDuplicateKeyError(err)) throw err;
       res.status(409).json({ error: 'A tag with that name already exists' });
       return;
     }
+    tag.name = name;
+    tag.nameKey = tagNameKey(name);
 
-    if (previousName !== name) {
-      await recordAdminAction(req.account!.accountId, 'tag.renamed', { type: 'tag', id: String(tag._id), label: name }, { from: previousName, to: name });
+    if (previous) {
+      await recordAdminAction(req.account!.accountId, 'tag.renamed', { type: 'tag', id: String(tag._id), label: name }, { from: previous.name, to: name });
     }
 
     res.status(200).json(tagResponse(tag, await memberCount(tag._id)));

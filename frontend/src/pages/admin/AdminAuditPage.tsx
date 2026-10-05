@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button, Select } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
@@ -63,37 +63,43 @@ export function AdminAuditPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // Bumped on every filter change; a response from an older generation (a
+  // first page or a Load more for the previous filter) is dropped, so pages
+  // from different filters can never mix.
+  const generation = useRef(0);
 
   useEffect(() => {
     if (!token) return;
-    let superseded = false;
+    const current = ++generation.current;
+    setEntries([]);
+    setNextCursor(null);
     setIsLoaded(false);
+    setIsLoadingMore(false);
     fetchAuditLog(token, { category })
       .then((res) => {
-        if (superseded) return;
+        if (current !== generation.current) return;
         setEntries(res.entries);
         setNextCursor(res.nextCursor);
         setIsLoaded(true);
       })
       .catch(() => {
-        if (!superseded) showToast('Could not load the audit log.', 'error');
+        if (current === generation.current) showToast('Could not load the audit log.', 'error');
       });
-    return () => {
-      superseded = true;
-    };
   }, [token, category, showToast]);
 
   async function loadMore() {
-    if (!token || !nextCursor) return;
+    if (!token || !nextCursor || isLoadingMore) return;
+    const current = generation.current;
     setIsLoadingMore(true);
     try {
       const res = await fetchAuditLog(token, { category, before: nextCursor });
+      if (current !== generation.current) return;
       setEntries((prev) => [...prev, ...res.entries]);
       setNextCursor(res.nextCursor);
     } catch {
-      showToast('Could not load more entries.', 'error');
+      if (current === generation.current) showToast('Could not load more entries.', 'error');
     } finally {
-      setIsLoadingMore(false);
+      if (current === generation.current) setIsLoadingMore(false);
     }
   }
 
@@ -115,7 +121,7 @@ export function AdminAuditPage() {
         </ul>
       )}
 
-      {nextCursor && (
+      {isLoaded && nextCursor && (
         <Button variant="secondary" className="mt-4 w-full" disabled={isLoadingMore} onClick={loadMore}>
           {isLoadingMore ? 'Loading…' : 'Load more'}
         </Button>

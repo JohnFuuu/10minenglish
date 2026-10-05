@@ -42,18 +42,18 @@ creditPacksRouter.patch(
       res.status(404).json({ error: 'Pack not found' });
       return;
     }
-    const fromCents = pack.priceCents;
-    pack.priceCents = priceCents;
-    await pack.save();
-    if (fromCents !== priceCents) {
+    // Conditional update returning the old document: only a request that
+    // actually changes the price is audited, even if two arrive at once.
+    const previous = await CreditPack.findOneAndUpdate({ packSize, priceCents: { $ne: priceCents } }, { $set: { priceCents } });
+    if (previous) {
       await recordAdminAction(
         req.account!.accountId,
         'price.changed',
         { type: 'creditPack', id: String(packSize), label: `${packSize} credits` },
-        { packSize, fromCents, toCents: priceCents },
+        { packSize, fromCents: previous.priceCents, toCents: priceCents },
       );
     }
 
-    res.status(200).json({ size: pack.packSize, priceCents: pack.priceCents });
+    res.status(200).json({ size: packSize, priceCents });
   },
 );
