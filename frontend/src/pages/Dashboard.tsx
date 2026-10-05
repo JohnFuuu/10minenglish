@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { AdminDashboard } from './AdminDashboard';
+import { AdminMembersPage } from './admin/AdminMembersPage';
 import { BuddyDashboard } from './BuddyDashboard';
 import { UserDashboard } from './UserDashboard';
 
@@ -21,7 +21,7 @@ export function Dashboard() {
     case 'buddy':
       return <BuddyDashboard />;
     case 'admin':
-      return <AdminDashboard />;
+      return <AdminMembersPage />;
     default:
       return <Navigate to="/login" replace />;
   }

@@ -4,8 +4,6 @@ import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import { addMemberTag, fetchAdminMembers, removeMemberTag, type AdminMember, type AdminTag } from '../../lib/api';
 
-const SECTION_HEADING =
-  'mb-1 inline-block rounded-md bg-accent-lime-light px-3 py-1 text-sm font-bold uppercase tracking-wide text-success';
 const FIELD = 'rounded-md border-2 border-border bg-bg-surface px-3 py-2 text-sm text-text-body';
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -74,7 +72,6 @@ export function MembersSection({ tags, onTagsChanged }: { tags: AdminTag[]; onTa
 
   return (
     <section className="mb-10">
-      <h2 className={SECTION_HEADING}>Members</h2>
       <p className="mb-4 text-sm font-medium text-text-secondary">Find a member to see or change their tags.</p>
 
       <div className="mb-4 flex flex-col gap-2 sm:flex-row">

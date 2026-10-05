@@ -50,6 +50,28 @@ const PROFILE_ICON = (active: boolean) => (
   </svg>
 );
 
+const TAGS_ICON = (active: boolean) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : INACTIVE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+    <line x1="7" y1="7" x2="7.01" y2="7" />
+  </svg>
+);
+
+const BUDDY_ROSTER_ICON = (active: boolean) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : INACTIVE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="8.5" cy="7" r="4" />
+    <polyline points="17 11 19 13 23 9" />
+  </svg>
+);
+
+const PRICING_ICON = (active: boolean) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : INACTIVE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="1" x2="12" y2="23" />
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+  </svg>
+);
+
 const USER_TABS: NavTab[] = [
   { path: '/dashboard', label: 'HOME', icon: HOME_ICON },
   { path: '/buddies', label: 'BUDDIES', icon: BUDDIES_ICON },
@@ -64,6 +86,17 @@ const BUDDY_TABS: NavTab[] = [
   { path: '/profile', label: 'PROFILE', icon: PROFILE_ICON },
 ];
 
+// Grouped by job: finding/tagging members (home), managing the tag list,
+// Buddy accounts, and Credit Pack prices.
+const ADMIN_TABS: NavTab[] = [
+  { path: '/dashboard', label: 'MEMBERS', icon: BUDDIES_ICON },
+  { path: '/admin/tags', label: 'TAGS', icon: TAGS_ICON },
+  { path: '/admin/buddies', label: 'BUDDIES', icon: BUDDY_ROSTER_ICON },
+  { path: '/admin/pricing', label: 'PRICING', icon: PRICING_ICON },
+];
+
+const TABS_BY_ROLE: Record<string, NavTab[]> = { user: USER_TABS, buddy: BUDDY_TABS, admin: ADMIN_TABS };
+
 // Persistent tab bar, shared across the signed-in screens it appears on.
 // Pages that render this need bottom padding (see NAV_CLEARANCE_CLASS) so
 // their own content doesn't sit underneath the fixed bar.
@@ -74,12 +107,8 @@ export function BottomNav() {
   const navigate = useNavigate();
   const { account } = useAuth();
 
-  // Admin has no tab set of its own (see AdminDashboard) — that's one
-  // self-contained internal-tools page, not a multi-screen flow like User
-  // and Buddy each have.
-  if (account?.role !== 'user' && account?.role !== 'buddy') return null;
-
-  const tabs = account.role === 'buddy' ? BUDDY_TABS : USER_TABS;
+  const tabs = account ? TABS_BY_ROLE[account.role] : undefined;
+  if (!tabs) return null;
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-border bg-bg-surface pb-[env(safe-area-inset-bottom,12px)]">
