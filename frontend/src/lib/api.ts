@@ -633,3 +633,12 @@ export function createAdmin(token: string, payload: { name: string; email: strin
     body: JSON.stringify(payload),
   });
 }
+
+// Archives a Buddy (see the backend route): upcoming Lessons are cancelled
+// and refunded, and the Buddy is locked out and hidden.
+export function removeBuddy(token: string, buddyId: string) {
+  return request<{ id: string; cancelledLessons: number }>(`/api/admin/buddies/${buddyId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

@@ -52,7 +52,8 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
   // one out of rotation is not the same as deleting them, so an Admin has to be
   // able to see them and put them back.
   router.get('/api/admin/buddies', requireAuth, requireRole('admin'), async (_req, res) => {
-    const buddies = await Account.find({ role: 'buddy' }).sort({ name: 1 });
+    // Archived (removed) Buddies are gone from the roster for good.
+    const buddies = await Account.find({ role: 'buddy', removedAt: { $exists: false } }).sort({ name: 1 });
     // What deactivating would cancel (and refund) — shown in the confirm.
     // One grouped query for the whole roster rather than one per Buddy.
     const counts = await Lesson.aggregate<{ _id: unknown; count: number }>([
@@ -131,6 +132,43 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
       active: buddy.active,
       cancelledLessons,
     });
+  });
+
+  // Archives a Buddy: cancels and refunds their upcoming Lessons (the same
+  // path as deactivating), locks them out, and hides them everywhere, while
+  // keeping the record so Users' past Lessons still show who taught them.
+  router.delete('/api/admin/buddies/:id', requireAuth, requireRole('admin'), async (req, res) => {
+    const buddyId = String(req.params.id);
+    if (!/^[a-f0-9]{24}$/i.test(buddyId)) {
+      res.status(404).json({ error: 'Buddy not found' });
+      return;
+    }
+
+    // One conditional update, so a double click archives (and audits) once.
+    const buddy = await Account.findOneAndUpdate(
+      { _id: buddyId, role: 'buddy', removedAt: { $exists: false } },
+      { $set: { removedAt: new Date(), active: false } },
+      { new: true },
+    );
+    if (!buddy) {
+      res.status(404).json({ error: 'Buddy not found' });
+      return;
+    }
+
+    const upcoming = await Lesson.find({ buddyId: buddy._id, status: 'upcoming', startTime: { $gt: new Date() } });
+    let cancelledLessons = 0;
+    for (const lesson of upcoming) {
+      const result = await cancelLessonAsBuddy({ emailSender, lessonId: lesson._id, buddyName: buddy.name });
+      if (result) cancelledLessons += 1;
+    }
+
+    await recordAdminAction(
+      req.account!.accountId,
+      'buddy.removed',
+      { type: 'buddy', id: String(buddy._id), label: accountLabel(buddy) },
+      { cancelledLessons },
+    );
+    res.status(200).json({ id: buddy.id, cancelledLessons });
   });
 
   router.get('/api/admin/admins', requireAuth, requireRole('admin'), async (_req, res) => {

@@ -49,6 +49,9 @@ export interface AccountDocument extends mongoose.Document {
   // Admin-controlled, and only meaningful for Buddy accounts: an inactive
   // Buddy is out of rotation but keeps their account and profile.
   active: boolean;
+  // Set when an Admin removes (archives) a Buddy: kept for Lesson history and
+  // the audit log, but locked out and hidden from every roster/directory.
+  removedAt?: Date;
   emailConfirmed: boolean;
   emailConfirmationToken?: string;
   emailConfirmationExpires?: Date;
@@ -114,6 +117,7 @@ const accountSchema = new Schema<AccountDocument>({
     default: [],
   },
   active: { type: Boolean, required: true, default: true },
+  removedAt: { type: Date },
   emailConfirmed: { type: Boolean, required: true, default: false },
   emailConfirmationToken: { type: String },
   emailConfirmationExpires: { type: Date },

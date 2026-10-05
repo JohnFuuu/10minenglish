@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import { Button } from '../../components';
 import { SectionHeading } from './SectionHeading';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
-import { fetchAdminBuddies, setBuddyActive, type AdminBuddy } from '../../lib/api';
+import { fetchAdminBuddies, removeBuddy, setBuddyActive, type AdminBuddy } from '../../lib/api';
 
 export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
   const { token } = useAuth();
   const { showToast } = useToast();
   const [buddies, setBuddies] = useState<AdminBuddy[]>([]);
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  // Which row is asking "are you sure?", and about what — one at a time.
+  const [confirming, setConfirming] = useState<{ id: string; action: 'deactivate' | 'remove' } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -36,7 +38,7 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
           b.id === buddy.id ? { ...b, active: updated.active, upcomingLessons: updated.active ? b.upcomingLessons : 0 } : b,
         ),
       );
-      setConfirmingId(null);
+      setConfirming(null);
       showToast(
         updated.active
           ? `${buddy.name ?? buddy.email} is bookable again.`
@@ -45,6 +47,26 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
       );
     } catch {
       showToast('Could not update that buddy.', 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function remove(buddy: AdminBuddy) {
+    if (!token) return;
+    setBusyId(buddy.id);
+    try {
+      const { cancelledLessons } = await removeBuddy(token, buddy.id);
+      setBuddies((prev) => prev.filter((b) => b.id !== buddy.id));
+      setConfirming(null);
+      showToast(
+        cancelledLessons === 0
+          ? `${buddy.name ?? buddy.email} removed.`
+          : `${buddy.name ?? buddy.email} removed. ${cancelledLessons} upcoming lesson(s) cancelled and refunded.`,
+        'success',
+      );
+    } catch {
+      showToast('Could not remove that buddy.', 'error');
     } finally {
       setBusyId(null);
     }
@@ -66,21 +88,31 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
         <ul className="divide-y-2 divide-border overflow-hidden rounded-md border-2 border-b-4 border-border-strong bg-bg-surface">
           {buddies.map((buddy) => (
             <li key={buddy.id} className="px-4 py-2.5">
-              {confirmingId === buddy.id ? (
-                // Deactivating cancels and refunds every upcoming Lesson, so the
-                // prompt says exactly what will happen before anything does.
+              {confirming?.id === buddy.id ? (
+                // Both actions cancel and refund every upcoming Lesson (removal
+                // also locks the Buddy out for good), so the prompt says
+                // exactly what will happen before anything does.
                 <div className="flex flex-col gap-2 rounded-md bg-warning/10 px-2 py-2">
                   <p className="text-sm font-bold text-text-body">
-                    Deactivate {buddy.name ?? buddy.email}?{' '}
+                    {confirming.action === 'remove'
+                      ? `Remove ${buddy.name ?? buddy.email}? They'll lose access, and `
+                      : `Deactivate ${buddy.name ?? buddy.email}? `}
                     {buddy.upcomingLessons === 0
-                      ? 'They have no upcoming lessons.'
-                      : `Their ${buddy.upcomingLessons} upcoming lesson${buddy.upcomingLessons === 1 ? '' : 's'} will be cancelled and each User refunded.`}
+                      ? confirming.action === 'remove'
+                        ? 'they have no upcoming lessons.'
+                        : 'They have no upcoming lessons.'
+                      : `${confirming.action === 'remove' ? 'their' : 'Their'} ${buddy.upcomingLessons} upcoming lesson${buddy.upcomingLessons === 1 ? '' : 's'} will be cancelled and each User refunded.`}
                   </p>
                   <div className="flex gap-2">
-                    <Button size="sm" tone="red" disabled={busyId === buddy.id} onClick={() => toggle(buddy)}>
-                      Deactivate
+                    <Button
+                      size="sm"
+                      tone="red"
+                      disabled={busyId === buddy.id}
+                      onClick={() => (confirming.action === 'remove' ? remove(buddy) : toggle(buddy))}
+                    >
+                      {confirming.action === 'remove' ? 'Remove' : 'Deactivate'}
                     </Button>
-                    <Button variant="secondary" size="sm" disabled={busyId === buddy.id} onClick={() => setConfirmingId(null)}>
+                    <Button variant="secondary" size="sm" disabled={busyId === buddy.id} onClick={() => setConfirming(null)}>
                       Keep
                     </Button>
                   </div>
@@ -100,14 +132,25 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
                       </p>
                     </div>
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={busyId === buddy.id}
-                    onClick={() => (buddy.active ? setConfirmingId(buddy.id) : toggle(buddy))}
-                  >
-                    {buddy.active ? 'Deactivate' : 'Activate'}
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busyId === buddy.id}
+                      onClick={() => (buddy.active ? setConfirming({ id: buddy.id, action: 'deactivate' }) : toggle(buddy))}
+                    >
+                      {buddy.active ? 'Deactivate' : 'Activate'}
+                    </Button>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${buddy.name ?? buddy.email}`}
+                      disabled={busyId === buddy.id}
+                      onClick={() => setConfirming({ id: buddy.id, action: 'remove' })}
+                      className="flex h-9 w-9 items-center justify-center rounded-md border-2 border-b-[3px] border-error text-error"
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
               )}
             </li>
