@@ -28,6 +28,10 @@ _Avoid_: Calendar (Calendar is the UI view; this is the underlying rule data)
 A purchasable bundle (sizes: 1/10/20/30 credits) with a price that is not fixed at build time — pricing must be configurable/changeable without a code deploy (e.g. admin-editable), not hardcoded constants.
 _Avoid_: Plan, tier
 
+**Member tag**:
+An Admin-managed label on a User (e.g. "low-income"), chosen from a managed list Admins create, rename, and delete. Private: it never appears anywhere the User or a Buddy can see it, and each tag on a member records which Admin added it and when. Tags have no effect on what a User can do or pay today; they are the hook for future rules such as weekly vouchers for a group (see docs/superpowers/specs/2026-10-05-admin-member-tags-design.md).
+_Avoid_: Label, category, segment
+
 **Notification**:
 A message about something the User/Buddy didn't just trigger themselves — either event-driven (e.g. a Buddy cancelling a Lesson) or time-scheduled (a pre-lesson reminder sent ahead of a normal, non-cancelled Lesson, to both User and Buddy). Always delivered two ways: an in-app banner/badge for when the recipient happens to be in the Dashboard, and an email for reliable delivery when they're not — the in-app view is a convenience layer on top of email, not the primary channel. Persists with read/unread state in a Notification inbox (a new Dashboard section) rather than disappearing once dismissed. Distinct from a success/failure Message (Section 10), which is a synchronous response to the User's own action, shown in-app only, and not persisted.
 _Avoid_: Alert, message (Message is reserved for synchronous success/failure feedback)
