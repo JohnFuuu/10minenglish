@@ -4,7 +4,15 @@ import { Button } from '../../components';
 import { SectionHeading } from './SectionHeading';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
-import { fetchAdminBuddies, removeBuddy, setBuddyActive, type AdminBuddy } from '../../lib/api';
+import {
+  fetchAdminBuddies,
+  fetchAdminBuddyDetails,
+  removeBuddy,
+  setBuddyActive,
+  type AdminBuddy,
+  type AdminBuddyDetails,
+} from '../../lib/api';
+import { BuddyDetails } from './BuddyDetails';
 
 export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
   const { token } = useAuth();
@@ -14,6 +22,30 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
   const [confirming, setConfirming] = useState<{ id: string; action: 'deactivate' | 'remove' } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  // The open row, and details already fetched (each loads once, on first open).
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [detailsById, setDetailsById] = useState<Record<string, AdminBuddyDetails>>({});
+
+  function toggleDetails(buddy: AdminBuddy) {
+    setExpandedId((open) => (open === buddy.id ? null : buddy.id));
+  }
+
+  // Load the open row's details whenever they're missing — on first open,
+  // and again after a Deactivate/Activate drops the stale copy.
+  useEffect(() => {
+    if (!expandedId || detailsById[expandedId] || !token) return;
+    let cancelled = false;
+    fetchAdminBuddyDetails(token, expandedId)
+      .then((details) => {
+        if (!cancelled) setDetailsById((prev) => ({ ...prev, [details.id]: details }));
+      })
+      .catch(() => {
+        if (!cancelled) showToast('Could not load that buddy’s details.', 'error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [expandedId, detailsById, token, showToast]);
 
   useEffect(() => {
     if (!showHelp) return;
@@ -47,6 +79,7 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
         ),
       );
       setConfirming(null);
+      setDetailsById(({ [buddy.id]: _stale, ...rest }) => rest);
       showToast(
         updated.active
           ? `${buddy.name ?? buddy.email} is bookable again.`
@@ -153,19 +186,24 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2">
+                  <button
+                    type="button"
+                    aria-expanded={expandedId === buddy.id}
+                    onClick={() => toggleDetails(buddy)}
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  >
                     <span
                       aria-hidden="true"
                       className={`h-2 w-2 shrink-0 rounded-full ${buddy.active ? 'bg-brand-primary' : 'bg-border-strong/40'}`}
                     />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-text-heading">{buddy.name ?? buddy.email}</p>
-                      <p className="truncate text-xs text-text-secondary">
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-bold text-text-heading">{buddy.name ?? buddy.email}</span>
+                      <span className="block truncate text-xs text-text-secondary">
                         {buddy.active ? 'Active' : 'Inactive'}
                         {buddy.active && !buddy.hasMeetingLink && ' · no meeting link yet'}
-                      </p>
-                    </div>
-                  </div>
+                      </span>
+                    </span>
+                  </button>
                   <div className="flex shrink-0 items-center gap-2">
                     <Button
                       variant="secondary"
@@ -186,6 +224,13 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
                     </button>
                   </div>
                 </div>
+              )}
+              {expandedId === buddy.id && confirming?.id !== buddy.id && (
+                detailsById[buddy.id] ? (
+                  <BuddyDetails details={detailsById[buddy.id]} />
+                ) : (
+                  <p className="mt-3 border-t-2 border-border pt-3 text-sm text-text-secondary">Loading…</p>
+                )
               )}
             </li>
           ))}

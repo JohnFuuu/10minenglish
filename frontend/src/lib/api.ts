@@ -642,3 +642,25 @@ export function removeBuddy(token: string, buddyId: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export interface AdminBuddyDetails {
+  id: string;
+  name?: string;
+  email: string;
+  active: boolean;
+  joinedAt: string;
+  picture?: string;
+  timezone?: string;
+  location?: string;
+  bio?: string;
+  meetingLink?: string;
+  availabilityBlocks: { dayOfWeek: number; startTime: string; endTime: string }[];
+  lessons: { upcoming: number; completed: number; cancelled: number };
+  nextLessonAt: string | null;
+}
+
+export function fetchAdminBuddyDetails(token: string, buddyId: string) {
+  return request<AdminBuddyDetails>(`/api/admin/buddies/${buddyId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
