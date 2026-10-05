@@ -4,18 +4,35 @@ const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 // Monday first, as people read a working week.
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
-// "Mon, Wed · 09:00–17:00 (Pacific/Auckland)" — days sharing the same hours
-// on one line, one line per distinct time range.
-export function summariseAvailability(blocks: AdminBuddyDetails['availabilityBlocks'], timezone?: string): string[] {
-  const daysByRange = new Map<string, number[]>();
-  for (const block of blocks) {
-    const range = `${block.startTime}–${block.endTime}`;
-    daysByRange.set(range, [...(daysByRange.get(range) ?? []), block.dayOfWeek]);
+type Block = AdminBuddyDetails['availabilityBlocks'][number];
+
+// Buddies often save hour-long slots (09:00–10:00, 10:00–11:00, …); join
+// back-to-back or overlapping slots on the same day into one range.
+function mergeDay(blocks: Block[]): { start: string; end: string }[] {
+  const sorted = [...blocks].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const merged: { start: string; end: string }[] = [];
+  for (const { startTime, endTime } of sorted) {
+    const last = merged[merged.length - 1];
+    if (last && startTime <= last.end) {
+      if (endTime > last.end) last.end = endTime;
+    } else {
+      merged.push({ start: startTime, end: endTime });
+    }
   }
-  return [...daysByRange.entries()].map(([range, days]) => {
-    const dayList = WEEK_ORDER.filter((d) => days.includes(d)).map((d) => DAY_NAMES[d]).join(', ');
-    return `${dayList} · ${range}${timezone ? ` (${timezone})` : ''}`;
-  });
+  return merged;
+}
+
+// One line per distinct set of hours, listing the days that share it:
+// "Mon, Wed · 09:00–12:00" / "Sun · 08:00–10:00, 11:00–14:00".
+export function summariseAvailability(blocks: Block[]): string[] {
+  const daysByHours = new Map<string, number[]>();
+  for (const day of WEEK_ORDER) {
+    const ranges = mergeDay(blocks.filter((b) => b.dayOfWeek === day));
+    if (ranges.length === 0) continue;
+    const hours = ranges.map((r) => `${r.start}–${r.end}`).join(', ');
+    daysByHours.set(hours, [...(daysByHours.get(hours) ?? []), day]);
+  }
+  return [...daysByHours.entries()].map(([hours, days]) => `${days.map((d) => DAY_NAMES[d]).join(', ')} · ${hours}`);
 }
 
 function formatDate(iso: string): string {
@@ -26,6 +43,8 @@ function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 }
 
+// Label above a full-width value: at phone width a side-by-side layout
+// leaves values too narrow (emails and links wrap mid-word).
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
@@ -37,11 +56,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 // The expanded part of a Buddy roster row (Admin only).
 export function BuddyDetails({ details }: { details: AdminBuddyDetails }) {
-  const availability = summariseAvailability(details.availabilityBlocks, details.timezone);
+  const availability = summariseAvailability(details.availabilityBlocks);
   const { upcoming, completed, cancelled } = details.lessons;
 
   return (
-    <div className="mt-3 flex flex-col gap-3 border-t-2 border-border pt-3">
+    // A tinted inset card, so the details read as "about this Buddy" rather
+    // than as more roster rows.
+    <div data-testid="buddy-details" className="mt-3 flex flex-col gap-2.5 rounded-md bg-border/40 p-3">
       <Field label="Email">{details.email}</Field>
       <Field label="Status">
         {details.active ? 'Active' : 'Inactive'} · joined {formatDate(details.joinedAt)}
@@ -63,7 +84,12 @@ export function BuddyDetails({ details }: { details: AdminBuddyDetails }) {
         {availability.length === 0 ? (
           <span className="text-text-secondary">No availability set</span>
         ) : (
-          availability.map((line) => <p key={line}>{line}</p>)
+          <>
+            {availability.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+            {details.timezone && <p className="text-xs text-text-secondary">Times in {details.timezone}</p>}
+          </>
         )}
       </Field>
       {details.location && <Field label="Location">{details.location}</Field>}
