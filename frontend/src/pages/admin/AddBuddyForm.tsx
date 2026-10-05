@@ -4,28 +4,22 @@ import { useAuth } from '../../auth/AuthContext';
 import { ApiError, provisionBuddy } from '../../lib/api';
 
 // Buddies can't self-register; an Admin creates their account here.
-export function AddBuddyForm({ onCreated }: { onCreated: () => void }) {
+export function AddBuddyForm({ onCreated, onCancel }: { onCreated: (email: string) => void; onCancel: () => void }) {
   const { token } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setCreated(null);
     setIsSubmitting(true);
 
     try {
       const buddy = await provisionBuddy(token!, { name, email, password });
-      setCreated(buddy.email);
-      onCreated();
-      setName('');
-      setEmail('');
-      setPassword('');
+      onCreated(buddy.email);
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 409
@@ -38,21 +32,13 @@ export function AddBuddyForm({ onCreated }: { onCreated: () => void }) {
   }
 
   return (
-    <section>
+    <section className="mb-8">
       <h2 className="mb-1 inline-block rounded-md bg-accent-lime-light px-3 py-1 text-sm font-bold uppercase tracking-wide text-success">
         Add Buddy account
       </h2>
       <p className="mb-5 text-sm font-medium text-text-secondary">
         Buddies cannot self-register — use this form to create their account.
       </p>
-
-      {created && (
-        <div className="mb-4 rounded-md border-2 border-accent-lime bg-accent-lime-light px-3 py-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-success">
-            Account created for {created}.
-          </p>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input
@@ -82,6 +68,9 @@ export function AddBuddyForm({ onCreated }: { onCreated: () => void }) {
         <Button type="submit" disabled={isSubmitting}>
           Create Buddy Account
         </Button>
+        <button type="button" onClick={onCancel} className="text-sm font-bold text-text-secondary">
+          Cancel
+        </button>
       </form>
     </section>
   );
