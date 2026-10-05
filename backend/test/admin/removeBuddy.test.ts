@@ -111,7 +111,9 @@ describe('DELETE /api/admin/buddies/:id (archive)', () => {
     expect(facebook.status).toBe(403);
   });
 
-  it('404s an already-removed, unknown, malformed, or non-Buddy target — recording only one removal', async () => {
+  // A repeat finishes any clean-up an interrupted removal left behind (#29),
+  // so it succeeds — but it is not a second removal.
+  it('treats a repeat removal as a no-op success, and 404s unknown, malformed, or non-Buddy targets', async () => {
     const { buddy, user, asAdmin } = await setup();
 
     const first = await asAdmin('delete', `/api/admin/buddies/${buddy.id}`);
@@ -121,7 +123,9 @@ describe('DELETE /api/admin/buddies/:id (archive)', () => {
     const notBuddy = await asAdmin('delete', `/api/admin/buddies/${user.id}`);
 
     expect(first.status).toBe(200);
-    expect([again.status, unknown.status, malformed.status, notBuddy.status]).toEqual([404, 404, 404, 404]);
+    expect(again.status).toBe(200);
+    expect(again.body).toEqual({ id: buddy.id, cancelledLessons: 0 });
+    expect([unknown.status, malformed.status, notBuddy.status]).toEqual([404, 404, 404]);
     expect(await AuditEntry.countDocuments({ action: 'buddy.removed' })).toBe(1);
   });
 
@@ -130,7 +134,7 @@ describe('DELETE /api/admin/buddies/:id (archive)', () => {
 
     const results = await Promise.all([asAdmin('delete', `/api/admin/buddies/${buddy.id}`), asAdmin('delete', `/api/admin/buddies/${buddy.id}`)]);
 
-    expect(results.map((r) => r.status).sort()).toEqual([200, 404]);
+    expect(results.map((r) => r.status)).toEqual([200, 200]);
     expect(await AuditEntry.countDocuments({ action: 'buddy.removed' })).toBe(1);
   });
 });

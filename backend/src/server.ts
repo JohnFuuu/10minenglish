@@ -8,6 +8,7 @@ import {
   sendDueLessonReminders,
 } from './services/lessonReminders.js';
 import { COMPLETION_SWEEP_INTERVAL_MS, completeDueLessons } from './services/lessonCompletion.js';
+import { RECONCILE_SWEEP_INTERVAL_MS, reconcileBuddyState } from './services/buddyReconciliation.js';
 import { mockPoliClient, mockStripeClient } from './services/mockPaymentClients.js';
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
@@ -59,6 +60,23 @@ async function main() {
     });
   }, COMPLETION_SWEEP_INTERVAL_MS);
   console.log(`Lesson completion sweeping every ${COMPLETION_SWEEP_INTERVAL_MS / 1000}s.`);
+
+  // Backstop for Admin actions that aren't all-or-nothing (#29): cancels any
+  // upcoming Lesson still attached to an inactive or removed Buddy (after a
+  // crash mid-deactivation, or a booking that raced it) and drops member
+  // references to deleted tags. Idempotent, like the sweeps above.
+  setInterval(() => {
+    reconcileBuddyState({ emailSender })
+      .then(({ cancelledLessons, membersWithDanglingTagsCleaned }) => {
+        if (cancelledLessons || membersWithDanglingTagsCleaned) {
+          console.log(`Reconciliation: cancelled ${cancelledLessons} stranded lesson(s), cleaned ${membersWithDanglingTagsCleaned} member(s) of deleted tags.`);
+        }
+      })
+      .catch((err) => {
+        console.error('Reconciliation sweep failed', err);
+      });
+  }, RECONCILE_SWEEP_INTERVAL_MS);
+  console.log(`Reconciliation sweeping every ${RECONCILE_SWEEP_INTERVAL_MS / 1000}s.`);
 }
 
 main().catch((err) => {
