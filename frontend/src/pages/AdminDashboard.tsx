@@ -7,12 +7,15 @@ import {
   ApiError,
   adminUpdateCreditPackPrice,
   fetchAdminBuddies,
+  fetchAdminTags,
   fetchCreditPacks,
   provisionBuddy,
   setBuddyActive,
   type AdminBuddy,
+  type AdminTag,
   type CreditPack,
 } from '../lib/api';
+import { MemberTagsSection } from './admin/MemberTagsSection';
 
 // Whole dollars or dollars-and-cents only — e.g. "9", "9.9", "9.99". Rejects
 // negatives, letters, and anything past two decimal places.
@@ -234,6 +237,21 @@ export function AdminDashboard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Bumped after provisioning so the roster below picks up the new Buddy.
   const [rosterKey, setRosterKey] = useState(0);
+  const { showToast } = useToast();
+  // Owned here so the Members section's tag picker and filter stay in step
+  // with the Member tags section.
+  const [tags, setTags] = useState<AdminTag[]>([]);
+  const loadTags = useCallback(async () => {
+    if (!token) return;
+    try {
+      setTags((await fetchAdminTags(token)).tags);
+    } catch {
+      showToast('Could not load member tags.', 'error');
+    }
+  }, [token, showToast]);
+  useEffect(() => {
+    loadTags();
+  }, [loadTags]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -278,6 +296,8 @@ export function AdminDashboard() {
       <CreditPackPricing />
 
       <BuddyRoster refreshKey={rosterKey} />
+
+      <MemberTagsSection tags={tags} onChanged={loadTags} />
 
       <section>
         <h2 className="mb-1 inline-block rounded-md bg-accent-lime-light px-3 py-1 text-sm font-bold uppercase tracking-wide text-success">
