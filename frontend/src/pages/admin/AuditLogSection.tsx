@@ -50,6 +50,12 @@ function describe(entry: AuditLogEntry): ReactNode {
       return <>{who} changed {target} from {dollars(entry.details.fromCents)} to {dollars(entry.details.toCents)}</>;
     case 'admin.created':
       return <>{who} created Admin account {target}</>;
+    case 'admin.deactivated':
+      return <>{who} deactivated Admin {target}</>;
+    case 'admin.activated':
+      return <>{who} activated Admin {target}</>;
+    case 'admin.removed':
+      return <>{who} removed Admin {target}</>;
     default:
       return <>{who} · {entry.action} · {target}</>;
   }

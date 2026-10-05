@@ -33,13 +33,17 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  // Tokens last 7 days, so a removed (archived) Buddy's existing session is
-  // cut off here rather than when it expires. Only Buddies can be removed,
-  // so only their requests pay for the lookup.
-  if (payload.role === 'buddy') {
-    const account = await Account.findById(payload.accountId, { removedAt: 1 });
+  // Tokens last 7 days, so a removed (archived) Buddy or Admin, or a
+  // deactivated (suspended) Admin, is cut off here rather than when the token
+  // expires. Users can't be removed or suspended, so they skip the lookup.
+  if (payload.role === 'buddy' || payload.role === 'admin') {
+    const account = await Account.findById(payload.accountId, { removedAt: 1, active: 1 });
     if (account?.removedAt) {
       res.status(401).json({ error: 'Account removed' });
+      return;
+    }
+    if (payload.role === 'admin' && account?.active === false) {
+      res.status(401).json({ error: 'Account inactive' });
       return;
     }
   }
