@@ -57,42 +57,49 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
 
       {buddies.length === 0 && <p className="text-sm text-text-secondary">No buddies yet.</p>}
 
-      <div className="flex flex-col gap-3">
-        {buddies.map((buddy) => (
-          <div
-            key={buddy.id}
-            className="flex items-center justify-between gap-3 rounded-md border-2 border-b-4 border-border-strong bg-bg-surface p-4"
-          >
-            <div className="min-w-0">
-              <p className="truncate font-bold text-text-heading">{buddy.name ?? buddy.email}</p>
-              <p className="truncate text-xs font-bold uppercase tracking-wide text-text-secondary">
-                {buddy.active ? 'Active' : 'Inactive'}
-                {buddy.active && !buddy.hasMeetingLink && ' · no meeting link yet'}
-              </p>
-            </div>
-
-            {confirmingId === buddy.id ? (
-              <div className="flex shrink-0 items-center gap-2">
-                <Button size="sm" disabled={busyId === buddy.id} onClick={() => toggle(buddy)}>
-                  Confirm
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => setConfirmingId(null)}>
-                  Keep
-                </Button>
+      {/* One compact panel with divider rows (not a card per Buddy), so a
+          long roster stays scannable. */}
+      {buddies.length > 0 && (
+        <ul className="divide-y-2 divide-border overflow-hidden rounded-md border-2 border-b-4 border-border-strong bg-bg-surface">
+          {buddies.map((buddy) => (
+            <li key={buddy.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+              <div className="flex min-w-0 items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className={`h-2 w-2 shrink-0 rounded-full ${buddy.active ? 'bg-brand-primary' : 'bg-border-strong/40'}`}
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-text-heading">{buddy.name ?? buddy.email}</p>
+                  <p className="truncate text-xs text-text-secondary">
+                    {buddy.active ? 'Active' : 'Inactive'}
+                    {buddy.active && !buddy.hasMeetingLink && ' · no meeting link yet'}
+                  </p>
+                </div>
               </div>
-            ) : (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={busyId === buddy.id}
-                onClick={() => (buddy.active ? setConfirmingId(buddy.id) : toggle(buddy))}
-              >
-                {buddy.active ? 'Deactivate' : 'Activate'}
-              </Button>
-            )}
-          </div>
-        ))}
-      </div>
+
+              {confirmingId === buddy.id ? (
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button size="sm" disabled={busyId === buddy.id} onClick={() => toggle(buddy)}>
+                    Confirm
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setConfirmingId(null)}>
+                    Keep
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={busyId === buddy.id}
+                  onClick={() => (buddy.active ? setConfirmingId(buddy.id) : toggle(buddy))}
+                >
+                  {buddy.active ? 'Deactivate' : 'Activate'}
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
