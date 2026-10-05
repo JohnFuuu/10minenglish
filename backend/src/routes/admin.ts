@@ -122,6 +122,44 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
     });
   });
 
+  // One Buddy's details for the roster's expanded row: profile, availability,
+  // and how many Lessons they have. Fetched on demand so the roster list
+  // itself stays a single light query. No credentials are included.
+  router.get('/api/admin/buddies/:id', requireAuth, requireRole('admin'), async (req, res) => {
+    const buddyId = String(req.params.id);
+    const buddy = /^[a-f0-9]{24}$/i.test(buddyId)
+      ? await Account.findOne({ _id: buddyId, role: 'buddy', removedAt: { $exists: false } })
+      : null;
+    if (!buddy) {
+      res.status(404).json({ error: 'Buddy not found' });
+      return;
+    }
+
+    const now = new Date();
+    const [upcoming, completed, cancelled, next] = await Promise.all([
+      Lesson.countDocuments({ buddyId: buddy._id, status: 'upcoming', startTime: { $gt: now } }),
+      Lesson.countDocuments({ buddyId: buddy._id, status: 'completed' }),
+      Lesson.countDocuments({ buddyId: buddy._id, status: 'cancelled' }),
+      Lesson.findOne({ buddyId: buddy._id, status: 'upcoming', startTime: { $gt: now } }).sort({ startTime: 1 }),
+    ]);
+
+    res.status(200).json({
+      id: buddy.id,
+      name: buddy.name,
+      email: buddy.email,
+      active: buddy.active,
+      joinedAt: buddy._id.getTimestamp().toISOString(),
+      picture: buddy.picture,
+      timezone: buddy.timezone,
+      location: buddy.location,
+      bio: buddy.bio,
+      meetingLink: buddy.meetingLink,
+      availabilityBlocks: buddy.availabilityBlocks.map((b) => ({ dayOfWeek: b.dayOfWeek, startTime: b.startTime, endTime: b.endTime })),
+      lessons: { upcoming, completed, cancelled },
+      nextLessonAt: next ? next.startTime.toISOString() : null,
+    });
+  });
+
   // Archives a Buddy: cancels and refunds their upcoming Lessons (the same
   // path as deactivating), locks them out, and hides them everywhere, while
   // keeping the record so Users' past Lessons still show who taught them.
