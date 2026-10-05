@@ -5,6 +5,7 @@ import { Lesson } from '../models/Lesson.js';
 import { hashPassword } from '../services/password.js';
 import { cancelLessonAsBuddy } from '../services/buddyCancellation.js';
 import type { EmailSender } from '../services/email.js';
+import { accountLabel, recordAdminAction } from '../services/auditLog.js';
 
 export interface AdminRouterDependencies {
   emailSender: EmailSender;
@@ -41,6 +42,8 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
       // a User-only concept — a Buddy should never be routed through it.
       onboardingCompleted: true,
     });
+
+    await recordAdminAction(req.account!.accountId, 'buddy.created', { type: 'buddy', id: String(buddy._id), label: accountLabel(buddy) });
 
     res.status(201).json({ id: buddy.id, email: buddy.email, role: buddy.role });
   });
@@ -99,6 +102,15 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
         });
         if (result) cancelledLessons += 1;
       }
+    }
+
+    if (wasActive !== active) {
+      await recordAdminAction(
+        req.account!.accountId,
+        active ? 'buddy.activated' : 'buddy.deactivated',
+        { type: 'buddy', id: String(buddy._id), label: accountLabel(buddy) },
+        active ? {} : { cancelledLessons },
+      );
     }
 
     res.status(200).json({

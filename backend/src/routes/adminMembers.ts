@@ -3,6 +3,7 @@ import type { HydratedDocument, Types } from 'mongoose';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { Account, type AccountDocument } from '../models/Account.js';
 import { Tag, tagNameKey, type TagDocument } from '../models/Tag.js';
+import { accountLabel, recordAdminAction } from '../services/auditLog.js';
 
 // Admin-only member tags (see docs/superpowers/specs/2026-10-05-admin-member-tags-design.md).
 // Everything about tags lives behind these routes: no User- or Buddy-facing
@@ -106,6 +107,7 @@ export function createAdminMembersRouter(): Router {
 
     try {
       const tag = await Tag.create({ name, nameKey: tagNameKey(name) });
+      await recordAdminAction(req.account!.accountId, 'tag.created', { type: 'tag', id: String(tag._id), label: tag.name });
       res.status(201).json(tagResponse(tag, 0));
     } catch (err) {
       if (!isDuplicateKeyError(err)) throw err;
@@ -125,6 +127,7 @@ export function createAdminMembersRouter(): Router {
       return;
     }
 
+    const previousName = tag.name;
     tag.name = name;
     tag.nameKey = tagNameKey(name);
     try {
@@ -133,6 +136,10 @@ export function createAdminMembersRouter(): Router {
       if (!isDuplicateKeyError(err)) throw err;
       res.status(409).json({ error: 'A tag with that name already exists' });
       return;
+    }
+
+    if (previousName !== name) {
+      await recordAdminAction(req.account!.accountId, 'tag.renamed', { type: 'tag', id: String(tag._id), label: name }, { from: previousName, to: name });
     }
 
     res.status(200).json(tagResponse(tag, await memberCount(tag._id)));
@@ -151,6 +158,12 @@ export function createAdminMembersRouter(): Router {
       { $pull: { memberTags: { tagId: tag._id } } },
     );
     await tag.deleteOne();
+    await recordAdminAction(
+      req.account!.accountId,
+      'tag.deleted',
+      { type: 'tag', id: String(tag._id), label: tag.name },
+      { removedFromMembers: result.modifiedCount },
+    );
 
     res.status(200).json({ removedFromMembers: result.modifiedCount });
   });
@@ -187,10 +200,18 @@ export function createAdminMembersRouter(): Router {
     // One conditional update, so a double click or two Admins at once can
     // never add the same tag twice; an existing entry keeps its original
     // addedBy/addedAt.
-    await Account.updateOne(
+    const result = await Account.updateOne(
       { _id: member._id, 'memberTags.tagId': { $ne: tag._id } },
       { $push: { memberTags: { tagId: tag._id, addedBy: req.account!.accountId, addedAt: new Date() } } },
     );
+    if (result.modifiedCount > 0) {
+      await recordAdminAction(
+        req.account!.accountId,
+        'member.tag_added',
+        { type: 'member', id: String(member._id), label: accountLabel(member) },
+        { tag: tag.name },
+      );
+    }
 
     const reloaded = await Account.findById(member._id);
     res.status(200).json((await memberResponses([reloaded!]))[0]);
@@ -204,7 +225,16 @@ export function createAdminMembersRouter(): Router {
     }
 
     if (isObjectIdString(req.params.tagId)) {
-      await Account.updateOne({ _id: member._id }, { $pull: { memberTags: { tagId: req.params.tagId } } });
+      const result = await Account.updateOne({ _id: member._id }, { $pull: { memberTags: { tagId: req.params.tagId } } });
+      if (result.modifiedCount > 0) {
+        const tag = await Tag.findById(req.params.tagId);
+        await recordAdminAction(
+          req.account!.accountId,
+          'member.tag_removed',
+          { type: 'member', id: String(member._id), label: accountLabel(member) },
+          { tag: tag?.name ?? 'deleted tag' },
+        );
+      }
     }
 
     const reloaded = await Account.findById(member._id);

@@ -6,6 +6,7 @@ import {
   ensureDefaultCreditPacks,
   type CreditPackSize,
 } from '../models/CreditPack.js';
+import { recordAdminAction } from '../services/auditLog.js';
 
 export const creditPacksRouter = Router();
 
@@ -41,8 +42,17 @@ creditPacksRouter.patch(
       res.status(404).json({ error: 'Pack not found' });
       return;
     }
+    const fromCents = pack.priceCents;
     pack.priceCents = priceCents;
     await pack.save();
+    if (fromCents !== priceCents) {
+      await recordAdminAction(
+        req.account!.accountId,
+        'price.changed',
+        { type: 'creditPack', id: String(packSize), label: `${packSize} credits` },
+        { packSize, fromCents, toCents: priceCents },
+      );
+    }
 
     res.status(200).json({ size: pack.packSize, priceCents: pack.priceCents });
   },
