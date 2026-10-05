@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { Select } from '../../components';
+import { Button, Select } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import { addMemberTag, fetchAdminMembers, removeMemberTag, type AdminMember, type AdminTag } from '../../lib/api';
@@ -27,6 +27,9 @@ export function MembersSection({ tags, onTagsChanged }: { tags: AdminTag[]; onTa
   const [members, setMembers] = useState<AdminMember[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Which member's tag is waiting on "Remove / Keep" — removing a label like
+  // "low-income" is sensitive enough to deserve a second step.
+  const [confirmingRemoval, setConfirmingRemoval] = useState<{ memberId: string; tagId: string } | null>(null);
 
   // A tag deleted while it's the active filter would otherwise leave the
   // dropdown reading "All members" over a list filtered by a tag that's gone.
@@ -124,25 +127,48 @@ export function MembersSection({ tags, onTagsChanged }: { tags: AdminTag[]; onTa
             {selected?.id === member.id && (
               <div className="flex flex-col gap-2 border-t-2 border-border p-3">
                 {member.tags.length === 0 && <p className="text-sm text-text-secondary">No tags yet.</p>}
-                {member.tags.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <TagChip name={t.name} />
-                      <p className="mt-0.5 text-xs text-text-secondary">
-                        added by {t.addedBy.name}, {formatDate(t.addedAt)}
+                {member.tags.map((t) =>
+                  confirmingRemoval?.memberId === member.id && confirmingRemoval.tagId === t.id ? (
+                    <div key={t.id} className="flex items-center justify-between gap-2 rounded-md bg-warning/10 px-2 py-1.5">
+                      <p className="min-w-0 text-sm font-bold text-text-body">
+                        Remove "{t.name}" from {member.name ?? member.email ?? 'this member'}?
                       </p>
+                      <div className="flex shrink-0 gap-2">
+                        <Button
+                          size="sm"
+                          disabled={busy}
+                          onClick={async () => {
+                            await change(() => removeMemberTag(token!, member.id, t.id));
+                            setConfirmingRemoval(null);
+                          }}
+                        >
+                          Remove
+                        </Button>
+                        <Button size="sm" variant="secondary" disabled={busy} onClick={() => setConfirmingRemoval(null)}>
+                          Keep
+                        </Button>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      aria-label={`Remove ${t.name}`}
-                      disabled={busy}
-                      onClick={() => change(() => removeMemberTag(token!, member.id, t.id))}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border-2 border-border"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ))}
+                  ) : (
+                    <div key={t.id} className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <TagChip name={t.name} />
+                        <p className="mt-0.5 text-xs text-text-secondary">
+                          added by {t.addedBy.name}, {formatDate(t.addedAt)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${t.name}`}
+                        disabled={busy}
+                        onClick={() => setConfirmingRemoval({ memberId: member.id, tagId: t.id })}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border-2 border-border"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ),
+                )}
 
                 {tags.some((tag) => !member.tags.some((t) => t.id === tag.id)) && (
                   <Select
