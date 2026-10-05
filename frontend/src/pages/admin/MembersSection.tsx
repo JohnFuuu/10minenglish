@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { Button, Select } from '../../components';
+import { SectionHeading } from './SectionHeading';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import { addMemberTag, fetchAdminMembers, removeMemberTag, type AdminMember, type AdminTag } from '../../lib/api';
@@ -92,6 +93,7 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
 
   return (
     <section className="mb-10">
+      <SectionHeading>Member list</SectionHeading>
       <p className="mb-4 text-sm font-medium text-text-secondary">Find a member to see or change their tags.</p>
 
       <div className="mb-4 flex flex-col gap-2 sm:flex-row">

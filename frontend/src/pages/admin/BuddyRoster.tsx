@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../../components';
+import { SectionHeading } from './SectionHeading';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import { fetchAdminBuddies, setBuddyActive, type AdminBuddy } from '../../lib/api';
@@ -51,9 +52,7 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
 
   return (
     <section className="mb-10">
-      <h2 className="mb-1 inline-block rounded-md bg-accent-lime-light px-3 py-1 text-sm font-bold uppercase tracking-wide text-success">
-        Buddy roster
-      </h2>
+      <SectionHeading>Buddy roster</SectionHeading>
       <p className="mb-4 text-sm font-medium text-text-secondary">
         Deactivating takes a Buddy out of rotation and cancels their upcoming lessons, refunding
         each User.

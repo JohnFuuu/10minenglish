@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button, Input } from '../../components';
+import { SectionHeading } from './SectionHeading';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../lib/api';
 
@@ -44,9 +45,7 @@ export function NewAccountForm({ heading, description, submitLabel, create, onCr
 
   return (
     <section className="mb-8">
-      <h2 className="mb-1 inline-block rounded-md bg-accent-lime-light px-3 py-1 text-sm font-bold uppercase tracking-wide text-success">
-        {heading}
-      </h2>
+      <SectionHeading>{heading}</SectionHeading>
       <p className="mb-5 text-sm font-medium text-text-secondary">{description}</p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
