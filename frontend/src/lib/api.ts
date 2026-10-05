@@ -592,3 +592,22 @@ export function removeMemberTag(token: string, memberId: string, tagId: string) 
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+// Admin-only, read-only history of Admin changes.
+export interface AuditLogEntry {
+  id: string;
+  action: string;
+  admin: { id: string; name: string };
+  target: { type: string; id?: string; label: string };
+  details: Record<string, unknown>;
+  createdAt: string;
+}
+
+export function fetchAuditLog(token: string, filters: { category?: string; before?: string }) {
+  const params = new URLSearchParams();
+  if (filters.category) params.set('category', filters.category);
+  if (filters.before) params.set('before', filters.before);
+  return request<{ entries: AuditLogEntry[]; nextCursor: string | null }>(`/api/admin/audit-log?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
