@@ -29,17 +29,17 @@ async function signUpAndConfirm(app: Express, emailSender: FakeEmailSender) {
 }
 
 describe('POST /auth/login', () => {
-  it('rejects login before the email is confirmed, with a resend hint', async () => {
-    const { app, emailSender } = createTestApp();
+  // Confirming only gates booking and buying credits, not getting in.
+  it('logs in an account whose email is not confirmed yet', async () => {
+    const { app } = createTestApp();
     await request(app).post('/auth/signup').send(validSignup);
 
     const res = await request(app)
       .post('/auth/login')
       .send({ email: validSignup.email, password: validSignup.password });
 
-    expect(res.status).toBe(403);
-    expect(res.body).toMatchObject({ error: 'EMAIL_NOT_CONFIRMED' });
-    expect(emailSender.sent).toHaveLength(1);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('token');
   });
 
   it('logs in successfully with the correct password once confirmed', async () => {

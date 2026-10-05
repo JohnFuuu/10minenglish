@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Info, PartyPopper } from 'lucide-react';
 import { Avatar, Button, Input } from '../components';
 import { useAuth } from '../auth/AuthContext';
+import { EmailConfirmationNotice } from '../auth/EmailConfirmationNotice';
 import { useToast } from '../toast/ToastContext';
 import {
   ApiError,
@@ -613,9 +614,13 @@ export function BookLesson() {
             </p>
           </div>
 
-          <Button onClick={handleConfirm} disabled={isSubmitting}>
-            {isSubmitting ? 'Confirming…' : 'Confirm & book'}
-          </Button>
+          {account.emailConfirmed ? (
+            <Button onClick={handleConfirm} disabled={isSubmitting}>
+              {isSubmitting ? 'Confirming…' : 'Confirm & book'}
+            </Button>
+          ) : (
+            <EmailConfirmationNotice action="book this lesson" />
+          )}
           <button type="button" onClick={() => setStep('options')} className="text-center text-sm font-bold text-text-secondary">
             Back
           </button>

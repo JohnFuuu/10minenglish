@@ -43,13 +43,39 @@ describe('POST /auth/signup', () => {
     expect(emailSender.sent[0].to).toBe(validSignup.email);
   });
 
-  it('rejects a signup with an email that is already registered', async () => {
+  it('signs the new User straight in, before they confirm their email', async () => {
     const { app } = createTestApp();
+
+    const res = await request(app).post('/auth/signup').send(validSignup);
+
+    expect(res.body.token).toBeTruthy();
+    const me = await request(app).get('/api/me').set('Authorization', `Bearer ${res.body.token}`);
+    expect(me.status).toBe(200);
+    expect(me.body).toMatchObject({ role: 'user', emailConfirmed: false });
+  });
+
+  it('rejects a signup with an email that is already registered and confirmed', async () => {
+    const { app } = createTestApp();
+    await request(app).post('/auth/signup').send(validSignup);
+    await Account.updateOne({ email: validSignup.email }, { emailConfirmed: true });
+
+    const res = await request(app).post('/auth/signup').send(validSignup);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('Email already registered');
+  });
+
+  it('re-sends the confirmation email when an unconfirmed email signs up again', async () => {
+    const { app, emailSender } = createTestApp();
     await request(app).post('/auth/signup').send(validSignup);
 
     const res = await request(app).post('/auth/signup').send(validSignup);
 
     expect(res.status).toBe(409);
+    expect(res.body.error).toBe('EMAIL_NOT_CONFIRMED');
+    expect(emailSender.sent).toHaveLength(2);
+    expect(emailSender.sent[1].to).toBe(validSignup.email);
+    expect(await Account.countDocuments({ email: validSignup.email })).toBe(1);
   });
 
   it('rejects a signup missing required fields', async () => {

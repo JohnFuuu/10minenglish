@@ -37,8 +37,10 @@ describe('GET /api/me', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       id: account.id,
+      email: 'buddy@example.com',
       role: 'buddy',
       onboardingCompleted: false,
+      emailConfirmed: false,
       credits: 0,
       isNZLocated: false,
     });

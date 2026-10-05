@@ -31,7 +31,7 @@ async function createBuddy() {
 }
 
 async function createUser(credits = 3) {
-  const account = await Account.create({ role: 'user', email: 'sarah@example.com', credits });
+  const account = await Account.create({ role: 'user', email: 'sarah@example.com', emailConfirmed: true, credits });
   return { account, token: signAccountToken({ accountId: account.id, role: account.role }) };
 }
 

@@ -40,6 +40,16 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
     }
 
     const existing = await Account.findOne({ email });
+    if (existing && !existing.emailConfirmed) {
+      // Most likely the same person, who never found the first email —
+      // send a fresh link rather than leave them stuck on "already registered".
+      existing.emailConfirmationToken = generateToken();
+      existing.emailConfirmationExpires = new Date(Date.now() + EMAIL_CONFIRMATION_TTL_MS);
+      await existing.save();
+      await sendConfirmationEmail(emailSender, existing.email, existing.emailConfirmationToken);
+      res.status(409).json({ error: 'EMAIL_NOT_CONFIRMED' });
+      return;
+    }
     if (existing) {
       res.status(409).json({ error: 'Email already registered' });
       return;
@@ -75,7 +85,10 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       'Welcome to 10ME! Confirm your email',
     );
 
-    res.status(201).json({ id: account.id, email: account.email });
+    // Signed straight in: an unconfirmed User can look around and onboard,
+    // and is only stopped at booking or buying credits until they confirm.
+    const token = signAccountToken({ accountId: account.id, role: account.role });
+    res.status(201).json({ token, id: account.id, email: account.email });
   });
 
   router.get('/auth/confirm-email', async (req, res) => {
@@ -116,7 +129,10 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
     account.emailConfirmationExpires = undefined;
     await account.save();
 
-    res.status(200).json({ confirmed: true, email: account.email });
+    // Also signs them in, since the link often opens in a different browser
+    // (the mail app's) from the one they signed up in.
+    const sessionToken = signAccountToken({ accountId: account.id, role: account.role });
+    res.status(200).json({ confirmed: true, email: account.email, token: sessionToken });
   });
 
   router.post('/auth/resend-confirmation', async (req, res) => {
@@ -172,15 +188,6 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
     account.failedLoginAttempts = 0;
     account.lockedUntil = undefined;
     await account.save();
-
-    if (!account.emailConfirmed) {
-      res.status(403).json({
-        error: 'EMAIL_NOT_CONFIRMED',
-        message: 'Please confirm your email before logging in.',
-        resend: true,
-      });
-      return;
-    }
 
     const token = signAccountToken({ accountId: account.id, role: account.role });
     res.status(200).json({ token, id: account.id, role: account.role });

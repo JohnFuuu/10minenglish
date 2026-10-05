@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components';
 import { useAuth } from '../auth/AuthContext';
+import { EmailConfirmationNotice } from '../auth/EmailConfirmationNotice';
 import { useToast } from '../toast/ToastContext';
 import { fetchCreditPacks, startPoliCheckout, startStripeCheckout, type CreditPack } from '../lib/api';
 
@@ -110,19 +111,25 @@ export function CreditsScreen() {
         })}
       </div>
 
-      <div className="flex flex-col gap-3">
-        <Button tone="blue" disabled={!selectedSize || isPaying} onClick={() => handlePay('stripe')}>
-          {isPaying ? 'Processing…' : 'Pay with Stripe'}
-        </Button>
-        {account?.isNZLocated && (
-          <Button variant="secondary" tone="blue" disabled={!selectedSize || isPaying} onClick={() => handlePay('poli')}>
-            {isPaying ? 'Processing…' : 'Pay with POLi'}
-          </Button>
-        )}
-      </div>
-      <p className="mt-3 text-center text-xs text-text-secondary">
-        Payments are processed securely. Credits added instantly.
-      </p>
+      {account && !account.emailConfirmed ? (
+        <EmailConfirmationNotice action="buy credits" />
+      ) : (
+        <>
+          <div className="flex flex-col gap-3">
+            <Button tone="blue" disabled={!selectedSize || isPaying} onClick={() => handlePay('stripe')}>
+              {isPaying ? 'Processing…' : 'Pay with Stripe'}
+            </Button>
+            {account?.isNZLocated && (
+              <Button variant="secondary" tone="blue" disabled={!selectedSize || isPaying} onClick={() => handlePay('poli')}>
+                {isPaying ? 'Processing…' : 'Pay with POLi'}
+              </Button>
+            )}
+          </div>
+          <p className="mt-3 text-center text-xs text-text-secondary">
+            Payments are processed securely. Credits added instantly.
+          </p>
+        </>
+      )}
     </main>
   );
 }

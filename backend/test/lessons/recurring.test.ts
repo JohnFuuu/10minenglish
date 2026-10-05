@@ -23,7 +23,7 @@ function nextFriday() {
 }
 
 async function userToken(overrides: Record<string, unknown> = {}) {
-  const account = await Account.create({ role: 'user', email: 'user@example.com', credits: 10, ...overrides });
+  const account = await Account.create({ role: 'user', email: 'user@example.com', emailConfirmed: true, credits: 10, ...overrides });
   return { account, token: signAccountToken({ accountId: account.id, role: account.role }) };
 }
 
@@ -40,6 +40,29 @@ async function everyDayBuddy(overrides: Record<string, unknown> = {}) {
 }
 
 describe('POST /api/lessons/recurring', () => {
+  it('blocks a series until the User confirms their email, creating nothing', async () => {
+    const buddy = await everyDayBuddy();
+    const { account, token } = await userToken({ emailConfirmed: false });
+    const { app } = createTestApp();
+
+    const res = await request(app)
+      .post('/api/lessons/recurring')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        buddyId: buddy.id,
+        startTime: nextFriday().toJSDate().toISOString(),
+        frequency: { type: 'weekly' },
+        includeWeekends: true,
+        occurrenceCount: 3,
+      });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('EMAIL_NOT_CONFIRMED');
+    expect(await Lesson.countDocuments()).toBe(0);
+    const updated = await Account.findById(account.id);
+    expect(updated!.credits).toBe(10);
+  });
+
   it('blocks the whole series upfront when credits are insufficient, creating nothing', async () => {
     const buddy = await everyDayBuddy();
     const { account, token } = await userToken({ credits: 2 });

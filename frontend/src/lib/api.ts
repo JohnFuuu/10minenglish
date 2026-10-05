@@ -41,7 +41,7 @@ export interface SignupPayload {
 }
 
 export function signup(payload: SignupPayload) {
-  return request<{ id: string; email: string }>('/auth/signup', {
+  return request<{ token: string; id: string; email: string }>('/auth/signup', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -76,7 +76,7 @@ export function resendConfirmation(email: string) {
 }
 
 export function confirmEmail(token: string) {
-  return request<{ confirmed: boolean }>(`/auth/confirm-email?token=${encodeURIComponent(token)}`);
+  return request<{ confirmed: boolean; email: string; token: string }>(`/auth/confirm-email?token=${encodeURIComponent(token)}`);
 }
 
 export function forgotPassword(email: string) {
@@ -104,8 +104,10 @@ export function fetchMe(token: string) {
   return request<{
     id: string;
     name?: string;
+    email: string;
     role: string;
     onboardingCompleted: boolean;
+    emailConfirmed: boolean;
     credits: number;
     isNZLocated: boolean;
   }>('/api/me', {

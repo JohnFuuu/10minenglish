@@ -20,7 +20,7 @@ export function Signup() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [linkResent, setLinkResent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function updateField(field: keyof typeof form) {
@@ -39,10 +39,18 @@ export function Signup() {
 
     setIsSubmitting(true);
     try {
-      await signup({ name: form.name, email: form.email, password: form.password });
-      setSubmitted(true);
+      // Signed straight in — they confirm their email later, before booking
+      // or buying credits (the Dashboard reminds them).
+      const result = await signup({ name: form.name, email: form.email, password: form.password });
+      const me = await fetchMe(result.token);
+      setSession(result.token, toAccount(me));
+      navigate('/dashboard');
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
+      if (err instanceof ApiError && err.status === 409 && err.message === 'EMAIL_NOT_CONFIRMED') {
+        // They signed up before but never confirmed; the backend has just
+        // sent a fresh link.
+        setLinkResent(true);
+      } else if (err instanceof ApiError && err.status === 409) {
         setError('That email is already registered.');
       } else {
         setError('Something went wrong. Please check your details and try again.');
@@ -64,22 +72,19 @@ export function Signup() {
     }
   }
 
-  if (submitted) {
+  if (linkResent) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-8 text-center">
         <MailCheck size={56} className="mx-auto text-brand-primary" />
-        <h1 className="text-2xl font-bold text-text-body">Check your inbox</h1>
-        <p className="text-sm font-medium text-text-secondary">
-          We've sent a confirmation link to{' '}
-          <span className="font-bold text-brand-secondary">{form.email}</span>
+        <h1 className="text-2xl font-bold text-text-body">You already started signing up</h1>
+        <p className="text-base font-medium text-text-body">
+          We've sent a new confirmation link to{' '}
+          <span className="font-bold text-brand-secondary">{form.email}</span>. Tap it to finish setting up your
+          account, or log in with the password you chose.
         </p>
-        <button
-          type="button"
-          onClick={() => navigate('/login')}
-          className="mt-8 text-xs font-bold uppercase tracking-wide text-brand-secondary"
-        >
-          ← Back to log in
-        </button>
+        <Button tone="blue" className="mt-6 w-full" onClick={() => navigate('/login')}>
+          Log in
+        </Button>
       </div>
     );
   }

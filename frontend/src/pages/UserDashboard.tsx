@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Calendar, CalendarDays, CalendarX, ChevronDown, ChevronUp, Gem, Receipt, Users } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
+import { EmailConfirmationNotice } from '../auth/EmailConfirmationNotice';
 import { Avatar, BottomNav, Button, Card, Modal, NAV_CLEARANCE_CLASS } from '../components';
 import {
   fetchPaymentHistory,
@@ -101,6 +102,12 @@ export function UserDashboard() {
           {account?.name?.split(' ')[0] ?? 'there'}!
         </h1>
       </div>
+
+      {account && !account.emailConfirmed && (
+        <div className="mx-5 mb-5">
+          <EmailConfirmationNotice action="book lessons and buy credits" />
+        </div>
+      )}
 
       <div className="mx-5 mb-5 rounded-md border-2 border-b-[5px] border-brand-primary-border bg-brand-primary p-4">
         <div className="flex items-center justify-between">

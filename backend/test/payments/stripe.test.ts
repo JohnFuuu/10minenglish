@@ -14,7 +14,7 @@ afterAll(stopTestDb, 30000);
 beforeEach(clearTestDb);
 
 async function userToken(overrides: Record<string, unknown> = {}) {
-  const account = await Account.create({ role: 'user', email: 'sarah@example.com', ...overrides });
+  const account = await Account.create({ role: 'user', email: 'sarah@example.com', emailConfirmed: true, ...overrides });
   return { account, token: signAccountToken({ accountId: account.id, role: account.role }) };
 }
 
@@ -30,6 +30,20 @@ describe('POST /api/payments/stripe/checkout', () => {
       .send({ packSize: 10 });
 
     expect(res.status).toBe(403);
+  });
+
+  it('blocks buying credits until the User confirms their email', async () => {
+    const { token } = await userToken({ emailConfirmed: false });
+    const { app } = createTestApp();
+
+    const res = await request(app)
+      .post('/api/payments/stripe/checkout')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ packSize: 10 });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('EMAIL_NOT_CONFIRMED');
+    expect(await Payment.countDocuments()).toBe(0);
   });
 
   it('rejects an invalid pack size', async () => {

@@ -6,8 +6,12 @@ export type AccountRole = 'user' | 'buddy' | 'admin';
 export interface Account {
   id: string;
   name?: string;
+  email: string;
   role: AccountRole;
   onboardingCompleted: boolean;
+  // False for a new password-signup User until they click the link in their
+  // confirmation email; booking and buying Credits wait on it.
+  emailConfirmed: boolean;
   credits: number;
   isNZLocated: boolean;
 }
@@ -34,8 +38,10 @@ export function toAccount(me: Awaited<ReturnType<typeof fetchMe>>): Account {
   return {
     id: me.id,
     name: me.name,
+    email: me.email,
     role: me.role as AccountRole,
     onboardingCompleted: me.onboardingCompleted,
+    emailConfirmed: me.emailConfirmed,
     credits: me.credits,
     isNZLocated: me.isNZLocated,
   };

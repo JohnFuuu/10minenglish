@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { requireConfirmedEmail } from '../middleware/requireConfirmedEmail.js';
 import { Account, type AccountDocument } from '../models/Account.js';
 import { Lesson, LESSON_DURATION_MINUTES, type LessonDocument } from '../models/Lesson.js';
 import type { EmailSender } from '../services/email.js';
@@ -110,7 +111,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     });
   });
 
-  router.post('/api/lessons', requireAuth, requireRole('user'), async (req, res) => {
+  router.post('/api/lessons', requireAuth, requireRole('user'), requireConfirmedEmail, async (req, res) => {
     const { buddyId, startTime } = req.body ?? {};
     if (typeof buddyId !== 'string' || typeof startTime !== 'string') {
       res.status(400).json({ error: 'Missing buddyId or startTime' });
@@ -147,7 +148,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     res.status(201).json({ lesson: serializeLesson(lesson), creditsRemaining: user.credits });
   });
 
-  router.post('/api/lessons/recurring', requireAuth, requireRole('user'), async (req, res) => {
+  router.post('/api/lessons/recurring', requireAuth, requireRole('user'), requireConfirmedEmail, async (req, res) => {
     const { buddyId, startTime, frequency, includeWeekends, occurrenceCount, timezone } = req.body ?? {};
 
     if (typeof startTime !== 'string' || !isValidFrequency(frequency) || typeof occurrenceCount !== 'number' || occurrenceCount < 1) {

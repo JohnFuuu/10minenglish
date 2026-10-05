@@ -21,7 +21,7 @@ function anchorLocal() {
 }
 
 async function userToken(overrides: Record<string, unknown> = {}) {
-  const account = await Account.create({ role: 'user', email: 'user@example.com', credits: 3, ...overrides });
+  const account = await Account.create({ role: 'user', email: 'user@example.com', emailConfirmed: true, credits: 3, ...overrides });
   return { account, token: signAccountToken({ accountId: account.id, role: account.role }) };
 }
 
@@ -50,6 +50,23 @@ describe('POST /api/lessons', () => {
       .send({ buddyId: buddy.id, startTime: anchorLocal().toJSDate().toISOString() });
 
     expect(res.status).toBe(403);
+  });
+
+  it('blocks booking until the User confirms their email, deducting nothing', async () => {
+    const buddy = await bookableBuddy();
+    const { account, token } = await userToken({ emailConfirmed: false });
+    const { app } = createTestApp();
+
+    const res = await request(app)
+      .post('/api/lessons')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ buddyId: buddy.id, startTime: anchorLocal().toJSDate().toISOString() });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('EMAIL_NOT_CONFIRMED');
+    const updated = await Account.findById(account.id);
+    expect(updated!.credits).toBe(3);
+    expect(await Lesson.countDocuments()).toBe(0);
   });
 
   it('blocks booking with 0 credits and deducts nothing', async () => {

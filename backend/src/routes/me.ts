@@ -55,8 +55,12 @@ export function createMeRouter(deps: MeRouterDependencies): Router {
     res.status(200).json({
       id: account.id,
       name: account.name,
+      // Lets the "confirm your email" banner say where the link went and
+      // resend it without asking again.
+      email: account.email,
       role: account.role,
       onboardingCompleted: account.onboardingCompleted,
+      emailConfirmed: account.emailConfirmed,
       credits: account.credits,
       isNZLocated: isLikelyNewZealand(account.location),
     });

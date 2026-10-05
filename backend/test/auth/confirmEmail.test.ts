@@ -42,6 +42,20 @@ describe('GET /auth/confirm-email', () => {
     expect(account!.emailConfirmationToken).toBeUndefined();
   });
 
+  // The link may open in a different browser (e.g. the mail app's), so it
+  // signs the person in there too rather than asking them to log in again.
+  it('signs the person in with a session token', async () => {
+    const { app, emailSender } = createTestApp();
+    await request(app).post('/auth/signup').send(validSignup);
+    const token = extractToken(emailSender.sent[0].body);
+
+    const res = await request(app).get(`/auth/confirm-email?token=${token}`);
+
+    expect(res.body.token).toBeTruthy();
+    const me = await request(app).get('/api/me').set('Authorization', `Bearer ${res.body.token}`);
+    expect(me.body).toMatchObject({ role: 'user', emailConfirmed: true });
+  });
+
   it('rejects an invalid token', async () => {
     const { app } = createTestApp();
 

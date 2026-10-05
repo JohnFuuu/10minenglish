@@ -15,7 +15,7 @@ afterAll(stopTestDb, 30000);
 beforeEach(clearTestDb);
 
 async function userToken(overrides: Record<string, unknown> = {}) {
-  const account = await Account.create({ role: 'user', email: 'user@example.com', credits: 3, ...overrides });
+  const account = await Account.create({ role: 'user', email: 'user@example.com', emailConfirmed: true, credits: 3, ...overrides });
   return { account, token: signAccountToken({ accountId: account.id, role: account.role }) };
 }
 

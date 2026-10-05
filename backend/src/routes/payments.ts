@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { requireConfirmedEmail } from '../middleware/requireConfirmedEmail.js';
 import { Account } from '../models/Account.js';
 import {
   CREDIT_PACK_CURRENCY,
@@ -32,6 +33,7 @@ export function createPaymentsRouter(deps: PaymentsRouterDependencies): Router {
     '/api/payments/stripe/checkout',
     requireAuth,
     requireRole('user'),
+    requireConfirmedEmail,
     async (req, res) => {
       const { packSize } = req.body ?? {};
       if (!isValidPackSize(packSize)) {
@@ -109,7 +111,7 @@ export function createPaymentsRouter(deps: PaymentsRouterDependencies): Router {
     res.status(200).json({ status: 'failed' });
   });
 
-  router.post('/api/payments/poli/checkout', requireAuth, requireRole('user'), async (req, res) => {
+  router.post('/api/payments/poli/checkout', requireAuth, requireRole('user'), requireConfirmedEmail, async (req, res) => {
     const { packSize } = req.body ?? {};
     if (!isValidPackSize(packSize)) {
       res.status(400).json({ error: 'Invalid pack size' });
