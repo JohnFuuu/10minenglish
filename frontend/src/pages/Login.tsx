@@ -66,7 +66,7 @@ export function Login() {
       <div className="relative flex h-[45vh] min-h-[280px] items-center justify-center bg-bg-surface px-10 py-6">
         <img src="/logo.png" alt="10 Minute English" className="h-full w-full object-contain" />
         <div className="absolute right-0 top-0">
-          <BackArrow onPress={() => navigate('/signup')} />
+          <BackArrow onPress={() => navigate('/')} />
         </div>
       </div>
 

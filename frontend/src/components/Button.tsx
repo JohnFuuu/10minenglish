@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes } from 'react';
 import { cn } from '../lib/cn';
 
 type ButtonVariant = 'primary' | 'secondary';
-type ButtonSize = 'sm' | 'md';
+type ButtonSize = 'sm' | 'md' | 'lg';
 // Green is the default brand tone (dashboard, in-app actions). Blue is used
 // specifically for auth-flow CTAs, matching the exported AuthScreen pattern.
 type ButtonTone = 'green' | 'blue';
@@ -34,6 +34,9 @@ const variantToneClasses: Record<ButtonVariant, Record<ButtonTone, string>> = {
 const sizeClasses: Record<ButtonSize, string> = {
   sm: 'px-4 py-2 text-xs',
   md: 'px-6 py-3 text-sm',
+  // For first-run choices aimed at older Users — a bigger target and
+  // easier-to-read label than the standard in-app button.
+  lg: 'px-6 py-5 text-lg',
 };
 
 export function Button({

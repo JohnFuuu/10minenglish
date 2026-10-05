@@ -86,7 +86,7 @@ export function Signup() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <BackArrow onPress={() => navigate('/login')} />
+      <BackArrow onPress={() => navigate('/')} />
 
       <div className="flex-1 px-5 pb-8">
         <h1 className="mb-5 text-center text-2xl font-bold text-text-body">Create your profile</h1>
