@@ -3,7 +3,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { Account } from '../models/Account.js';
 import { Lesson } from '../models/Lesson.js';
 import { hashPassword } from '../services/password.js';
-import { cancelLessonAsBuddy } from '../services/buddyCancellation.js';
+import { cancelUpcomingLessonsForBuddy } from '../services/buddyReconciliation.js';
 import type { EmailSender } from '../services/email.js';
 import { accountLabel, recordAdminAction } from '../services/auditLog.js';
 
@@ -97,24 +97,12 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
     // Deactivating means this Buddy will not be teaching their booked Lessons,
     // so those Lessons are cancelled down the same path a Buddy-initiated
     // cancellation takes: always refunded, always notified (see CONTEXT.md,
-    // Account). Reactivating cancels nothing — the Lessons are already gone.
-    let cancelledLessons = 0;
-    if (wasActive && !active) {
-      const upcoming = await Lesson.find({
-        buddyId: buddy._id,
-        status: 'upcoming',
-        startTime: { $gt: new Date() },
-      });
-
-      for (const lesson of upcoming) {
-        const result = await cancelLessonAsBuddy({
-          emailSender,
-          lessonId: lesson._id,
-          buddyName: buddy.name,
-        });
-        if (result) cancelledLessons += 1;
-      }
-    }
+    // Account). Run even when the Buddy was already inactive, so a retry
+    // finishes a deactivation that was interrupted part-way (#29); the
+    // reconciliation sweep is the backstop. Reactivating cancels nothing.
+    const cancelledLessons = active
+      ? 0
+      : await cancelUpcomingLessonsForBuddy({ emailSender, buddyId: buddy._id, buddyName: buddy.name });
 
     if (wasActive !== active) {
       await recordAdminAction(
@@ -151,16 +139,19 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
       { new: true },
     );
     if (!buddy) {
-      res.status(404).json({ error: 'Buddy not found' });
+      // Already removed: finish any clean-up an interrupted removal left
+      // behind (#29), but don't audit a second removal.
+      const archived = await Account.findOne({ _id: buddyId, role: 'buddy', removedAt: { $exists: true } });
+      if (!archived) {
+        res.status(404).json({ error: 'Buddy not found' });
+        return;
+      }
+      const cancelledLessons = await cancelUpcomingLessonsForBuddy({ emailSender, buddyId: archived._id, buddyName: archived.name });
+      res.status(200).json({ id: archived.id, cancelledLessons });
       return;
     }
 
-    const upcoming = await Lesson.find({ buddyId: buddy._id, status: 'upcoming', startTime: { $gt: new Date() } });
-    let cancelledLessons = 0;
-    for (const lesson of upcoming) {
-      const result = await cancelLessonAsBuddy({ emailSender, lessonId: lesson._id, buddyName: buddy.name });
-      if (result) cancelledLessons += 1;
-    }
+    const cancelledLessons = await cancelUpcomingLessonsForBuddy({ emailSender, buddyId: buddy._id, buddyName: buddy.name });
 
     await recordAdminAction(
       req.account!.accountId,
