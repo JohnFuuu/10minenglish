@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { Account } from '../../src/models/Account.js';
 import { AuditEntry } from '../../src/models/AuditEntry.js';
@@ -12,7 +12,14 @@ beforeAll(async () => {
   await startTestDb();
 }, 30000);
 afterAll(stopTestDb, 30000);
-beforeEach(clearTestDb);
+beforeEach(async () => {
+  await clearTestDb();
+  // Ada is a super admin (allowed to deactivate/remove Admins); Bob and Cy are not.
+  process.env.SUPER_BACKEND_ADMIN = 'ada@10me.test';
+});
+afterEach(() => {
+  delete process.env.SUPER_BACKEND_ADMIN;
+});
 
 const PASSWORD = 'StarterPass1!';
 
@@ -101,28 +108,6 @@ describe('safeguards', () => {
     expect(await AuditEntry.countDocuments()).toBe(0);
   });
 
-  it('never leaves zero active Admins — even when two deactivate each other at once', async () => {
-    const { ada, bob, as } = await setup();
-
-    const [a, b] = await Promise.all([
-      as(ada, 'patch', `/api/admin/admins/${bob.id}`, { active: false }),
-      as(bob, 'patch', `/api/admin/admins/${ada.id}`, { active: false }),
-    ]);
-
-    // Whichever interleaving happens, someone can still manage the app. If
-    // both changes land together, both are undone (both Admins stay active
-    // and are told why) — safe, and either can simply retry.
-    const active = await Account.countDocuments({ role: 'admin', active: { $ne: false }, removedAt: { $exists: false } });
-    expect(active).toBeGreaterThanOrEqual(1);
-    const succeeded = [a, b].filter((r) => r.status === 200);
-    for (const r of [a, b].filter((x) => x.status !== 200)) {
-      expect(r.status).toBe(409);
-      expect(r.body.error).toBe('LAST_ACTIVE_ADMIN');
-    }
-    expect(succeeded.length).toBeLessThanOrEqual(1);
-    expect(await AuditEntry.countDocuments()).toBe(succeeded.length);
-  });
-
   it('refuses removing the last other active Admin when the rest are inactive', async () => {
     const { ada, bob, as } = await setup();
     const cy = await admin('Cy');
@@ -148,5 +133,63 @@ describe('safeguards', () => {
     ]).then((rs) => rs.map((r) => r.status));
 
     expect(statuses).toEqual([404, 404, 404, 404]);
+  });
+});
+
+describe('super admins (SUPER_BACKEND_ADMIN)', () => {
+  it('only super admins may deactivate, reactivate, or remove other Admins', async () => {
+    const { ada, bob, as } = await setup();
+    const cy = await admin('Cy');
+
+    const deactivate = await as(bob, 'patch', `/api/admin/admins/${cy.id}`, { active: false });
+    const remove = await as(bob, 'delete', `/api/admin/admins/${cy.id}`);
+    const bySuper = await as(ada, 'patch', `/api/admin/admins/${cy.id}`, { active: false });
+
+    expect([deactivate.status, remove.status]).toEqual([403, 403]);
+    expect(deactivate.body.error).toBe('SUPER_ADMIN_REQUIRED');
+    expect(bySuper.status).toBe(200);
+    expect(await AuditEntry.countDocuments()).toBe(1);
+  });
+
+  it('protects super admins from being deactivated or removed, even by another super admin', async () => {
+    const { ada, as } = await setup();
+    const zed = await admin('Zed');
+    process.env.SUPER_BACKEND_ADMIN = 'ada@10me.test,zed@10me.test';
+
+    const deactivate = await as(ada, 'patch', `/api/admin/admins/${zed.id}`, { active: false });
+    const remove = await as(ada, 'delete', `/api/admin/admins/${zed.id}`);
+
+    expect([deactivate.status, remove.status]).toEqual([409, 409]);
+    expect(deactivate.body.error).toBe('SUPER_ADMIN_PROTECTED');
+    expect(await Account.findById(zed._id)).toMatchObject({ active: true });
+    expect((await Account.findById(zed._id))!.removedAt).toBeUndefined();
+  });
+
+  it('reads a comma-separated list, ignoring spaces and capitals', async () => {
+    const { bob, as } = await setup();
+    const cy = await admin('Cy');
+    process.env.SUPER_BACKEND_ADMIN = ' someone@else.com ,  BOB@10ME.test ';
+
+    const res = await as(bob, 'patch', `/api/admin/admins/${cy.id}`, { active: false });
+
+    expect(res.status).toBe(200);
+  });
+
+  it('lets nobody deactivate or remove Admins when the setting is missing', async () => {
+    const { ada, bob, as } = await setup();
+    delete process.env.SUPER_BACKEND_ADMIN;
+
+    const res = await as(ada, 'patch', `/api/admin/admins/${bob.id}`, { active: false });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('marks super admins in the Admin list', async () => {
+    const { ada, as } = await setup();
+
+    const res = await as(ada, 'get', '/api/admin/admins');
+
+    const flags = Object.fromEntries(res.body.admins.map((a: { name: string; isSuperAdmin: boolean }) => [a.name, a.isSuperAdmin]));
+    expect(flags).toEqual({ Ada: true, Bob: false });
   });
 });
