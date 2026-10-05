@@ -1,10 +1,21 @@
 import { useState } from 'react';
 import { Button, Input } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
-import { ApiError, provisionBuddy } from '../../lib/api';
+import { ApiError } from '../../lib/api';
 
-// Buddies can't self-register; an Admin creates their account here.
-export function AddBuddyForm({ onCreated, onCancel }: { onCreated: (email: string) => void; onCancel: () => void }) {
+interface NewAccountFormProps {
+  heading: string;
+  description: string;
+  submitLabel: string;
+  // Creates the account and resolves with its email.
+  create: (token: string, payload: { name: string; email: string; password: string }) => Promise<{ email: string }>;
+  onCreated: (email: string) => void;
+  onCancel: () => void;
+}
+
+// Name / email / starter-password form for accounts an Admin creates on
+// someone's behalf (Buddies, other Admins) — neither can self-register.
+export function NewAccountForm({ heading, description, submitLabel, create, onCreated, onCancel }: NewAccountFormProps) {
   const { token } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -18,8 +29,8 @@ export function AddBuddyForm({ onCreated, onCancel }: { onCreated: (email: strin
     setIsSubmitting(true);
 
     try {
-      const buddy = await provisionBuddy(token!, { name, email, password });
-      onCreated(buddy.email);
+      const account = await create(token!, { name, email, password });
+      onCreated(account.email);
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 409
@@ -34,11 +45,9 @@ export function AddBuddyForm({ onCreated, onCancel }: { onCreated: (email: strin
   return (
     <section className="mb-8">
       <h2 className="mb-1 inline-block rounded-md bg-accent-lime-light px-3 py-1 text-sm font-bold uppercase tracking-wide text-success">
-        Add Buddy account
+        {heading}
       </h2>
-      <p className="mb-5 text-sm font-medium text-text-secondary">
-        Buddies cannot self-register — use this form to create their account.
-      </p>
+      <p className="mb-5 text-sm font-medium text-text-secondary">{description}</p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input
@@ -66,7 +75,7 @@ export function AddBuddyForm({ onCreated, onCancel }: { onCreated: (email: strin
         />
         {error && <p className="text-sm font-bold text-error">{error}</p>}
         <Button type="submit" disabled={isSubmitting}>
-          Create Buddy Account
+          {submitLabel}
         </Button>
         <button type="button" onClick={onCancel} className="text-sm font-bold text-text-secondary">
           Cancel

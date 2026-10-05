@@ -13,9 +13,10 @@ export const AUDIT_ACTIONS = [
   'buddy.activated',
   'buddy.deactivated',
   'price.changed',
+  'admin.created',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
-export type AuditTargetType = 'tag' | 'member' | 'buddy' | 'creditPack';
+export type AuditTargetType = 'tag' | 'member' | 'buddy' | 'creditPack' | 'admin';
 
 // The Audit log tab's filter options.
 export const AUDIT_CATEGORIES: Record<string, AuditAction[]> = {
@@ -23,6 +24,7 @@ export const AUDIT_CATEGORIES: Record<string, AuditAction[]> = {
   memberTags: ['member.tag_added', 'member.tag_removed'],
   buddies: ['buddy.created', 'buddy.activated', 'buddy.deactivated'],
   pricing: ['price.changed'],
+  admins: ['admin.created'],
 };
 
 export interface AuditEntryDocument extends mongoose.Document {
@@ -42,7 +44,7 @@ const adminSnapshotSchema = new Schema(
 
 const targetSnapshotSchema = new Schema(
   {
-    type: { type: String, required: true, enum: ['tag', 'member', 'buddy', 'creditPack'] },
+    type: { type: String, required: true, enum: ['tag', 'member', 'buddy', 'creditPack', 'admin'] },
     id: { type: String },
     label: { type: String, required: true },
   },

@@ -613,3 +613,23 @@ export function fetchAuditLog(token: string, filters: { category?: string; befor
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export interface AdminAccount {
+  id: string;
+  name?: string;
+  email: string;
+}
+
+export function fetchAdmins(token: string) {
+  return request<{ admins: AdminAccount[] }>('/api/admin/admins', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function createAdmin(token: string, payload: { name: string; email: string; password: string }) {
+  return request<{ id: string; email: string; role: string }>('/api/admin/admins', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+}

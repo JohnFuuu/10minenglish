@@ -11,6 +11,7 @@ const CATEGORY_OPTIONS = [
   { value: 'memberTags', label: 'Member tags' },
   { value: 'buddies', label: 'Buddies' },
   { value: 'pricing', label: 'Pricing' },
+  { value: 'admins', label: 'Admins' },
 ];
 
 const dollars = (cents: unknown) => `$${(Number(cents) / 100).toFixed(2)}`;
@@ -45,6 +46,8 @@ function describe(entry: AuditLogEntry): ReactNode {
       return <>{who} deactivated {target} ({plural(entry.details.cancelledLessons, 'upcoming lesson')} cancelled and refunded)</>;
     case 'price.changed':
       return <>{who} changed {target} from {dollars(entry.details.fromCents)} to {dollars(entry.details.toCents)}</>;
+    case 'admin.created':
+      return <>{who} created Admin account {target}</>;
     default:
       return <>{who} · {entry.action} · {target}</>;
   }
