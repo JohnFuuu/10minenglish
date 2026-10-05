@@ -5,6 +5,7 @@ import { Button } from '../../components';
 import { AdminLayout } from './AdminLayout';
 import { MembersSection } from './MembersSection';
 import { MemberTagsSection } from './MemberTagsSection';
+import { SectionHeading } from './SectionHeading';
 import { useAdminTags } from './useAdminTags';
 
 // Admin home (/dashboard for an Admin): finding and tagging members, with
@@ -21,7 +22,7 @@ export function AdminMembersPage() {
       {isManagingTags && (
         <div className="mb-6 rounded-md border-2 border-b-4 border-border-strong bg-bg-surface p-4">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-text-heading">Manage tags</h2>
+            <SectionHeading className="mb-0">Member tags</SectionHeading>
             <Button size="sm" variant="secondary" onClick={() => setIsManagingTags(false)}>
               Done
             </Button>
