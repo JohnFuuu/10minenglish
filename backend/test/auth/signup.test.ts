@@ -54,6 +54,21 @@ describe('POST /auth/signup', () => {
     expect(me.body).toMatchObject({ role: 'user', emailConfirmed: false });
   });
 
+  // The banner on the Dashboard lets them resend, so a delivery hiccup
+  // shouldn't stop the account being created and signed in.
+  it('still creates and signs in the User when the confirmation email fails to send', async () => {
+    const { app, emailSender } = createTestApp();
+    emailSender.send = async () => {
+      throw new Error('Resend is down');
+    };
+
+    const res = await request(app).post('/auth/signup').send(validSignup);
+
+    expect(res.status).toBe(201);
+    expect(res.body.token).toBeTruthy();
+    expect(await Account.countDocuments({ email: validSignup.email })).toBe(1);
+  });
+
   it('rejects a signup with an email that is already registered and confirmed', async () => {
     const { app } = createTestApp();
     await request(app).post('/auth/signup').send(validSignup);

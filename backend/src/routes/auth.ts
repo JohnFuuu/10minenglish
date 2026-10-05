@@ -78,12 +78,18 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       emailConfirmationExpires,
     });
 
-    await sendConfirmationEmail(
-      emailSender,
-      account.email,
-      emailConfirmationToken,
-      'Welcome to 10ME! Confirm your email',
-    );
+    // A failed send mustn't undo the signup: they're signed in either way,
+    // and the Dashboard's confirm-your-email banner lets them resend.
+    try {
+      await sendConfirmationEmail(
+        emailSender,
+        account.email,
+        emailConfirmationToken,
+        'Welcome to 10ME! Confirm your email',
+      );
+    } catch (err) {
+      console.error('Signup confirmation email failed to send', err);
+    }
 
     // Signed straight in: an unconfirmed User can look around and onboard,
     // and is only stopped at booking or buying credits until they confirm.

@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { createApp } from './app.js';
 import { connectToDatabase } from './db.js';
-import { consoleEmailSender } from './services/email.js';
+import { consoleEmailSender, emailSenderFromEnv } from './services/email.js';
 import {
   REMINDER_LEAD_MINUTES,
   REMINDER_SWEEP_INTERVAL_MS,
@@ -20,7 +20,12 @@ if (!JWT_SECRET) throw new Error('JWT_SECRET is not set');
 
 async function main() {
   await connectToDatabase(MONGODB_URI!);
-  const emailSender = consoleEmailSender;
+  const emailSender = emailSenderFromEnv();
+  console.log(
+    emailSender === consoleEmailSender
+      ? 'RESEND_API_KEY not set — emails are logged here, not delivered.'
+      : `Sending email via Resend from ${process.env.EMAIL_FROM}.`,
+  );
   const app = createApp(
     PAYMENTS_MOCK
       ? { emailSender, stripeClient: mockStripeClient, poliClient: mockPoliClient }
