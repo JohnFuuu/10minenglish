@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 
-// The lime "chip" subtitle that names each module on an Admin tab (e.g.
-// "Buddy roster", "Member list").
+// The subtitle that names each module on an Admin tab (e.g. "Buddy roster",
+// "Member list"): bold black in the display font (Inter), so it reads as a
+// heading against the Nunito body text.
 export function SectionHeading({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <h2
       className={cn(
-        'mb-1 inline-block rounded-md bg-accent-lime-light px-3 py-1 text-sm font-bold uppercase tracking-wide text-success',
+        'mb-1 font-display text-lg font-extrabold text-black',
         className,
       )}
     >
