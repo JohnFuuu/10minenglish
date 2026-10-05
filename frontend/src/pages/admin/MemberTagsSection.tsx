@@ -56,7 +56,7 @@ export function MemberTagsSection({ tags, onChanged }: { tags: AdminTag[]; onCha
   }
 
   return (
-    <section className="mb-10">
+    <section>
       <p className="mb-4 text-sm font-medium text-text-secondary">
         Private labels for grouping members, e.g. "low-income". Members never see their tags.
       </p>

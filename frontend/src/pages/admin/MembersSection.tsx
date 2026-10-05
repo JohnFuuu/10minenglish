@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { Button, Select } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
@@ -19,7 +19,18 @@ function TagChip({ name }: { name: string }) {
 }
 
 // Admin-only list of Users with search, tag filter, and per-member tagging.
-export function MembersSection({ tags, onTagsChanged }: { tags: AdminTag[]; onTagsChanged: () => void }) {
+interface MembersSectionProps {
+  tags: AdminTag[];
+  onTagsChanged: () => void;
+  // Bumped by the page when a tag is renamed or deleted, so rows and chips
+  // re-fetch. A counter rather than the tag list itself, so the first load
+  // isn't fetched twice when the tag list arrives.
+  refreshKey?: number;
+  // Rendered at the end of the search/filter row (e.g. "Manage tags").
+  toolbarAction?: ReactNode;
+}
+
+export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAction }: MembersSectionProps) {
   const { token } = useAuth();
   const { showToast } = useToast();
   const [query, setQuery] = useState('');
@@ -45,8 +56,8 @@ export function MembersSection({ tags, onTagsChanged }: { tags: AdminTag[]; onTa
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Not keyed on the tag list: renames and deletes happen on the Tags tab,
-  // and coming back here remounts this section with fresh data.
+  // Not keyed on the tag list itself (see refreshKey): the page bumps
+  // refreshKey when a tag is renamed or deleted in the Manage tags panel.
   useEffect(() => {
     if (!token) return;
     // Set by cleanup once a newer search has started, so a slow, older
@@ -62,7 +73,7 @@ export function MembersSection({ tags, onTagsChanged }: { tags: AdminTag[]; onTa
     return () => {
       superseded = true;
     };
-  }, [token, debouncedQuery, tagFilter, showToast]);
+  }, [token, debouncedQuery, tagFilter, refreshKey, showToast]);
 
   const selected = members.find((m) => m.id === selectedId) ?? null;
 
@@ -98,6 +109,7 @@ export function MembersSection({ tags, onTagsChanged }: { tags: AdminTag[]; onTa
           options={[{ value: '', label: 'All members' }, ...tags.map((tag) => ({ value: tag.id, label: `Tagged: ${tag.name}` }))]}
           className="sm:w-60"
         />
+        {toolbarAction}
       </div>
 
       {members.length === 0 && <p className="text-sm text-text-secondary">No members match.</p>}

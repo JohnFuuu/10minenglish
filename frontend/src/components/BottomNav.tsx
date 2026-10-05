@@ -50,13 +50,6 @@ const PROFILE_ICON = (active: boolean) => (
   </svg>
 );
 
-const TAGS_ICON = (active: boolean) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : INACTIVE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-    <line x1="7" y1="7" x2="7.01" y2="7" />
-  </svg>
-);
-
 const BUDDY_ROSTER_ICON = (active: boolean) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : INACTIVE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -93,12 +86,11 @@ const BUDDY_TABS: NavTab[] = [
   { path: '/profile', label: 'PROFILE', icon: PROFILE_ICON },
 ];
 
-// Grouped by job: finding/tagging members (home), managing the tag list,
-// Buddy accounts, Credit Pack prices, and Admin accounts. (The audit log
-// is reached from the header — see AdminLayout.)
+// Grouped by job: members and their tags (home), Buddy accounts, Credit
+// Pack prices, and Admin accounts. The audit log is reached from the
+// header (see AdminLayout).
 const ADMIN_TABS: NavTab[] = [
   { path: '/dashboard', label: 'MEMBERS', icon: BUDDIES_ICON },
-  { path: '/admin/tags', label: 'TAGS', icon: TAGS_ICON },
   { path: '/admin/buddies', label: 'BUDDIES', icon: BUDDY_ROSTER_ICON },
   { path: '/admin/pricing', label: 'PRICING', icon: PRICING_ICON },
   { path: '/admin/admins', label: 'ADMINS', icon: ADMINS_ICON },

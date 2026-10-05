@@ -2,7 +2,6 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { RequireAuth } from './auth/RequireAuth';
 import { RequireAdmin } from './auth/RequireAdmin';
-import { AdminTagsPage } from './pages/admin/AdminTagsPage';
 import { AdminBuddiesPage } from './pages/admin/AdminBuddiesPage';
 import { AdminPricingPage } from './pages/admin/AdminPricingPage';
 import { AdminAuditPage } from './pages/admin/AdminAuditPage';
@@ -54,7 +53,8 @@ function App() {
             <Route path="/buddies/:id" element={<RequireAuth><BuddyScreen /></RequireAuth>} />
             <Route path="/teaching" element={<RequireAuth><BuddyLessonsScreen /></RequireAuth>} />
             <Route path="/availability" element={<RequireAuth><BuddyAvailabilityScreen /></RequireAuth>} />
-            <Route path="/admin/tags" element={<RequireAdmin><AdminTagsPage /></RequireAdmin>} />
+            {/* Tags are managed from the Members page now. */}
+            <Route path="/admin/tags" element={<Navigate to="/dashboard?manageTags=1" replace />} />
             <Route path="/admin/buddies" element={<RequireAdmin><AdminBuddiesPage /></RequireAdmin>} />
             <Route path="/admin/pricing" element={<RequireAdmin><AdminPricingPage /></RequireAdmin>} />
             <Route path="/admin/audit" element={<RequireAdmin><AdminAuditPage /></RequireAdmin>} />
