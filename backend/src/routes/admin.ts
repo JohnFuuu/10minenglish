@@ -53,6 +53,13 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
   // able to see them and put them back.
   router.get('/api/admin/buddies', requireAuth, requireRole('admin'), async (_req, res) => {
     const buddies = await Account.find({ role: 'buddy' }).sort({ name: 1 });
+    // What deactivating would cancel (and refund) — shown in the confirm.
+    // One grouped query for the whole roster rather than one per Buddy.
+    const counts = await Lesson.aggregate<{ _id: unknown; count: number }>([
+      { $match: { buddyId: { $in: buddies.map((b) => b._id) }, status: 'upcoming', startTime: { $gt: new Date() } } },
+      { $group: { _id: '$buddyId', count: { $sum: 1 } } },
+    ]);
+    const upcomingByBuddy = new Map(counts.map((c) => [String(c._id), c.count]));
 
     res.status(200).json({
       buddies: buddies.map((b) => ({
@@ -61,6 +68,7 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
         email: b.email,
         active: b.active,
         hasMeetingLink: Boolean(b.meetingLink),
+        upcomingLessons: upcomingByBuddy.get(String(b._id)) ?? 0,
       })),
     });
   });

@@ -266,4 +266,29 @@ describe('GET /api/admin/buddies', () => {
     expect(res.body.buddies).toHaveLength(1);
     expect(res.body.buddies[0]).toMatchObject({ name: 'Maria', active: false, hasMeetingLink: true });
   });
+
+  // Shown in the deactivate confirmation, so the Admin knows exactly how many
+  // Lessons will be cancelled and refunded.
+  it('reports how many upcoming Lessons each Buddy has', async () => {
+    const token = await adminToken();
+    const buddy = await createBuddy();
+    const { account: user } = await createUser();
+    await createUpcomingLesson(user.id, buddy.id, 2);
+    await createUpcomingLesson(user.id, buddy.id, 5);
+    await Lesson.create({
+      userId: user.id,
+      buddyId: buddy.id,
+      startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      durationMinutes: 10,
+      status: 'completed',
+      meetingLink: 'https://zoom.us/j/1234567890',
+    });
+    const cancelled = await createUpcomingLesson(user.id, buddy.id, 3);
+    await Lesson.updateOne({ _id: cancelled._id }, { status: 'cancelled' });
+
+    const { app } = createTestApp();
+    const res = await request(app).get('/api/admin/buddies').set('Authorization', `Bearer ${token}`);
+
+    expect(res.body.buddies[0].upcomingLessons).toBe(2);
+  });
 });

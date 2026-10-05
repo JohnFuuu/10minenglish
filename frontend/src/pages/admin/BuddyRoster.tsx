@@ -30,7 +30,11 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
     setBusyId(buddy.id);
     try {
       const updated = await setBuddyActive(token, buddy.id, !buddy.active);
-      setBuddies((prev) => prev.map((b) => (b.id === buddy.id ? { ...b, active: updated.active } : b)));
+      setBuddies((prev) =>
+        prev.map((b) =>
+          b.id === buddy.id ? { ...b, active: updated.active, upcomingLessons: updated.active ? b.upcomingLessons : 0 } : b,
+        ),
+      );
       setConfirmingId(null);
       showToast(
         updated.active
@@ -62,39 +66,50 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
       {buddies.length > 0 && (
         <ul className="divide-y-2 divide-border overflow-hidden rounded-md border-2 border-b-4 border-border-strong bg-bg-surface">
           {buddies.map((buddy) => (
-            <li key={buddy.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-              <div className="flex min-w-0 items-center gap-2">
-                <span
-                  aria-hidden="true"
-                  className={`h-2 w-2 shrink-0 rounded-full ${buddy.active ? 'bg-brand-primary' : 'bg-border-strong/40'}`}
-                />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-text-heading">{buddy.name ?? buddy.email}</p>
-                  <p className="truncate text-xs text-text-secondary">
-                    {buddy.active ? 'Active' : 'Inactive'}
-                    {buddy.active && !buddy.hasMeetingLink && ' · no meeting link yet'}
-                  </p>
-                </div>
-              </div>
-
+            <li key={buddy.id} className="px-4 py-2.5">
               {confirmingId === buddy.id ? (
-                <div className="flex shrink-0 items-center gap-2">
-                  <Button size="sm" disabled={busyId === buddy.id} onClick={() => toggle(buddy)}>
-                    Confirm
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => setConfirmingId(null)}>
-                    Keep
-                  </Button>
+                // Deactivating cancels and refunds every upcoming Lesson, so the
+                // prompt says exactly what will happen before anything does.
+                <div className="flex flex-col gap-2 rounded-md bg-warning/10 px-2 py-2">
+                  <p className="text-sm font-bold text-text-body">
+                    Deactivate {buddy.name ?? buddy.email}?{' '}
+                    {buddy.upcomingLessons === 0
+                      ? 'They have no upcoming lessons.'
+                      : `Their ${buddy.upcomingLessons} upcoming lesson${buddy.upcomingLessons === 1 ? '' : 's'} will be cancelled and each User refunded.`}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button size="sm" tone="red" disabled={busyId === buddy.id} onClick={() => toggle(buddy)}>
+                      Deactivate
+                    </Button>
+                    <Button variant="secondary" size="sm" disabled={busyId === buddy.id} onClick={() => setConfirmingId(null)}>
+                      Keep
+                    </Button>
+                  </div>
                 </div>
               ) : (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={busyId === buddy.id}
-                  onClick={() => (buddy.active ? setConfirmingId(buddy.id) : toggle(buddy))}
-                >
-                  {buddy.active ? 'Deactivate' : 'Activate'}
-                </Button>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className={`h-2 w-2 shrink-0 rounded-full ${buddy.active ? 'bg-brand-primary' : 'bg-border-strong/40'}`}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-text-heading">{buddy.name ?? buddy.email}</p>
+                      <p className="truncate text-xs text-text-secondary">
+                        {buddy.active ? 'Active' : 'Inactive'}
+                        {buddy.active && !buddy.hasMeetingLink && ' · no meeting link yet'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={busyId === buddy.id}
+                    onClick={() => (buddy.active ? setConfirmingId(buddy.id) : toggle(buddy))}
+                  >
+                    {buddy.active ? 'Deactivate' : 'Activate'}
+                  </Button>
+                </div>
               )}
             </li>
           ))}

@@ -493,6 +493,8 @@ export interface AdminBuddy {
   email: string;
   active: boolean;
   hasMeetingLink: boolean;
+  // Upcoming, not-cancelled Lessons — what deactivating would cancel.
+  upcomingLessons: number;
 }
 
 export function fetchAdminBuddies(token: string) {
