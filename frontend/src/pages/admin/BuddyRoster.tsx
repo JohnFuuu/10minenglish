@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { HelpCircle, Trash2 } from 'lucide-react';
 import { Button } from '../../components';
 import { SectionHeading } from './SectionHeading';
 import { useAuth } from '../../auth/AuthContext';
@@ -13,6 +13,14 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
   // Which row is asking "are you sure?", and about what — one at a time.
   const [confirming, setConfirming] = useState<{ id: string; action: 'deactivate' | 'remove' } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
+
+  useEffect(() => {
+    if (!showHelp) return;
+    const closeOnEscape = (e: KeyboardEvent) => e.key === 'Escape' && setShowHelp(false);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [showHelp]);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -74,18 +82,37 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
 
   return (
     <section className="mb-10">
-      <SectionHeading>Buddy roster</SectionHeading>
-      {/* Two actions that look alike but differ in how final they are. */}
-      <div className="mb-4 flex flex-col gap-1 text-sm font-medium text-text-secondary">
-        <p>
-          <span className="font-bold text-text-body">Deactivate</span> pauses a Buddy (e.g. on holiday): their upcoming
-          lessons are cancelled and refunded, but they can still sign in, and you can reactivate them any time.
-        </p>
-        <p>
-          <span className="font-bold text-text-body">Remove</span> is for a Buddy who has left for good: they also lose
-          access and leave this list, while past lessons keep their name.
-        </p>
+      <div className="mb-3 flex items-center gap-1.5">
+        <SectionHeading className="mb-0">Buddy roster</SectionHeading>
+        <button
+          type="button"
+          aria-label="What's the difference between Deactivate and Remove?"
+          aria-expanded={showHelp}
+          aria-controls="buddy-roster-help"
+          onClick={() => setShowHelp((open) => !open)}
+          className={`flex h-7 w-7 items-center justify-center rounded-full ${showHelp ? 'text-brand-secondary' : 'text-text-secondary'}`}
+        >
+          <HelpCircle size={20} aria-hidden="true" />
+        </button>
       </div>
+
+      {/* Two actions that look alike but differ in how final they are —
+          explained on demand rather than always taking up space. */}
+      {showHelp && (
+        <div
+          id="buddy-roster-help"
+          className="mb-4 flex flex-col gap-1 rounded-md bg-brand-secondary/10 px-3 py-2 text-sm font-medium text-text-body"
+        >
+          <p>
+            <span className="font-bold">Deactivate</span> pauses a Buddy (e.g. on holiday): their upcoming lessons are
+            cancelled and refunded, but they can still sign in, and you can reactivate them any time.
+          </p>
+          <p>
+            <span className="font-bold">Remove</span> is for a Buddy who has left for good: they also lose access and
+            leave this list, while past lessons keep their name.
+          </p>
+        </div>
+      )}
 
       {buddies.length === 0 && <p className="text-sm text-text-secondary">No buddies yet.</p>}
 
