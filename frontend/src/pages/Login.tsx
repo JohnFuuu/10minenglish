@@ -61,7 +61,9 @@ export function Login() {
       </div>
 
       <div className="flex flex-1 flex-col justify-center gap-5 px-5 pb-8">
-        <h1 className="text-center text-2xl font-bold text-text-body">Log in</h1>
+        {/* Visually removed — the logo and LOG IN button make the page's
+            purpose obvious — but kept for screen readers as the page title. */}
+        <h1 className="sr-only">Log in</h1>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div className="flex flex-col gap-3">
@@ -101,9 +103,14 @@ export function Login() {
             Forgot password?
           </button>
 
-          <Button type="submit" tone="blue" disabled={isSubmitting}>
-            Log In
-          </Button>
+          <div className="flex gap-3">
+            <Button type="submit" tone="blue" disabled={isSubmitting} className="flex-1">
+              Log In
+            </Button>
+            <Button type="button" variant="secondary" tone="blue" onClick={() => navigate('/signup')} className="flex-1">
+              Sign Up
+            </Button>
+          </div>
 
           <OrDivider />
 
@@ -111,17 +118,6 @@ export function Login() {
 
           <LegalText action="signing in" />
         </form>
-      </div>
-
-      <div className="px-5 pb-8 text-center">
-        <span className="text-sm font-bold text-text-body">Don't have an account? </span>
-        <button
-          type="button"
-          onClick={() => navigate('/signup')}
-          className="text-sm font-bold text-brand-secondary"
-        >
-          SIGN UP
-        </button>
       </div>
     </div>
   );
