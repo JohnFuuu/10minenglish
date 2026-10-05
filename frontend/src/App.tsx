@@ -5,6 +5,7 @@ import { RequireAdmin } from './auth/RequireAdmin';
 import { AdminTagsPage } from './pages/admin/AdminTagsPage';
 import { AdminBuddiesPage } from './pages/admin/AdminBuddiesPage';
 import { AdminPricingPage } from './pages/admin/AdminPricingPage';
+import { AdminAuditPage } from './pages/admin/AdminAuditPage';
 import { ToastProvider } from './toast/ToastContext';
 import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
@@ -55,6 +56,7 @@ function App() {
             <Route path="/admin/tags" element={<RequireAdmin><AdminTagsPage /></RequireAdmin>} />
             <Route path="/admin/buddies" element={<RequireAdmin><AdminBuddiesPage /></RequireAdmin>} />
             <Route path="/admin/pricing" element={<RequireAdmin><AdminPricingPage /></RequireAdmin>} />
+            <Route path="/admin/audit" element={<RequireAdmin><AdminAuditPage /></RequireAdmin>} />
             <Route path="/playground" element={<ComponentPlayground />} />
             {/* Unmatched paths fall through to /dashboard, which already does the
                 right thing either way: RequireAuth sends a signed-out visitor to
