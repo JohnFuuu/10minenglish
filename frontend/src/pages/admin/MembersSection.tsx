@@ -1,0 +1,154 @@
+import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
+import { useAuth } from '../../auth/AuthContext';
+import { useToast } from '../../toast/ToastContext';
+import { addMemberTag, fetchAdminMembers, removeMemberTag, type AdminMember, type AdminTag } from '../../lib/api';
+
+const SECTION_HEADING =
+  'mb-1 inline-block rounded-md bg-accent-lime-light px-3 py-1 text-sm font-bold uppercase tracking-wide text-success';
+const FIELD = 'rounded-md border-2 border-border bg-bg-surface px-3 py-2 text-sm text-text-body';
+const SEARCH_DEBOUNCE_MS = 300;
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function TagChip({ name }: { name: string }) {
+  return (
+    <span className="rounded-full bg-accent-lime-light px-2 py-0.5 text-xs font-bold text-success">{name}</span>
+  );
+}
+
+// Admin-only list of Users with search, tag filter, and per-member tagging.
+export function MembersSection({ tags, onTagsChanged }: { tags: AdminTag[]; onTagsChanged: () => void }) {
+  const { token } = useAuth();
+  const { showToast } = useToast();
+  const [query, setQuery] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
+  const [members, setMembers] = useState<AdminMember[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Re-run when the search, the filter, or the tag list itself changes (a
+  // rename or delete in the Member tags section changes what rows show).
+  useEffect(() => {
+    if (!token) return;
+    const timer = setTimeout(() => {
+      fetchAdminMembers(token, { q: query.trim(), tagId: tagFilter })
+        .then((res) => setMembers(res.members))
+        .catch(() => showToast('Could not load members.', 'error'));
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [token, query, tagFilter, tags, showToast]);
+
+  const selected = members.find((m) => m.id === selectedId) ?? null;
+
+  async function change(action: () => Promise<AdminMember>) {
+    setBusy(true);
+    try {
+      const updated = await action();
+      setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+      onTagsChanged(); // member counts on the tag list
+    } catch {
+      showToast('Could not update that member’s tags.', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="mb-10">
+      <h2 className={SECTION_HEADING}>Members</h2>
+      <p className="mb-4 text-sm font-medium text-text-secondary">Find a member to see or change their tags.</p>
+
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+        <input
+          aria-label="Search members"
+          placeholder="Search name or email"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className={`${FIELD} flex-1`}
+        />
+        <select aria-label="Filter by tag" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className={FIELD}>
+          <option value="">All members</option>
+          {tags.map((tag) => (
+            <option key={tag.id} value={tag.id}>
+              Tagged: {tag.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {members.length === 0 && <p className="text-sm text-text-secondary">No members match.</p>}
+
+      <div className="flex flex-col gap-2">
+        {members.map((member) => (
+          <div key={member.id} className="rounded-md border-2 border-b-4 border-border-strong bg-bg-surface">
+            <button
+              type="button"
+              onClick={() => setSelectedId(selectedId === member.id ? null : member.id)}
+              className="flex w-full flex-col items-start gap-1 p-3 text-left"
+            >
+              <span className="font-bold text-text-heading">{member.name ?? 'No name'}</span>
+              <span className="text-xs text-text-secondary">
+                {member.email ?? 'No email'} · joined {formatDate(member.joinedAt)} · {member.credits} credit
+                {member.credits === 1 ? '' : 's'}
+              </span>
+              {member.tags.length > 0 && (
+                <span className="flex flex-wrap gap-1">
+                  {member.tags.map((t) => (
+                    <TagChip key={t.id} name={t.name} />
+                  ))}
+                </span>
+              )}
+            </button>
+
+            {selected?.id === member.id && (
+              <div className="flex flex-col gap-2 border-t-2 border-border p-3">
+                {member.tags.length === 0 && <p className="text-sm text-text-secondary">No tags yet.</p>}
+                {member.tags.map((t) => (
+                  <div key={t.id} className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <TagChip name={t.name} />
+                      <p className="mt-0.5 text-xs text-text-secondary">
+                        added by {t.addedBy.name}, {formatDate(t.addedAt)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${t.name}`}
+                      disabled={busy}
+                      onClick={() => change(() => removeMemberTag(token!, member.id, t.id))}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border-2 border-border"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+
+                {tags.some((tag) => !member.tags.some((t) => t.id === tag.id)) && (
+                  <select
+                    aria-label="Add a tag"
+                    value=""
+                    disabled={busy}
+                    onChange={(e) => e.target.value && change(() => addMemberTag(token!, member.id, e.target.value))}
+                    className={FIELD}
+                  >
+                    <option value="">Add a tag…</option>
+                    {tags
+                      .filter((tag) => !member.tags.some((t) => t.id === tag.id))
+                      .map((tag) => (
+                        <option key={tag.id} value={tag.id}>
+                          {tag.name}
+                        </option>
+                      ))}
+                  </select>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}

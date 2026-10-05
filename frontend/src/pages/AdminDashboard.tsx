@@ -16,6 +16,7 @@ import {
   type CreditPack,
 } from '../lib/api';
 import { MemberTagsSection } from './admin/MemberTagsSection';
+import { MembersSection } from './admin/MembersSection';
 
 // Whole dollars or dollars-and-cents only — e.g. "9", "9.9", "9.99". Rejects
 // negatives, letters, and anything past two decimal places.
@@ -298,6 +299,8 @@ export function AdminDashboard() {
       <BuddyRoster refreshKey={rosterKey} />
 
       <MemberTagsSection tags={tags} onChanged={loadTags} />
+
+      <MembersSection tags={tags} onTagsChanged={loadTags} />
 
       <section>
         <h2 className="mb-1 inline-block rounded-md bg-accent-lime-light px-3 py-1 text-sm font-bold uppercase tracking-wide text-success">
