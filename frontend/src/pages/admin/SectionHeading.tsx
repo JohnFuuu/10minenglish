@@ -16,3 +16,7 @@ export function SectionHeading({ children, className }: { children: ReactNode; c
     </h2>
   );
 }
+
+// The framed box a module sits in (e.g. Member tags and Member list on the
+// Members tab), so neighbouring modules read as matching cards.
+export const MODULE_FRAME = 'rounded-md border-2 border-b-4 border-border-strong bg-bg-surface p-4';
