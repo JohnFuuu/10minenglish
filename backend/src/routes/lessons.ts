@@ -142,7 +142,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
 
     const lesson = await bookLesson({ user, buddy, startTime: instant });
     await emailSender.send(
-      buildConfirmationEmail(user.email, [{ startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: buddy.meetingLink! }]),
+      buildConfirmationEmail(user.email!, [{ startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: buddy.meetingLink! }]),
     );
 
     res.status(201).json({ lesson: serializeLesson(lesson), creditsRemaining: user.credits });
@@ -207,7 +207,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     if (booked.length > 0) {
       await emailSender.send(
         buildConfirmationEmail(
-          user.email,
+          user.email!,
           booked.map(({ lesson, buddy }) => ({
             startTime: lesson.startTime,
             buddyName: buddy.name ?? 'your Buddy',
@@ -326,15 +326,16 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     if (user) {
       // The User triggered this, so they get a plain confirmation, mirroring
       // the booking one. The Buddy didn't, so they get a Notification.
+      // (Booking required a confirmed email, so this User has one.)
       await emailSender.send(
-        buildConfirmationEmail(user.email, [
+        buildConfirmationEmail(user.email!, [
           { startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: lesson.meetingLink },
         ]),
       );
 
       const { message, email } = buildLessonRescheduledNotification({
         userName: user.name ?? 'Your learner',
-        buddyEmail: buddy.email,
+        buddyEmail: buddy.email!,
         previousStartTime,
         startTime: instant,
       });

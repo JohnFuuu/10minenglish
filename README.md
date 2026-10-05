@@ -43,6 +43,7 @@ A web app connecting English learners (Users) with volunteer conversation partne
    - `FRONTEND_URL` — used for links in outbound emails (defaults to `http://localhost:5173`)
    - `GOOGLE_CLIENT_ID` — only needed if you're testing the Google OAuth signup/login path
    - `PAYMENTS_MOCK` — set to `true` for local dev to auto-succeed Stripe/POLi checkout without real provider credentials
+   - `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET` — only needed for "Continue with Facebook". In the Meta app's Facebook Login settings, add `{FRONTEND_URL}/auth/facebook/callback` (e.g. `http://localhost:5173/auth/facebook/callback`) under **Valid OAuth Redirect URIs**; the frontend also needs `VITE_FACEBOOK_APP_ID` (same App ID) in `frontend/.env`. While the Meta app is in Development mode, only accounts added as testers can log in.
    - `RESEND_API_KEY`, `EMAIL_FROM` — only needed to actually deliver email (signup confirmation, password reset, lesson notifications) via [Resend](https://resend.com). Leave both unset for local dev: every email is printed to the backend's terminal instead, which is where to grab confirmation/reset links from. `EMAIL_FROM` must use a domain verified in Resend.
    - `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ENDPOINT`, `R2_PUBLIC_URL`, `R2_BUCKET` — only needed if you're testing profile picture upload; a Cloudflare R2 (S3-compatible) bucket. Leave unset for local dev without picture uploads — the upload route 502s with a clear message instead of the process failing to boot.
 

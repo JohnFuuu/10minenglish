@@ -4,12 +4,14 @@ import { hashPassword, verifyPassword } from '../services/password.js';
 import { signAccountToken } from '../middleware/auth.js';
 import type { EmailSender } from '../services/email.js';
 import type { GoogleTokenVerifier } from '../services/googleAuth.js';
+import type { FacebookAuthClient } from '../services/facebookAuth.js';
 import { EMAIL_CONFIRMATION_TTL_MS, sendConfirmationEmail } from '../services/emailConfirmation.js';
 import { generateToken } from '../services/tokens.js';
 
 export interface AuthRouterDependencies {
   emailSender: EmailSender;
   googleTokenVerifier: GoogleTokenVerifier;
+  facebookAuthClient: FacebookAuthClient;
 }
 
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
@@ -18,7 +20,7 @@ const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
 export function createAuthRouter(deps: AuthRouterDependencies): Router {
-  const { emailSender, googleTokenVerifier } = deps;
+  const { emailSender, googleTokenVerifier, facebookAuthClient } = deps;
   const router = Router();
 
   router.post('/auth/signup', async (req, res) => {
@@ -46,7 +48,8 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       existing.emailConfirmationToken = generateToken();
       existing.emailConfirmationExpires = new Date(Date.now() + EMAIL_CONFIRMATION_TTL_MS);
       await existing.save();
-      await sendConfirmationEmail(emailSender, existing.email, existing.emailConfirmationToken);
+      // Found by email above, so it has one.
+      await sendConfirmationEmail(emailSender, existing.email!, existing.emailConfirmationToken);
       res.status(409).json({ error: 'EMAIL_NOT_CONFIRMED' });
       return;
     }
@@ -83,7 +86,7 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
     try {
       await sendConfirmationEmail(
         emailSender,
-        account.email,
+        account.email!,
         emailConfirmationToken,
         'Welcome to 10ME! Confirm your email',
       );
@@ -154,7 +157,8 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       account.emailConfirmationExpires = new Date(Date.now() + EMAIL_CONFIRMATION_TTL_MS);
       await account.save();
 
-      await sendConfirmationEmail(emailSender, account.email, account.emailConfirmationToken);
+      // Found by email above, so it has one.
+      await sendConfirmationEmail(emailSender, account.email!, account.emailConfirmationToken);
     }
 
     // Always 200, regardless of whether the account exists or is already
@@ -213,7 +217,7 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       await account.save();
 
       await emailSender.send({
-        to: account.email,
+        to: account.email!, // found by email above
         subject: 'Reset your 10ME password',
         body: `Reset your password: ${FRONTEND_URL}/reset-password?token=${account.passwordResetToken}`,
       });
@@ -281,6 +285,53 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       });
     } else if (!account.googleId) {
       account.googleId = profile.googleId;
+      account.emailConfirmed = true;
+      await account.save();
+    }
+
+    const token = signAccountToken({ accountId: account.id, role: account.role });
+    res.status(200).json({ token, id: account.id, role: account.role });
+  });
+
+  // The browser lands on /auth/facebook/callback with a one-time code from
+  // Facebook's login page and posts it here; account handling mirrors
+  // /auth/google above.
+  router.post('/auth/facebook', async (req, res) => {
+    const { code } = req.body ?? {};
+    if (!code) {
+      res.status(400).json({ error: 'Missing code' });
+      return;
+    }
+
+    let profile;
+    try {
+      profile = await facebookAuthClient.exchangeCode(code);
+    } catch (err) {
+      console.error('Facebook sign-in failed', err);
+      res.status(401).json({ error: 'Invalid Facebook code' });
+      return;
+    }
+
+    let account = await Account.findOne({ facebookId: profile.facebookId });
+    if (!account && profile.email) {
+      // Link to an existing account with the same email rather than creating
+      // a duplicate — Facebook only shares emails it has verified.
+      account = await Account.findOne({ email: profile.email });
+    }
+
+    if (!account) {
+      // No email from Facebook (a phone sign-up, or they declined to share
+      // it): they still get in, but stay unconfirmed — and so can't book or
+      // buy Credits — until they add an email and click its link.
+      account = await Account.create({
+        role: 'user',
+        email: profile.email,
+        name: profile.name,
+        facebookId: profile.facebookId,
+        emailConfirmed: Boolean(profile.email),
+      });
+    } else if (!account.facebookId) {
+      account.facebookId = profile.facebookId;
       account.emailConfirmed = true;
       await account.save();
     }

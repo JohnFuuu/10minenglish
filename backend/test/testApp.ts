@@ -1,6 +1,7 @@
 import { createApp } from '../src/app.js';
 import type { EmailMessage, EmailSender } from '../src/services/email.js';
 import type { GoogleProfile, GoogleTokenVerifier } from '../src/services/googleAuth.js';
+import type { FacebookAuthClient, FacebookProfile } from '../src/services/facebookAuth.js';
 import type {
   StripeCheckoutSession,
   StripeCheckoutStatus,
@@ -27,6 +28,21 @@ export class FakeGoogleTokenVerifier implements GoogleTokenVerifier {
   async verify(idToken: string): Promise<GoogleProfile> {
     const profile = this.profiles.get(idToken);
     if (!profile) throw new Error('invalid token');
+    return profile;
+  }
+}
+
+export class FakeFacebookAuthClient implements FacebookAuthClient {
+  private profiles = new Map<string, FacebookProfile>();
+
+  // Test helper — the profile Facebook would return for this one-time code.
+  registerCode(code: string, profile: FacebookProfile) {
+    this.profiles.set(code, profile);
+  }
+
+  async exchangeCode(code: string): Promise<FacebookProfile> {
+    const profile = this.profiles.get(code);
+    if (!profile) throw new Error('invalid code');
     return profile;
   }
 }
@@ -85,9 +101,10 @@ export class FakeMediaStorage implements MediaStorage {
 export function createTestApp() {
   const emailSender = new FakeEmailSender();
   const googleTokenVerifier = new FakeGoogleTokenVerifier();
+  const facebookAuthClient = new FakeFacebookAuthClient();
   const stripeClient = new FakeStripeClient();
   const poliClient = new FakePoliClient();
   const mediaStorage = new FakeMediaStorage();
-  const app = createApp({ emailSender, googleTokenVerifier, stripeClient, poliClient, mediaStorage });
-  return { app, emailSender, googleTokenVerifier, stripeClient, poliClient, mediaStorage };
+  const app = createApp({ emailSender, googleTokenVerifier, facebookAuthClient, stripeClient, poliClient, mediaStorage });
+  return { app, emailSender, googleTokenVerifier, facebookAuthClient, stripeClient, poliClient, mediaStorage };
 }

@@ -58,6 +58,9 @@ export function createMeRouter(deps: MeRouterDependencies): Router {
       // Lets the "confirm your email" banner say where the link went and
       // resend it without asking again.
       email: account.email,
+      // An address waiting on its confirmation link — for an email-less
+      // account, the one it's adding.
+      pendingEmail: account.pendingEmail,
       role: account.role,
       onboardingCompleted: account.onboardingCompleted,
       emailConfirmed: account.emailConfirmed,

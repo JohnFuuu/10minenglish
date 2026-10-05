@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '../components';
 import { toAccount, useAuth } from '../auth/AuthContext';
 import { GoogleSignInButton } from '../auth/GoogleSignInButton';
+import { FacebookSignInButton } from '../auth/FacebookSignInButton';
 import { BackArrow, LegalText, OrDivider } from '../auth/AuthPrimitives';
 import { PasswordVisibilityToggle } from '../auth/PasswordVisibilityToggle';
 import { ApiError, fetchMe, login, loginWithGoogle } from '../lib/api';
@@ -115,6 +116,7 @@ export function Login() {
           <OrDivider />
 
           <GoogleSignInButton onCredential={handleGoogleCredential} />
+          <FacebookSignInButton />
 
           <LegalText action="signing in" />
         </form>

@@ -23,7 +23,8 @@ export async function cancelLessonAsBuddy(params: {
   if (user) {
     const { message, email } = buildBuddyCancellationNotification({
       buddyName: buddyName ?? 'Your Buddy',
-      userEmail: user.email,
+      // Booking requires a confirmed email, so a User with a Lesson has one.
+      userEmail: user.email!,
       startTime: result.lesson.startTime,
       creditsRemaining: result.creditsRemaining,
     });

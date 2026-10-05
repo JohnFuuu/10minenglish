@@ -45,7 +45,9 @@ async function remindBothParties(
   for (const { account, otherPartyName } of recipients) {
     if (!account) continue;
     const { message, email } = buildLessonReminderNotification({
-      recipientEmail: account.email,
+      // Booking requires a confirmed email, and Buddies are provisioned with
+      // one, so both sides of a Lesson have an address.
+      recipientEmail: account.email!,
       otherPartyName,
       startTime: lesson.startTime,
       meetingLink: lesson.meetingLink,

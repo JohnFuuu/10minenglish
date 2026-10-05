@@ -14,6 +14,7 @@ import { notificationsRouter } from './routes/notifications.js';
 import { createMediaRouter } from './routes/media.js';
 import { consoleEmailSender, type EmailSender } from './services/email.js';
 import { realGoogleTokenVerifier, type GoogleTokenVerifier } from './services/googleAuth.js';
+import { realFacebookAuthClient, type FacebookAuthClient } from './services/facebookAuth.js';
 import { realStripeClient, type StripeClient } from './services/stripeClient.js';
 import { realPoliClient, type PoliClient } from './services/poliClient.js';
 import { r2MediaStorage, type MediaStorage } from './services/mediaStorage.js';
@@ -21,6 +22,7 @@ import { r2MediaStorage, type MediaStorage } from './services/mediaStorage.js';
 export interface AppDependencies {
   emailSender?: EmailSender;
   googleTokenVerifier?: GoogleTokenVerifier;
+  facebookAuthClient?: FacebookAuthClient;
   stripeClient?: StripeClient;
   poliClient?: PoliClient;
   mediaStorage?: MediaStorage;
@@ -29,6 +31,7 @@ export interface AppDependencies {
 export function createApp(deps: AppDependencies = {}) {
   const emailSender = deps.emailSender ?? consoleEmailSender;
   const googleTokenVerifier = deps.googleTokenVerifier ?? realGoogleTokenVerifier;
+  const facebookAuthClient = deps.facebookAuthClient ?? realFacebookAuthClient;
   const stripeClient = deps.stripeClient ?? realStripeClient;
   const poliClient = deps.poliClient ?? realPoliClient;
   const mediaStorage = deps.mediaStorage ?? r2MediaStorage;
@@ -44,7 +47,7 @@ export function createApp(deps: AppDependencies = {}) {
   app.use(notificationsRouter);
   app.use(creditPacksRouter);
   app.use(createPaymentsRouter({ stripeClient, poliClient }));
-  app.use(createAuthRouter({ emailSender, googleTokenVerifier }));
+  app.use(createAuthRouter({ emailSender, googleTokenVerifier, facebookAuthClient }));
   app.use(createLessonsRouter({ emailSender }));
   app.use(createMediaRouter({ mediaStorage }));
 

@@ -20,7 +20,9 @@ export interface AvailabilityBlock {
 
 export interface AccountDocument extends mongoose.Document {
   role: AccountRole;
-  email: string;
+  // Absent only for a Facebook sign-up that shared no email; such an account
+  // can't book or buy Credits until it adds and confirms one.
+  email?: string;
   // Set while a profile email change is awaiting confirmation; the account
   // keeps logging in with `email` until the new address is confirmed.
   pendingEmail?: string;
@@ -33,6 +35,7 @@ export interface AccountDocument extends mongoose.Document {
   learningGoals?: string[];
   learningGoalOther?: string;
   googleId?: string;
+  facebookId?: string;
   picture?: string;
   bio?: string;
   timezone?: string;
@@ -60,7 +63,9 @@ export interface AccountDocument extends mongoose.Document {
 
 const accountSchema = new Schema<AccountDocument>({
   role: { type: String, enum: ['user', 'buddy', 'admin'], required: true },
-  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  // sparse: uniqueness applies only to accounts that have an email, so any
+  // number of email-less accounts can exist.
+  email: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
   pendingEmail: { type: String, lowercase: true, trim: true },
   name: { type: String },
   passwordHash: { type: String },
@@ -71,6 +76,7 @@ const accountSchema = new Schema<AccountDocument>({
   learningGoals: { type: [String] },
   learningGoalOther: { type: String },
   googleId: { type: String },
+  facebookId: { type: String },
   picture: { type: String },
   bio: { type: String },
   timezone: { type: String },

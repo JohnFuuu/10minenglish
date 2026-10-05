@@ -34,7 +34,7 @@ interface ProfileForm {
 function toForm(profile: UserProfile): ProfileForm {
   return {
     name: profile.name ?? '',
-    email: profile.email,
+    email: profile.email ?? '',
     picture: profile.picture ?? '',
     location: profile.location ?? '',
     nationality: profile.nationality ?? '',
@@ -114,7 +114,9 @@ export function ProfileScreen() {
     try {
       const updated = await updateProfile(token, {
         name: form.name,
-        email: form.email,
+        // Left out while blank, so an account with no email yet can still save
+        // its other fields (the backend rejects an empty email).
+        email: form.email.trim() || undefined,
         picture: form.picture,
         location: form.location,
         nationality: form.nationality,
@@ -184,7 +186,7 @@ export function ProfileScreen() {
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-lg font-bold text-text-body">{profile.name}</p>
-                <p className="truncate text-sm text-text-secondary">{profile.email}</p>
+                <p className="truncate text-sm text-text-secondary">{profile.email ?? 'No email added yet'}</p>
                 {profile.pendingEmail && (
                   <p className="mt-1 text-xs font-bold text-brand-secondary">
                     Pending: {profile.pendingEmail} — confirm it from your inbox to switch.

@@ -7,6 +7,7 @@ import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { Welcome } from './pages/Welcome';
 import { ConfirmEmail } from './pages/ConfirmEmail';
+import { FacebookCallback } from './pages/FacebookCallback';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
 import { Onboarding } from './pages/Onboarding';
@@ -32,6 +33,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/confirm-email" element={<ConfirmEmail />} />
+            <Route path="/auth/facebook/callback" element={<FacebookCallback />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />

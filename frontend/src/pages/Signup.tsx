@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MailCheck } from 'lucide-react';
 import { Button, Input } from '../components';
 import { GoogleSignInButton } from '../auth/GoogleSignInButton';
+import { FacebookSignInButton } from '../auth/FacebookSignInButton';
 import { BackArrow, LegalText, OrDivider } from '../auth/AuthPrimitives';
 import { PasswordVisibilityToggle } from '../auth/PasswordVisibilityToggle';
 import { toAccount, useAuth } from '../auth/AuthContext';
@@ -150,6 +151,7 @@ export function Signup() {
           <OrDivider />
 
           <GoogleSignInButton onCredential={handleGoogleCredential} />
+          <FacebookSignInButton />
 
           <LegalText action="signing up" />
         </form>

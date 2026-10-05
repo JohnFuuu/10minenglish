@@ -6,7 +6,10 @@ export type AccountRole = 'user' | 'buddy' | 'admin';
 export interface Account {
   id: string;
   name?: string;
-  email: string;
+  // Missing only for a Facebook sign-up that shared no email.
+  email?: string;
+  // An address waiting on its confirmation link.
+  pendingEmail?: string;
   role: AccountRole;
   onboardingCompleted: boolean;
   // False for a new password-signup User until they click the link in their
@@ -39,6 +42,7 @@ export function toAccount(me: Awaited<ReturnType<typeof fetchMe>>): Account {
     id: me.id,
     name: me.name,
     email: me.email,
+    pendingEmail: me.pendingEmail,
     role: me.role as AccountRole,
     onboardingCompleted: me.onboardingCompleted,
     emailConfirmed: me.emailConfirmed,

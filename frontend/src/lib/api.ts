@@ -100,11 +100,19 @@ export function loginWithGoogle(idToken: string) {
   });
 }
 
+export function loginWithFacebook(code: string) {
+  return request<{ token: string; id: string; role: string }>('/auth/facebook', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
 export function fetchMe(token: string) {
   return request<{
     id: string;
     name?: string;
-    email: string;
+    email?: string;
+    pendingEmail?: string;
     role: string;
     onboardingCompleted: boolean;
     emailConfirmed: boolean;
@@ -392,7 +400,8 @@ export function buddyCancelLesson(token: string, lessonId: string) {
 export interface UserProfile {
   id: string;
   name?: string;
-  email: string;
+  // Missing only for a Facebook sign-up that shared no email.
+  email?: string;
   pendingEmail?: string;
   picture?: string;
   phoneNumber?: string;
