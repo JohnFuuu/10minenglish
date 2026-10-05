@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import { Select } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import { addMemberTag, fetchAdminMembers, removeMemberTag, type AdminMember, type AdminTag } from '../../lib/api';
@@ -87,14 +88,13 @@ export function MembersSection({ tags, onTagsChanged }: { tags: AdminTag[]; onTa
           onChange={(e) => setQuery(e.target.value)}
           className={`${FIELD} flex-1`}
         />
-        <select aria-label="Filter by tag" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className={FIELD}>
-          <option value="">All members</option>
-          {tags.map((tag) => (
-            <option key={tag.id} value={tag.id}>
-              Tagged: {tag.name}
-            </option>
-          ))}
-        </select>
+        <Select
+          aria-label="Filter by tag"
+          value={tagFilter}
+          onChange={setTagFilter}
+          options={[{ value: '', label: 'All members' }, ...tags.map((tag) => ({ value: tag.id, label: `Tagged: ${tag.name}` }))]}
+          className="sm:w-60"
+        />
       </div>
 
       {members.length === 0 && <p className="text-sm text-text-secondary">No members match.</p>}
@@ -145,22 +145,16 @@ export function MembersSection({ tags, onTagsChanged }: { tags: AdminTag[]; onTa
                 ))}
 
                 {tags.some((tag) => !member.tags.some((t) => t.id === tag.id)) && (
-                  <select
+                  <Select
                     aria-label="Add a tag"
                     value=""
+                    placeholder="Add a tag…"
                     disabled={busy}
-                    onChange={(e) => e.target.value && change(() => addMemberTag(token!, member.id, e.target.value))}
-                    className={FIELD}
-                  >
-                    <option value="">Add a tag…</option>
-                    {tags
+                    onChange={(tagId) => change(() => addMemberTag(token!, member.id, tagId))}
+                    options={tags
                       .filter((tag) => !member.tags.some((t) => t.id === tag.id))
-                      .map((tag) => (
-                        <option key={tag.id} value={tag.id}>
-                          {tag.name}
-                        </option>
-                      ))}
-                  </select>
+                      .map((tag) => ({ value: tag.id, label: tag.name }))}
+                  />
                 )}
               </div>
             )}
