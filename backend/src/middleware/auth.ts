@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import type { NextFunction, Request, Response } from 'express';
+import { Account } from '../models/Account.js';
 
 export interface AuthTokenPayload {
   accountId: string;
@@ -16,7 +17,7 @@ export function signAccountToken(payload: AuthTokenPayload): string {
   return jwt.sign(payload, getSecret(), { expiresIn: '7d' });
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'Missing bearer token' });
@@ -24,12 +25,27 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 
   const token = header.slice('Bearer '.length);
+  let payload: AuthTokenPayload;
   try {
-    req.account = jwt.verify(token, getSecret()) as AuthTokenPayload;
-    next();
+    payload = jwt.verify(token, getSecret()) as AuthTokenPayload;
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });
+    return;
   }
+
+  // Tokens last 7 days, so a removed (archived) Buddy's existing session is
+  // cut off here rather than when it expires. Only Buddies can be removed,
+  // so only their requests pay for the lookup.
+  if (payload.role === 'buddy') {
+    const account = await Account.findById(payload.accountId, { removedAt: 1 });
+    if (account?.removedAt) {
+      res.status(401).json({ error: 'Account removed' });
+      return;
+    }
+  }
+
+  req.account = payload;
+  next();
 }
 
 export function requireRole(role: string) {

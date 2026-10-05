@@ -12,6 +12,7 @@ export const AUDIT_ACTIONS = [
   'buddy.created',
   'buddy.activated',
   'buddy.deactivated',
+  'buddy.removed',
   'price.changed',
   'admin.created',
 ] as const;
@@ -22,7 +23,7 @@ export type AuditTargetType = 'tag' | 'member' | 'buddy' | 'creditPack' | 'admin
 export const AUDIT_CATEGORIES: Record<string, AuditAction[]> = {
   tags: ['tag.created', 'tag.renamed', 'tag.deleted'],
   memberTags: ['member.tag_added', 'member.tag_removed'],
-  buddies: ['buddy.created', 'buddy.activated', 'buddy.deactivated'],
+  buddies: ['buddy.created', 'buddy.activated', 'buddy.deactivated', 'buddy.removed'],
   pricing: ['price.changed'],
   admins: ['admin.created'],
 };

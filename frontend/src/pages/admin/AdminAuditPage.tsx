@@ -44,6 +44,8 @@ function describe(entry: AuditLogEntry): ReactNode {
       return <>{who} activated {target}</>;
     case 'buddy.deactivated':
       return <>{who} deactivated {target} ({plural(entry.details.cancelledLessons, 'upcoming lesson')} cancelled and refunded)</>;
+    case 'buddy.removed':
+      return <>{who} removed Buddy {target} ({plural(entry.details.cancelledLessons, 'upcoming lesson')} cancelled and refunded)</>;
     case 'price.changed':
       return <>{who} changed {target} from {dollars(entry.details.fromCents)} to {dollars(entry.details.toCents)}</>;
     case 'admin.created':
