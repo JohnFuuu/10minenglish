@@ -4,7 +4,6 @@ import { RequireAuth } from './auth/RequireAuth';
 import { RequireAdmin } from './auth/RequireAdmin';
 import { AdminBuddiesPage } from './pages/admin/AdminBuddiesPage';
 import { AdminPricingPage } from './pages/admin/AdminPricingPage';
-import { AdminAuditPage } from './pages/admin/AdminAuditPage';
 import { AdminAdminsPage } from './pages/admin/AdminAdminsPage';
 import { ToastProvider } from './toast/ToastContext';
 import { Dashboard } from './pages/Dashboard';
@@ -57,7 +56,8 @@ function App() {
             <Route path="/admin/tags" element={<Navigate to="/dashboard?manageTags=1" replace />} />
             <Route path="/admin/buddies" element={<RequireAdmin><AdminBuddiesPage /></RequireAdmin>} />
             <Route path="/admin/pricing" element={<RequireAdmin><AdminPricingPage /></RequireAdmin>} />
-            <Route path="/admin/audit" element={<RequireAdmin><AdminAuditPage /></RequireAdmin>} />
+            {/* The audit log is a module on the ADMINS tab now. */}
+            <Route path="/admin/audit" element={<Navigate to="/admin/admins#audit-log" replace />} />
             <Route path="/admin/admins" element={<RequireAdmin><AdminAdminsPage /></RequireAdmin>} />
             <Route path="/playground" element={<ComponentPlayground />} />
             {/* Unmatched paths fall through to /dashboard, which already does the

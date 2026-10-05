@@ -3,7 +3,7 @@ import { Button, Select } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import { fetchAuditLog, type AuditLogEntry } from '../../lib/api';
-import { AdminLayout } from './AdminLayout';
+import { MODULE_FRAME, SectionHeading } from './SectionHeading';
 
 const CATEGORY_OPTIONS = [
   { value: '', label: 'All actions' },
@@ -59,8 +59,10 @@ function formatWhen(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-// Read-only history of every Admin change (append-only on the backend).
-export function AdminAuditPage() {
+// Read-only history of every Admin change (append-only on the backend),
+// shown as a module on the ADMINS tab. `refreshKey` reloads it after a
+// change made on the same page (e.g. adding an Admin).
+export function AuditLogSection({ refreshKey = 0 }: { refreshKey?: number }) {
   const { token } = useAuth();
   const { showToast } = useToast();
   const [category, setCategory] = useState('');
@@ -90,7 +92,7 @@ export function AdminAuditPage() {
       .catch(() => {
         if (current === generation.current) showToast('Could not load the audit log.', 'error');
       });
-  }, [token, category, showToast]);
+  }, [token, category, refreshKey, showToast]);
 
   async function loadMore() {
     if (!token || !nextCursor || isLoadingMore) return;
@@ -109,7 +111,8 @@ export function AdminAuditPage() {
   }
 
   return (
-    <AdminLayout title="Audit log">
+    <section id="audit-log" className={MODULE_FRAME}>
+      <SectionHeading>Audit log</SectionHeading>
       <p className="mb-4 text-sm font-medium text-text-secondary">Every change made by an Admin, newest first.</p>
       <Select aria-label="Filter actions" value={category} onChange={setCategory} options={CATEGORY_OPTIONS} className="mb-4" />
 
@@ -131,6 +134,6 @@ export function AdminAuditPage() {
           {isLoadingMore ? 'Loading…' : 'Load more'}
         </Button>
       )}
-    </AdminLayout>
+    </section>
   );
 }
