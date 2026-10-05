@@ -229,7 +229,7 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
                 detailsById[buddy.id] ? (
                   <BuddyDetails details={detailsById[buddy.id]} />
                 ) : (
-                  <p className="mt-3 border-t-2 border-border pt-3 text-sm text-text-secondary">Loading…</p>
+                  <p className="mt-3 rounded-md bg-border/40 p-3 text-sm text-text-secondary">Loading…</p>
                 )
               )}
             </li>
