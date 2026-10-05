@@ -33,27 +33,32 @@ export function MembersSection({ tags, onTagsChanged }: { tags: AdminTag[]; onTa
     if (tagFilter && !tags.some((tag) => tag.id === tagFilter)) setTagFilter('');
   }, [tags, tagFilter]);
 
-  // Re-run when the search, the filter, or the tag list itself changes (a
-  // rename or delete in the Member tags section changes what rows show).
+  // Only typing is debounced: the first load and filter changes fetch at
+  // once, rather than every visit paying the typing delay.
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Not keyed on the tag list: renames and deletes happen on the Tags tab,
+  // and coming back here remounts this section with fresh data.
   useEffect(() => {
     if (!token) return;
     // Set by cleanup once a newer search has started, so a slow, older
     // response that lands late can't overwrite the newer results.
     let superseded = false;
-    const timer = setTimeout(() => {
-      fetchAdminMembers(token, { q: query.trim(), tagId: tagFilter })
-        .then((res) => {
-          if (!superseded) setMembers(res.members);
-        })
-        .catch(() => {
-          if (!superseded) showToast('Could not load members.', 'error');
-        });
-    }, SEARCH_DEBOUNCE_MS);
+    fetchAdminMembers(token, { q: debouncedQuery, tagId: tagFilter })
+      .then((res) => {
+        if (!superseded) setMembers(res.members);
+      })
+      .catch(() => {
+        if (!superseded) showToast('Could not load members.', 'error');
+      });
     return () => {
       superseded = true;
-      clearTimeout(timer);
     };
-  }, [token, query, tagFilter, tags, showToast]);
+  }, [token, debouncedQuery, tagFilter, showToast]);
 
   const selected = members.find((m) => m.id === selectedId) ?? null;
 
