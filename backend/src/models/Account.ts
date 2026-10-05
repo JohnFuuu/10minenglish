@@ -41,6 +41,9 @@ export interface AccountDocument extends mongoose.Document {
   timezone?: string;
   meetingLink?: string;
   availabilityBlocks: AvailabilityBlock[];
+  // Admin-only labels from the managed Tag list (User accounts only). Never
+  // returned by any User- or Buddy-facing route — see routes/adminMembers.ts.
+  memberTags: { tagId: mongoose.Types.ObjectId; addedBy: mongoose.Types.ObjectId; addedAt: Date }[];
   // Buddies this User has favourited. Only ever set on User accounts.
   favouriteBuddyIds: mongoose.Types.ObjectId[];
   // Admin-controlled, and only meaningful for Buddy accounts: an inactive
@@ -91,6 +94,18 @@ const accountSchema = new Schema<AccountDocument>({
       },
     ],
     required: true,
+    default: [],
+  },
+  memberTags: {
+    type: [
+      {
+        tagId: { type: Schema.Types.ObjectId, ref: 'Tag', required: true },
+        // The Admin who added it, and when — the spec's audit trail.
+        addedBy: { type: Schema.Types.ObjectId, ref: 'Account', required: true },
+        addedAt: { type: Date, required: true },
+        _id: false,
+      },
+    ],
     default: [],
   },
   favouriteBuddyIds: {

@@ -5,6 +5,7 @@ import { healthRouter } from './routes/health.js';
 import { createMeRouter } from './routes/me.js';
 import { onboardingRouter } from './routes/onboarding.js';
 import { createAdminRouter } from './routes/admin.js';
+import { createAdminMembersRouter } from './routes/adminMembers.js';
 import { buddyRouter } from './routes/buddy.js';
 import { creditPacksRouter } from './routes/creditPacks.js';
 import { createPaymentsRouter } from './routes/payments.js';
@@ -43,6 +44,7 @@ export function createApp(deps: AppDependencies = {}) {
   app.use(createMeRouter({ emailSender }));
   app.use(onboardingRouter);
   app.use(createAdminRouter({ emailSender }));
+  app.use(createAdminMembersRouter());
   app.use(buddyRouter);
   app.use(notificationsRouter);
   app.use(creditPacksRouter);
