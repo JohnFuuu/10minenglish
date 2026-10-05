@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import type { Types } from 'mongoose';
+import type { HydratedDocument, Types } from 'mongoose';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { Account } from '../models/Account.js';
+import { Account, type AccountDocument } from '../models/Account.js';
 import { Tag, tagNameKey, type TagDocument } from '../models/Tag.js';
 
 // Admin-only member tags (see docs/superpowers/specs/2026-10-05-admin-member-tags-design.md).
@@ -32,6 +32,54 @@ async function memberCount(tagId: Types.ObjectId): Promise<number> {
 
 function tagResponse(tag: TagDocument, count: number) {
   return { id: String(tag._id), name: tag.name, memberCount: count };
+}
+
+const MEMBER_LIST_LIMIT = 200;
+
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Builds the Admin view of members in one pass: looks up every referenced
+// Tag and Admin together rather than once per member.
+async function memberResponses(members: HydratedDocument<AccountDocument>[]) {
+  const tagIds = new Set<string>();
+  const adminIds = new Set<string>();
+  for (const member of members) {
+    for (const entry of member.memberTags) {
+      tagIds.add(String(entry.tagId));
+      adminIds.add(String(entry.addedBy));
+    }
+  }
+  const [tags, admins] = await Promise.all([
+    Tag.find({ _id: { $in: [...tagIds] } }),
+    Account.find({ _id: { $in: [...adminIds] } }, { name: 1, email: 1 }),
+  ]);
+  const tagById = new Map(tags.map((t) => [t.id as string, t]));
+  const adminById = new Map(admins.map((a) => [a.id as string, a]));
+
+  return members.map((member) => ({
+    id: member.id as string,
+    name: member.name,
+    email: member.email,
+    joinedAt: member._id.getTimestamp().toISOString(),
+    credits: member.credits,
+    tags: member.memberTags
+      .filter((entry) => tagById.has(String(entry.tagId)))
+      .map((entry) => {
+        const addedBy = adminById.get(String(entry.addedBy));
+        return {
+          id: String(entry.tagId),
+          name: tagById.get(String(entry.tagId))!.name,
+          addedAt: entry.addedAt.toISOString(),
+          addedBy: { id: String(entry.addedBy), name: addedBy?.name ?? addedBy?.email ?? 'Removed admin' },
+        };
+      }),
+  }));
+}
+
+async function findMember(id: unknown) {
+  return isObjectIdString(id) ? Account.findOne({ _id: id, role: 'user' }) : null;
 }
 
 export function createAdminMembersRouter(): Router {
@@ -105,6 +153,62 @@ export function createAdminMembersRouter(): Router {
     await tag.deleteOne();
 
     res.status(200).json({ removedFromMembers: result.modifiedCount });
+  });
+
+  router.get('/api/admin/members', ...adminOnly, async (req, res) => {
+    const { q, tagId } = req.query;
+    const filter: Record<string, unknown> = { role: 'user' };
+
+    if (typeof q === 'string' && q.trim() !== '') {
+      const pattern = new RegExp(escapeRegex(q.trim()), 'i');
+      filter.$or = [{ name: pattern }, { email: pattern }];
+    }
+    if (tagId !== undefined && tagId !== '') {
+      if (!isObjectIdString(tagId)) {
+        res.status(200).json({ members: [] });
+        return;
+      }
+      filter['memberTags.tagId'] = tagId;
+    }
+
+    const members = await Account.find(filter).sort({ _id: -1 }).limit(MEMBER_LIST_LIMIT);
+    res.status(200).json({ members: await memberResponses(members) });
+  });
+
+  router.post('/api/admin/members/:id/tags', ...adminOnly, async (req, res) => {
+    const { tagId } = req.body ?? {};
+    const tag = isObjectIdString(tagId) ? await Tag.findById(tagId) : null;
+    const member = await findMember(req.params.id);
+    if (!member || !tag) {
+      res.status(404).json({ error: member ? 'Tag not found' : 'Member not found' });
+      return;
+    }
+
+    // One conditional update, so a double click or two Admins at once can
+    // never add the same tag twice; an existing entry keeps its original
+    // addedBy/addedAt.
+    await Account.updateOne(
+      { _id: member._id, 'memberTags.tagId': { $ne: tag._id } },
+      { $push: { memberTags: { tagId: tag._id, addedBy: req.account!.accountId, addedAt: new Date() } } },
+    );
+
+    const reloaded = await Account.findById(member._id);
+    res.status(200).json((await memberResponses([reloaded!]))[0]);
+  });
+
+  router.delete('/api/admin/members/:id/tags/:tagId', ...adminOnly, async (req, res) => {
+    const member = await findMember(req.params.id);
+    if (!member) {
+      res.status(404).json({ error: 'Member not found' });
+      return;
+    }
+
+    if (isObjectIdString(req.params.tagId)) {
+      await Account.updateOne({ _id: member._id }, { $pull: { memberTags: { tagId: req.params.tagId } } });
+    }
+
+    const reloaded = await Account.findById(member._id);
+    res.status(200).json((await memberResponses([reloaded!]))[0]);
   });
 
   return router;
