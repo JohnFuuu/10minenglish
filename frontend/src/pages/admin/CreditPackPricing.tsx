@@ -8,6 +8,12 @@ import { adminUpdateCreditPackPrice, fetchCreditPacks, type CreditPack } from '.
 // negatives, letters, and anything past two decimal places.
 const PRICE_FORMAT = /^\d+(\.\d{1,2})?$/;
 
+// "25", "25.0" and "25.00" are the same price; anything malformed is null.
+function toCents(text: string): number | null {
+  const trimmed = text.trim();
+  return PRICE_FORMAT.test(trimmed) ? Math.round(Number(trimmed) * 100) : null;
+}
+
 export function CreditPackPricing() {
   const { token } = useAuth();
   const { showToast } = useToast();
@@ -16,6 +22,8 @@ export function CreditPackPricing() {
   const [draftPrice, setDraftPrice] = useState('');
   const [confirmingSize, setConfirmingSize] = useState<number | null>(null);
   const [pendingPriceCents, setPendingPriceCents] = useState<number | null>(null);
+  // The price typed a second time; Confirm stays disabled until it matches.
+  const [retypedPrice, setRetypedPrice] = useState('');
   const [saved, setSaved] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -30,15 +38,17 @@ export function CreditPackPricing() {
   }
 
   // Validates the format and — instead of saving straight away — moves the
-  // row into a Confirm/Cancel state, since price changes go live immediately
-  // (see AdminLayout's warning banner) and deserve an explicit second step.
+  // row into a confirm state where the price must be typed again, since price
+  // changes go live immediately (see AdminLayout's warning banner) and a
+  // typo'd price would charge real Users the wrong amount.
   function requestConfirm(size: number) {
-    const trimmed = draftPrice.trim();
-    if (!PRICE_FORMAT.test(trimmed)) {
+    const cents = toCents(draftPrice);
+    if (cents === null) {
       showToast('Enter a valid price, e.g. 9.99.', 'error');
       return;
     }
-    setPendingPriceCents(Math.round(Number(trimmed) * 100));
+    setPendingPriceCents(cents);
+    setRetypedPrice('');
     setConfirmingSize(size);
     setEditingSize(null);
   }
@@ -75,7 +85,7 @@ export function CreditPackPricing() {
         {packs.map((pack) => (
           <div
             key={pack.size}
-            className="flex items-center justify-between rounded-md border-2 border-b-4 border-border-strong bg-bg-surface p-4"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-b-4 border-border-strong bg-bg-surface p-4"
           >
             <p className="font-bold text-text-heading">{pack.size} credits</p>
             {editingSize === pack.size ? (
@@ -90,16 +100,34 @@ export function CreditPackPricing() {
                 </Button>
               </div>
             ) : confirmingSize === pack.size ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-text-secondary">
-                  Set to ${((pendingPriceCents ?? 0) / 100).toFixed(2)}?
-                </span>
-                <Button size="sm" disabled={isSaving} onClick={() => confirmSave(pack.size)}>
-                  Confirm
-                </Button>
-                <Button variant="secondary" size="sm" disabled={isSaving} onClick={() => cancelConfirm(pack.size)}>
-                  Cancel
-                </Button>
+              <div className="flex w-full flex-col gap-2">
+                <p className="text-sm font-bold text-text-body">
+                  New price: ${((pendingPriceCents ?? 0) / 100).toFixed(2)} NZD. Type it again to confirm.
+                </p>
+                <Input
+                  aria-label="Type the new price again"
+                  placeholder="Type the new price again"
+                  inputMode="decimal"
+                  value={retypedPrice}
+                  onChange={(e) => setRetypedPrice(e.target.value)}
+                  autoFocus
+                />
+                {retypedPrice.trim() !== '' && toCents(retypedPrice) !== pendingPriceCents && (
+                  <p className="text-xs font-bold text-error">Prices don't match</p>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    tone="red"
+                    disabled={isSaving || toCents(retypedPrice) !== pendingPriceCents}
+                    onClick={() => confirmSave(pack.size)}
+                  >
+                    Confirm
+                  </Button>
+                  <Button variant="secondary" size="sm" disabled={isSaving} onClick={() => cancelConfirm(pack.size)}>
+                    Cancel
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-3">
