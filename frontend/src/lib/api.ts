@@ -620,6 +620,9 @@ export interface AdminAccount {
   email: string;
   // False while suspended (deactivated): they can't sign in.
   active: boolean;
+  // Named in the backend's SUPER_BACKEND_ADMIN: may deactivate/remove other
+  // Admins, and can't be deactivated/removed themselves.
+  isSuperAdmin: boolean;
 }
 
 export function fetchAdmins(token: string) {

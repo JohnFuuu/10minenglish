@@ -16,6 +16,7 @@ export function AdminAdminsPage() {
   const [admins, setAdmins] = useState<AdminAccount[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [auditRefreshKey, setAuditRefreshKey] = useState(0);
+  const amSuperAdmin = admins.some((a) => a.id === account?.id && a.isSuperAdmin);
   // Which other Admin is asking "are you sure?", and about what.
   const [confirming, setConfirming] = useState<{ id: string; action: 'deactivate' | 'remove' } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -43,7 +44,11 @@ export function AdminAdminsPage() {
           ? 'At least one Admin must stay active.'
           : code === 'CANNOT_CHANGE_SELF'
             ? "You can't change your own account."
-            : 'Could not update that Admin.',
+            : code === 'SUPER_ADMIN_REQUIRED'
+              ? 'Only a super admin can do that.'
+              : code === 'SUPER_ADMIN_PROTECTED'
+                ? "Super admins can't be deactivated or removed here."
+                : 'Could not update that Admin.',
         'error',
       );
     } finally {
@@ -98,6 +103,9 @@ export function AdminAdminsPage() {
           <ul className="divide-y-2 divide-border overflow-hidden rounded-md border-2 border-b-4 border-border-strong bg-bg-surface">
             {admins.map((admin) => {
               const isMe = admin.id === account?.id;
+              // Actions only for super admins, never on yourself or another super admin
+              // (the backend enforces the same rules).
+              const canManage = amSuperAdmin && !isMe && !admin.isSuperAdmin;
               const name = admin.name ?? admin.email;
               return (
                 <li key={admin.id} className="px-4 py-2.5">
@@ -129,14 +137,18 @@ export function AdminAdminsPage() {
                             {name}
                             {isMe && <span className="font-medium text-text-secondary"> (you)</span>}
                           </p>
+                          {admin.isSuperAdmin && (
+                            <span className="mt-0.5 inline-block rounded-full bg-brand-secondary/15 px-2 py-0.5 text-xs font-bold text-brand-secondary">
+                              Super admin
+                            </span>
+                          )}
                           <p className="truncate text-xs text-text-secondary">
                             {admin.active ? 'Active' : 'Inactive'} · {admin.email}
                           </p>
                         </div>
                       </div>
-                      {/* No actions on your own account — and the backend also
-                          keeps at least one Admin active at all times. */}
-                      {!isMe && (
+                      {/* The backend also keeps at least one Admin active at all times. */}
+                      {canManage && (
                         <div className="flex shrink-0 items-center gap-2">
                           <Button
                             variant="secondary"

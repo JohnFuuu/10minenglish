@@ -6,6 +6,7 @@ import { hashPassword } from '../services/password.js';
 import { cancelUpcomingLessonsForBuddy } from '../services/buddyReconciliation.js';
 import type { EmailSender } from '../services/email.js';
 import { accountLabel, recordAdminAction } from '../services/auditLog.js';
+import { isSuperAdmin } from '../services/superAdmins.js';
 
 export interface AdminRouterDependencies {
   emailSender: EmailSender;
@@ -203,7 +204,9 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
   router.get('/api/admin/admins', requireAuth, requireRole('admin'), async (_req, res) => {
     // Removed (archived) Admins are gone from the list; deactivated ones stay.
     const admins = await Account.find({ role: 'admin', removedAt: { $exists: false } }).sort({ name: 1 });
-    res.status(200).json({ admins: admins.map((a) => ({ id: a.id, name: a.name, email: a.email, active: a.active !== false })) });
+    res.status(200).json({
+      admins: admins.map((a) => ({ id: a.id, name: a.name, email: a.email, active: a.active !== false, isSuperAdmin: isSuperAdmin(a.email) })),
+    });
   });
 
   // Admins are created by another Admin, like Buddies — there is no self-signup.
@@ -247,6 +250,7 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
       res.status(400).json({ error: 'active must be a boolean' });
       return;
     }
+    if (!(await requireSuperAdmin(req.account!.accountId, res))) return;
     const target = await findChangeableAdmin(String(req.params.id), req.account!.accountId, res);
     if (!target) return;
 
@@ -276,6 +280,7 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
   // Archive another Admin: locked out and hidden, record kept for the audit
   // log. A repeat is a no-op success, like removing a Buddy.
   router.delete('/api/admin/admins/:id', requireAuth, requireRole('admin'), async (req, res) => {
+    if (!(await requireSuperAdmin(req.account!.accountId, res))) return;
     const id = String(req.params.id);
     if (/^[a-f0-9]{24}$/i.test(id) && (await Account.exists({ _id: id, role: 'admin', removedAt: { $exists: true } }))) {
       res.status(200).json({ id });
@@ -304,13 +309,21 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
   return router;
 }
 
+// Only super admins (SUPER_BACKEND_ADMIN) may deactivate or remove Admins.
+async function requireSuperAdmin(actorId: string, res: Response): Promise<boolean> {
+  const actor = await Account.findById(actorId, { email: 1 });
+  if (isSuperAdmin(actor?.email)) return true;
+  res.status(403).json({ error: 'SUPER_ADMIN_REQUIRED' });
+  return false;
+}
+
 // At least one Admin must always be able to sign in and manage the app.
 async function anyActiveAdminLeft(): Promise<boolean> {
   return Boolean(await Account.exists({ role: 'admin', active: { $ne: false }, removedAt: { $exists: false } }));
 }
 
 // The other, still-existing Admin an Admin action targets — or a response
-// explaining why not (unknown → 404, yourself → 409).
+// explaining why not (unknown → 404, yourself or a super admin → 409).
 async function findChangeableAdmin(id: string, actorId: string, res: Response) {
   const target = /^[a-f0-9]{24}$/i.test(id) ? await Account.findOne({ _id: id, role: 'admin', removedAt: { $exists: false } }) : null;
   if (!target) {
@@ -319,6 +332,12 @@ async function findChangeableAdmin(id: string, actorId: string, res: Response) {
   }
   if (String(target._id) === actorId) {
     res.status(409).json({ error: 'CANNOT_CHANGE_SELF' });
+    return null;
+  }
+  // Super admins can't lock each other out; demoting one means editing
+  // SUPER_BACKEND_ADMIN.
+  if (isSuperAdmin(target.email)) {
+    res.status(409).json({ error: 'SUPER_ADMIN_PROTECTED' });
     return null;
   }
   return target;

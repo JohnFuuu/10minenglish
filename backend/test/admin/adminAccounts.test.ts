@@ -48,7 +48,7 @@ describe('Admin accounts', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.admins.map((a: { name: string }) => a.name)).toEqual(['Ada Admin', 'Bob Admin']);
-    expect(res.body.admins[0]).toEqual({ id: expect.any(String), name: 'Ada Admin', email: 'ada@10me.test', active: true });
+    expect(res.body.admins[0]).toEqual({ id: expect.any(String), name: 'Ada Admin', email: 'ada@10me.test', active: true, isSuperAdmin: false });
   });
 
   it('creates a confirmed Admin who can log in with the starter password', async () => {
