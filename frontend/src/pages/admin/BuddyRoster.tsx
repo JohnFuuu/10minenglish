@@ -75,10 +75,17 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
   return (
     <section className="mb-10">
       <SectionHeading>Buddy roster</SectionHeading>
-      <p className="mb-4 text-sm font-medium text-text-secondary">
-        Deactivating takes a Buddy out of rotation and cancels their upcoming lessons, refunding
-        each User.
-      </p>
+      {/* Two actions that look alike but differ in how final they are. */}
+      <div className="mb-4 flex flex-col gap-1 text-sm font-medium text-text-secondary">
+        <p>
+          <span className="font-bold text-text-body">Deactivate</span> pauses a Buddy (e.g. on holiday): their upcoming
+          lessons are cancelled and refunded, but they can still sign in, and you can reactivate them any time.
+        </p>
+        <p>
+          <span className="font-bold text-text-body">Remove</span> is for a Buddy who has left for good: they also lose
+          access and leave this list, while past lessons keep their name.
+        </p>
+      </div>
 
       {buddies.length === 0 && <p className="text-sm text-text-secondary">No buddies yet.</p>}
 
