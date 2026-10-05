@@ -29,16 +29,32 @@ export function MembersSection({ tags, onTagsChanged }: { tags: AdminTag[]; onTa
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // A tag deleted while it's the active filter would otherwise leave the
+  // dropdown reading "All members" over a list filtered by a tag that's gone.
+  useEffect(() => {
+    if (tagFilter && !tags.some((tag) => tag.id === tagFilter)) setTagFilter('');
+  }, [tags, tagFilter]);
+
   // Re-run when the search, the filter, or the tag list itself changes (a
   // rename or delete in the Member tags section changes what rows show).
   useEffect(() => {
     if (!token) return;
+    // Set by cleanup once a newer search has started, so a slow, older
+    // response that lands late can't overwrite the newer results.
+    let superseded = false;
     const timer = setTimeout(() => {
       fetchAdminMembers(token, { q: query.trim(), tagId: tagFilter })
-        .then((res) => setMembers(res.members))
-        .catch(() => showToast('Could not load members.', 'error'));
+        .then((res) => {
+          if (!superseded) setMembers(res.members);
+        })
+        .catch(() => {
+          if (!superseded) showToast('Could not load members.', 'error');
+        });
     }, SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
+    return () => {
+      superseded = true;
+      clearTimeout(timer);
+    };
   }, [token, query, tagFilter, tags, showToast]);
 
   const selected = members.find((m) => m.id === selectedId) ?? null;
