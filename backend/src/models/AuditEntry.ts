@@ -15,6 +15,9 @@ export const AUDIT_ACTIONS = [
   'buddy.removed',
   'price.changed',
   'admin.created',
+  'admin.deactivated',
+  'admin.activated',
+  'admin.removed',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 export type AuditTargetType = 'tag' | 'member' | 'buddy' | 'creditPack' | 'admin';
@@ -25,7 +28,7 @@ export const AUDIT_CATEGORIES: Record<string, AuditAction[]> = {
   memberTags: ['member.tag_added', 'member.tag_removed'],
   buddies: ['buddy.created', 'buddy.activated', 'buddy.deactivated', 'buddy.removed'],
   pricing: ['price.changed'],
-  admins: ['admin.created'],
+  admins: ['admin.created', 'admin.deactivated', 'admin.activated', 'admin.removed'],
 };
 
 export interface AuditEntryDocument extends mongoose.Document {

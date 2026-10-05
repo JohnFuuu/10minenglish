@@ -618,6 +618,8 @@ export interface AdminAccount {
   id: string;
   name?: string;
   email: string;
+  // False while suspended (deactivated): they can't sign in.
+  active: boolean;
 }
 
 export function fetchAdmins(token: string) {
@@ -661,6 +663,21 @@ export interface AdminBuddyDetails {
 
 export function fetchAdminBuddyDetails(token: string, buddyId: string) {
   return request<AdminBuddyDetails>(`/api/admin/buddies/${buddyId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function setAdminActive(token: string, adminId: string, active: boolean) {
+  return request<AdminAccount>(`/api/admin/admins/${adminId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ active }),
+  });
+}
+
+export function removeAdmin(token: string, adminId: string) {
+  return request<{ id: string }>(`/api/admin/admins/${adminId}`, {
+    method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
 }

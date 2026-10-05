@@ -19,12 +19,20 @@ const MAX_FAILED_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
-// An archived Buddy keeps their record (for Lesson history) but may not sign
-// in by any route. Checked after the credential, so only its owner learns why.
-function refuseRemoved(account: { removedAt?: Date }, res: Response): boolean {
-  if (!account.removedAt) return false;
-  res.status(403).json({ error: 'ACCOUNT_REMOVED' });
-  return true;
+// Archived Buddies and Admins keep their record (for Lesson history and the
+// audit log) but may not sign in by any route; a deactivated Admin is
+// suspended until reactivated. (An inactive Buddy can still sign in.)
+// Checked after the credential, so only its owner learns why.
+function refuseLockedOut(account: { removedAt?: Date; role: string; active: boolean }, res: Response): boolean {
+  if (account.removedAt) {
+    res.status(403).json({ error: 'ACCOUNT_REMOVED' });
+    return true;
+  }
+  if (account.role === 'admin' && account.active === false) {
+    res.status(403).json({ error: 'ACCOUNT_INACTIVE' });
+    return true;
+  }
+  return false;
 }
 
 export function createAuthRouter(deps: AuthRouterDependencies): Router {
@@ -207,7 +215,7 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
     account.lockedUntil = undefined;
     await account.save();
 
-    if (refuseRemoved(account, res)) return;
+    if (refuseLockedOut(account, res)) return;
 
     const token = signAccountToken({ accountId: account.id, role: account.role });
     res.status(200).json({ token, id: account.id, role: account.role });
@@ -284,7 +292,7 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       // rather than creating a duplicate.
       account = await Account.findOne({ email: profile.email });
     }
-    if (account && refuseRemoved(account, res)) return;
+    if (account && refuseLockedOut(account, res)) return;
 
     if (!account) {
       account = await Account.create({
@@ -329,7 +337,7 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       // a duplicate — Facebook only shares emails it has verified.
       account = await Account.findOne({ email: profile.email });
     }
-    if (account && refuseRemoved(account, res)) return;
+    if (account && refuseLockedOut(account, res)) return;
 
     if (!account) {
       // No email from Facebook (a phone sign-up, or they declined to share

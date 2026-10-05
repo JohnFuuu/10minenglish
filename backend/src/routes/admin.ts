@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { Account } from '../models/Account.js';
 import { Lesson } from '../models/Lesson.js';
@@ -201,8 +201,9 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
   });
 
   router.get('/api/admin/admins', requireAuth, requireRole('admin'), async (_req, res) => {
-    const admins = await Account.find({ role: 'admin' }).sort({ name: 1 });
-    res.status(200).json({ admins: admins.map((a) => ({ id: a.id, name: a.name, email: a.email })) });
+    // Removed (archived) Admins are gone from the list; deactivated ones stay.
+    const admins = await Account.find({ role: 'admin', removedAt: { $exists: false } }).sort({ name: 1 });
+    res.status(200).json({ admins: admins.map((a) => ({ id: a.id, name: a.name, email: a.email, active: a.active !== false })) });
   });
 
   // Admins are created by another Admin, like Buddies — there is no self-signup.
@@ -239,5 +240,86 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
     res.status(201).json({ id: admin.id, email: admin.email, role: admin.role });
   });
 
+  // Suspend (active: false) or restore (active: true) another Admin.
+  router.patch('/api/admin/admins/:id', requireAuth, requireRole('admin'), async (req, res) => {
+    const { active } = req.body ?? {};
+    if (typeof active !== 'boolean') {
+      res.status(400).json({ error: 'active must be a boolean' });
+      return;
+    }
+    const target = await findChangeableAdmin(String(req.params.id), req.account!.accountId, res);
+    if (!target) return;
+
+    // Conditional on the current state, so a double click changes (and
+    // audits) once; a no-op returns the current state.
+    const previous = await Account.findOneAndUpdate(
+      { _id: target._id, removedAt: { $exists: false }, active: active ? false : { $ne: false } },
+      { $set: { active } },
+    );
+    if (previous && !active && !(await anyActiveAdminLeft())) {
+      // Two Admins deactivating each other at once could leave nobody able
+      // to manage the app: undo this one.
+      await Account.updateOne({ _id: target._id }, { $set: { active: true } });
+      res.status(409).json({ error: 'LAST_ACTIVE_ADMIN' });
+      return;
+    }
+    if (previous) {
+      await recordAdminAction(
+        req.account!.accountId,
+        active ? 'admin.activated' : 'admin.deactivated',
+        { type: 'admin', id: String(target._id), label: accountLabel(target) },
+      );
+    }
+    res.status(200).json({ id: target.id, name: target.name, email: target.email, active });
+  });
+
+  // Archive another Admin: locked out and hidden, record kept for the audit
+  // log. A repeat is a no-op success, like removing a Buddy.
+  router.delete('/api/admin/admins/:id', requireAuth, requireRole('admin'), async (req, res) => {
+    const id = String(req.params.id);
+    if (/^[a-f0-9]{24}$/i.test(id) && (await Account.exists({ _id: id, role: 'admin', removedAt: { $exists: true } }))) {
+      res.status(200).json({ id });
+      return;
+    }
+    const target = await findChangeableAdmin(id, req.account!.accountId, res);
+    if (!target) return;
+
+    const previous = await Account.findOneAndUpdate(
+      { _id: target._id, removedAt: { $exists: false } },
+      { $set: { removedAt: new Date(), active: false } },
+    );
+    if (!previous) {
+      res.status(200).json({ id: target.id });
+      return;
+    }
+    if (!(await anyActiveAdminLeft())) {
+      await Account.updateOne({ _id: target._id }, { $unset: { removedAt: '' }, $set: { active: previous.active !== false } });
+      res.status(409).json({ error: 'LAST_ACTIVE_ADMIN' });
+      return;
+    }
+    await recordAdminAction(req.account!.accountId, 'admin.removed', { type: 'admin', id: String(target._id), label: accountLabel(target) });
+    res.status(200).json({ id: target.id });
+  });
+
   return router;
+}
+
+// At least one Admin must always be able to sign in and manage the app.
+async function anyActiveAdminLeft(): Promise<boolean> {
+  return Boolean(await Account.exists({ role: 'admin', active: { $ne: false }, removedAt: { $exists: false } }));
+}
+
+// The other, still-existing Admin an Admin action targets — or a response
+// explaining why not (unknown → 404, yourself → 409).
+async function findChangeableAdmin(id: string, actorId: string, res: Response) {
+  const target = /^[a-f0-9]{24}$/i.test(id) ? await Account.findOne({ _id: id, role: 'admin', removedAt: { $exists: false } }) : null;
+  if (!target) {
+    res.status(404).json({ error: 'Admin not found' });
+    return null;
+  }
+  if (String(target._id) === actorId) {
+    res.status(409).json({ error: 'CANNOT_CHANGE_SELF' });
+    return null;
+  }
+  return target;
 }
