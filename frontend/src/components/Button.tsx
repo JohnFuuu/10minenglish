@@ -5,7 +5,9 @@ type ButtonVariant = 'primary' | 'secondary';
 type ButtonSize = 'sm' | 'md' | 'lg';
 // Green is the default brand tone (dashboard, in-app actions). Blue is used
 // specifically for auth-flow CTAs, matching the exported AuthScreen pattern.
-type ButtonTone = 'green' | 'blue';
+// Red is for the final step of a consequential, immediate change (e.g.
+// confirming a live price change).
+type ButtonTone = 'green' | 'blue' | 'red';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -23,11 +25,15 @@ const variantToneClasses: Record<ButtonVariant, Record<ButtonTone, string>> = {
     green:
       'border-2 border-b-[3px] border-brand-primary-border bg-brand-primary text-text-inverse active:border-b active:border-brand-primary-border disabled:border-border disabled:bg-border disabled:text-text-secondary',
     blue: 'border-2 border-b-[3px] border-brand-secondary-border bg-brand-secondary text-text-inverse active:border-b active:border-brand-secondary-border disabled:border-border disabled:bg-border disabled:text-text-secondary',
+    // Stays red (just faded) while disabled, so a pending confirm still reads
+    // as the consequential action it is.
+    red: 'border-2 border-b-[3px] border-error-border bg-error text-text-inverse active:border-b active:border-error-border disabled:opacity-50',
   },
   secondary: {
     green:
       'border-2 border-b-[3px] border-accent-lime bg-bg-surface text-brand-primary active:border-b disabled:border-border disabled:text-text-secondary',
     blue: 'border-2 border-b-[3px] border-brand-secondary bg-bg-surface text-brand-secondary active:border-b disabled:border-border disabled:text-text-secondary',
+    red: 'border-2 border-b-[3px] border-error bg-bg-surface text-error active:border-b disabled:border-border disabled:text-text-secondary',
   },
 };
 
