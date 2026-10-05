@@ -1,0 +1,64 @@
+import mongoose, { Schema } from 'mongoose';
+
+// Append-only record of Admin changes (see
+// docs/superpowers/specs/2026-10-05-admin-audit-log-design.md). Nothing in
+// the API updates or deletes these.
+export const AUDIT_ACTIONS = [
+  'tag.created',
+  'tag.renamed',
+  'tag.deleted',
+  'member.tag_added',
+  'member.tag_removed',
+  'buddy.created',
+  'buddy.activated',
+  'buddy.deactivated',
+  'price.changed',
+] as const;
+export type AuditAction = (typeof AUDIT_ACTIONS)[number];
+export type AuditTargetType = 'tag' | 'member' | 'buddy' | 'creditPack';
+
+// The Audit log tab's filter options.
+export const AUDIT_CATEGORIES: Record<string, AuditAction[]> = {
+  tags: ['tag.created', 'tag.renamed', 'tag.deleted'],
+  memberTags: ['member.tag_added', 'member.tag_removed'],
+  buddies: ['buddy.created', 'buddy.activated', 'buddy.deactivated'],
+  pricing: ['price.changed'],
+};
+
+export interface AuditEntryDocument extends mongoose.Document {
+  action: AuditAction;
+  // Snapshotted at write time, so the entry still reads correctly after a
+  // rename, a deletion, or an Admin account being removed.
+  admin: { id: mongoose.Types.ObjectId; name: string };
+  target: { type: AuditTargetType; id?: string; label: string };
+  details: Record<string, unknown>;
+  createdAt: Date;
+}
+
+const adminSnapshotSchema = new Schema(
+  { id: { type: Schema.Types.ObjectId, required: true }, name: { type: String, required: true } },
+  { _id: false },
+);
+
+const targetSnapshotSchema = new Schema(
+  {
+    type: { type: String, required: true, enum: ['tag', 'member', 'buddy', 'creditPack'] },
+    id: { type: String },
+    label: { type: String, required: true },
+  },
+  { _id: false },
+);
+
+const auditEntrySchema = new Schema<AuditEntryDocument>(
+  {
+    action: { type: String, required: true, enum: AUDIT_ACTIONS },
+    admin: { type: adminSnapshotSchema, required: true },
+    target: { type: targetSnapshotSchema, required: true },
+    details: { type: Schema.Types.Mixed, default: {} },
+    createdAt: { type: Date, required: true, default: Date.now },
+  },
+  // Keep `details: {}` rather than dropping the empty object.
+  { minimize: false },
+);
+
+export const AuditEntry = mongoose.model<AuditEntryDocument>('AuditEntry', auditEntrySchema);
