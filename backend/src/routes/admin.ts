@@ -78,9 +78,12 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
       return;
     }
 
-    const wasActive = buddy.active;
+    // One conditional update (returns the document as it was), so two
+    // identical requests at once can't both see the old state — only the one
+    // that actually flips it cancels Lessons and is audited.
+    const previous = await Account.findOneAndUpdate({ _id: buddy._id, active: { $ne: active } }, { $set: { active } });
+    const wasActive = previous ? previous.active : active;
     buddy.active = active;
-    await buddy.save();
 
     // Deactivating means this Buddy will not be teaching their booked Lessons,
     // so those Lessons are cancelled down the same path a Buddy-initiated

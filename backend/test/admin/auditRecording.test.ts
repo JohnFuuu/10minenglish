@@ -136,3 +136,28 @@ describe('when the audit write fails', () => {
     expect(await Tag.countDocuments()).toBe(1);
   });
 });
+
+describe('double-submitted requests', () => {
+  it('record one entry for two identical concurrent changes', async () => {
+    const { as } = await setup();
+    const buddy = await as('post', '/api/admin/buddies', { name: 'Maria', email: 'maria@example.com', password: 'StarterPass1!' });
+    const tag = await as('post', '/api/admin/tags', { name: 'low-income' });
+    await as('get', '/api/credit-packs');
+
+    await Promise.all([
+      as('patch', `/api/admin/buddies/${buddy.body.id}`, { active: false }),
+      as('patch', `/api/admin/buddies/${buddy.body.id}`, { active: false }),
+    ]);
+    await Promise.all([
+      as('patch', '/api/admin/credit-packs/10', { priceCents: 900 }),
+      as('patch', '/api/admin/credit-packs/10', { priceCents: 900 }),
+    ]);
+    await Promise.all([
+      as('patch', `/api/admin/tags/${tag.body.id}`, { name: 'Low income' }),
+      as('patch', `/api/admin/tags/${tag.body.id}`, { name: 'Low income' }),
+    ]);
+
+    const counts = (await entries()).reduce<Record<string, number>>((acc, e) => ({ ...acc, [e.action]: (acc[e.action] ?? 0) + 1 }), {});
+    expect(counts).toMatchObject({ 'buddy.deactivated': 1, 'price.changed': 1, 'tag.renamed': 1 });
+  });
+});
