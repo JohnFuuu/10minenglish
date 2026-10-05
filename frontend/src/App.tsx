@@ -1,6 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { RequireAuth } from './auth/RequireAuth';
+import { RequireAdmin } from './auth/RequireAdmin';
+import { AdminTagsPage } from './pages/admin/AdminTagsPage';
+import { AdminBuddiesPage } from './pages/admin/AdminBuddiesPage';
+import { AdminPricingPage } from './pages/admin/AdminPricingPage';
 import { ToastProvider } from './toast/ToastContext';
 import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
@@ -48,6 +52,9 @@ function App() {
             <Route path="/buddies/:id" element={<RequireAuth><BuddyScreen /></RequireAuth>} />
             <Route path="/teaching" element={<RequireAuth><BuddyLessonsScreen /></RequireAuth>} />
             <Route path="/availability" element={<RequireAuth><BuddyAvailabilityScreen /></RequireAuth>} />
+            <Route path="/admin/tags" element={<RequireAdmin><AdminTagsPage /></RequireAdmin>} />
+            <Route path="/admin/buddies" element={<RequireAdmin><AdminBuddiesPage /></RequireAdmin>} />
+            <Route path="/admin/pricing" element={<RequireAdmin><AdminPricingPage /></RequireAdmin>} />
             <Route path="/playground" element={<ComponentPlayground />} />
             {/* Unmatched paths fall through to /dashboard, which already does the
                 right thing either way: RequireAuth sends a signed-out visitor to

@@ -4,8 +4,6 @@ import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import { ApiError, createAdminTag, deleteAdminTag, renameAdminTag, type AdminTag } from '../../lib/api';
 
-const SECTION_HEADING =
-  'mb-1 inline-block rounded-md bg-accent-lime-light px-3 py-1 text-sm font-bold uppercase tracking-wide text-success';
 
 function tagErrorMessage(err: unknown): string {
   return err instanceof ApiError && err.status === 409
@@ -59,7 +57,6 @@ export function MemberTagsSection({ tags, onChanged }: { tags: AdminTag[]; onCha
 
   return (
     <section className="mb-10">
-      <h2 className={SECTION_HEADING}>Member tags</h2>
       <p className="mb-4 text-sm font-medium text-text-secondary">
         Private labels for grouping members, e.g. "low-income". Members never see their tags.
       </p>
