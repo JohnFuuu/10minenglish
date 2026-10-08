@@ -72,6 +72,60 @@ function freeCancelDeadline(iso: string): string {
   return formatDateTime(new Date(new Date(iso).getTime() - REFUND_CUTOFF_HOURS * 60 * 60 * 1000).toISOString());
 }
 
+// Quick picks in simple English, so learners don't have to type; "Other"
+// opens a short text box. All optional — shown to the Buddy.
+const CANCEL_REASONS = ['I’m busy', 'I’m sick', 'Need a different time'] as const;
+const OTHER = 'Other';
+
+function CancelReason({ onChange }: { onChange: (reason: string | undefined) => void }) {
+  const [choice, setChoice] = useState<string | null>(null);
+  const [other, setOther] = useState('');
+
+  function pick(next: string) {
+    const value = choice === next ? null : next; // tap again to clear
+    setChoice(value);
+    onChange(value === OTHER ? other.trim() || undefined : value ?? undefined);
+  }
+
+  return (
+    <div className="mt-3">
+      <p className="mb-1.5 text-xs font-bold text-text-body">
+        Why are you cancelling? <span className="font-medium text-text-secondary">(optional — we tell your Buddy)</span>
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {[...CANCEL_REASONS, OTHER].map((r) => (
+          <button
+            key={r}
+            type="button"
+            aria-pressed={choice === r}
+            onClick={() => pick(r)}
+            className={
+              choice === r
+                ? 'rounded-full border-2 border-brand-secondary bg-brand-secondary px-3 py-1 text-xs font-bold text-text-inverse'
+                : 'rounded-full border-2 border-border bg-bg-surface px-3 py-1 text-xs font-bold text-text-heading'
+            }
+          >
+            {r}
+          </button>
+        ))}
+      </div>
+      {choice === OTHER && (
+        <Input
+          aria-label="Your reason"
+          placeholder="Tell your Buddy why"
+          maxLength={200}
+          value={other}
+          onChange={(e) => {
+            setOther(e.target.value);
+            onChange(e.target.value.trim() || undefined);
+          }}
+          className="mt-2"
+        />
+      )}
+    </div>
+  );
+}
+
 // The cancel rule spelled out before the User confirms, in short plain
 // sentences (many Users are still learning English).
 function CancelRules({ startTime, creditsCost }: { startTime: string; creditsCost: number }) {
@@ -146,6 +200,8 @@ export function LessonsScreen() {
   const upcoming = lessons?.upcoming ?? [];
   const previous = lessons?.previous ?? [];
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  // The open cancel box's optional reason (reset whenever a box opens).
+  const [cancelReason, setCancelReason] = useState<string | undefined>();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState('');
@@ -219,7 +275,7 @@ export function LessonsScreen() {
   async function handleCancel(lesson: LessonWithBuddy) {
     setCancellingId(lesson.id);
     try {
-      const res = await cancelLesson(token!, lesson.id);
+      const res = await cancelLesson(token!, lesson.id, cancelReason);
       setLessons((current) => {
         if (!current) return current;
         return {
@@ -331,6 +387,7 @@ export function LessonsScreen() {
                       size="sm"
                       onClick={() => {
                         setReschedulingId(null);
+                        setCancelReason(undefined);
                         setConfirmingId(confirmingId === lesson.id ? null : lesson.id);
                       }}
                     >
@@ -347,6 +404,7 @@ export function LessonsScreen() {
                     }
                   >
                     <CancelRules startTime={lesson.startTime} creditsCost={lesson.creditsCost ?? 1} />
+                    <CancelReason key={lesson.id} onChange={setCancelReason} />
                     <div className="mt-3 flex gap-2">
                       <Button
                         size="sm"

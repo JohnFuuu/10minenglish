@@ -318,6 +318,8 @@ export interface Lesson {
   meetingLink: string;
   // Credits charged when booked — what a cancellation refunds.
   creditsCost: number;
+  // Set when the User gave one while cancelling.
+  cancellationReason?: string;
 }
 
 export function bookLesson(token: string, buddyId: string, startTime: string) {
@@ -373,12 +375,14 @@ export function fetchUserLessons(token: string) {
   });
 }
 
-export function cancelLesson(token: string, lessonId: string) {
+// `reason` is optional and shown to the Buddy.
+export function cancelLesson(token: string, lessonId: string, reason?: string) {
   return request<{ lesson: Lesson; refunded: boolean; creditsRemaining: number }>(
     `/api/lessons/${lessonId}/cancel`,
     {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(reason ? { reason } : {}),
     },
   );
 }

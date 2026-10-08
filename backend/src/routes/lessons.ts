@@ -25,6 +25,8 @@ import { cancelLessonAsBuddy } from '../services/buddyCancellation.js';
 import { createNotification } from '../services/notifications.js';
 import { currentCreditsPerLesson } from '../models/LessonPrice.js';
 
+const MAX_CANCELLATION_REASON_LENGTH = 200;
+
 export interface LessonsRouterDependencies {
   emailSender: EmailSender;
 }
@@ -39,6 +41,7 @@ function serializeLesson(lesson: LessonDocument) {
     status: lesson.status,
     meetingLink: lesson.meetingLink,
     creditsCost: lesson.creditsCost,
+    ...(lesson.cancellationReason ? { cancellationReason: lesson.cancellationReason } : {}),
   };
 }
 
@@ -413,13 +416,20 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       return;
     }
 
+    const { reason } = req.body ?? {};
+    if (reason !== undefined && (typeof reason !== 'string' || reason.trim().length > MAX_CANCELLATION_REASON_LENGTH)) {
+      res.status(400).json({ error: `reason must be text, up to ${MAX_CANCELLATION_REASON_LENGTH} characters` });
+      return;
+    }
+    const trimmedReason = typeof reason === 'string' && reason.trim() !== '' ? reason.trim() : undefined;
+
     const user = await Account.findById(req.account!.accountId);
     if (!user) {
       res.status(404).json({ error: 'Account not found' });
       return;
     }
 
-    const result = await cancelLesson({ lessonId: lesson._id, accountId: user._id });
+    const result = await cancelLesson({ lessonId: lesson._id, accountId: user._id, reason: trimmedReason });
     if (!result) {
       res.status(409).json({ error: 'Lesson is not upcoming' });
       return;
@@ -456,6 +466,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
             buddyEmail: buddy.email,
             startTime: result.lesson.startTime,
             timezone: buddy.timezone,
+            reason: trimmedReason,
           }),
         });
       } catch (err) {
