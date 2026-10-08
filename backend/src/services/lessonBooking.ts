@@ -327,6 +327,8 @@ export function buildUserCancellationEmail(params: {
   refunded: boolean;
   // What the Lesson cost — the amount refunded (or not).
   creditsCost: number;
+  // The User's own reason, echoed back so both sides' emails match.
+  reason?: string;
 }): EmailMessage {
   const when = formatLessonTimeFor(params.startTime, params.timezone);
   const credits = `${params.creditsCost} credit${params.creditsCost === 1 ? '' : 's'}`;
@@ -339,6 +341,7 @@ export function buildUserCancellationEmail(params: {
     body: [
       `Hi ${params.name ?? 'there'},`,
       `Your lesson with ${params.buddyName} on ${when} is cancelled.`,
+      ...(params.reason ? [`Your reason: “${params.reason}” (we told ${params.buddyName}).`] : []),
       refundLine,
       'Book another lesson whenever you like.',
       '— The 10ME team',
