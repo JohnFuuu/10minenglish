@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Info } from 'lucide-react';
 import { BottomNav, Button, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -95,6 +95,13 @@ export function BuddyAvailabilityScreen() {
       </div>
       <p className="mb-4 text-sm font-medium text-text-secondary">
         Tap a day, then tap the hours you're free. Users can only book active hours.
+      </p>
+      {/* Saving hours never touches existing Lessons (the server only checks
+          availability for new bookings and moves). */}
+      <p className="mb-4 flex items-start gap-2 rounded-md bg-brand-secondary/10 px-3 py-2 text-xs font-bold text-text-body">
+        <Info size={16} className="mt-px shrink-0 text-brand-secondary" aria-hidden="true" />
+        Changing your hours only affects new bookings. Lessons already booked stay booked — to drop one, cancel it on
+        your Teaching tab.
       </p>
 
       {error && <p className="mb-4 text-sm font-bold text-error">{error}</p>}
