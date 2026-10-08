@@ -29,9 +29,10 @@ export function isLessonUpcoming(lesson: LessonDocument, now: Date = new Date())
 export async function cancelLesson(params: {
   lessonId: mongoose.Types.ObjectId | string;
   accountId: mongoose.Types.ObjectId | string;
+  reason?: string;
   now?: Date;
 }): Promise<{ lesson: LessonDocument; refunded: boolean; creditsRemaining: number } | null> {
-  const { lessonId, accountId, now = new Date() } = params;
+  const { lessonId, accountId, reason, now = new Date() } = params;
 
   // Atomically claim the lesson: only the request that actually flips
   // status upcoming -> cancelled proceeds. Concurrent cancel requests for
@@ -39,7 +40,7 @@ export async function cancelLesson(params: {
   // preventing a double refund.
   const claimed = await Lesson.findOneAndUpdate(
     { _id: lessonId, status: 'upcoming' },
-    { $set: { status: 'cancelled' } },
+    { $set: { status: 'cancelled', ...(reason ? { cancellationReason: reason } : {}) } },
     { returnDocument: 'after' },
   );
   if (!claimed) return null;
@@ -352,9 +353,11 @@ export function buildLessonCancelledByUserNotification(params: {
   buddyEmail?: string;
   startTime: Date;
   timezone?: string;
+  reason?: string;
 }): { message: string; email?: EmailMessage } {
   const when = formatLessonTimeFor(params.startTime, params.timezone);
-  const message = `${params.userName} cancelled your lesson on ${when}. That time is free again.`;
+  const because = params.reason ? ` Reason: “${params.reason}”.` : '';
+  const message = `${params.userName} cancelled your lesson on ${when}.${because} That time is free again.`;
   return {
     message,
     email: params.buddyEmail

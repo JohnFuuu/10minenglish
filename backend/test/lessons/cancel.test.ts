@@ -225,3 +225,47 @@ describe('emails after a User cancels', () => {
     expect((await Account.findById(account.id))!.credits).toBe(3);
   });
 });
+
+describe('cancellation reason', () => {
+  const startTime = DateTime.fromISO('2099-10-31T00:30:00Z').toJSDate();
+
+  async function cancelWith(body: Record<string, unknown>) {
+    const b = await buddy();
+    const { account, token } = await userToken({ name: 'Sarah' });
+    const lesson = await Lesson.create({ userId: account.id, buddyId: b.id, startTime, meetingLink: b.meetingLink });
+    const created = createTestApp();
+    const res = await request(created.app).post(`/api/lessons/${lesson.id}/cancel`).set('Authorization', `Bearer ${token}`).send(body);
+    return { ...created, res, lesson, buddyAccount: b, account };
+  }
+
+  it('saves the reason on the Lesson and tells the Buddy, in the app and by email', async () => {
+    const { res, lesson, emailSender, buddyAccount } = await cancelWith({ reason: '  I’m sick  ' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.lesson.cancellationReason).toBe('I’m sick');
+    expect((await Lesson.findById(lesson.id))!.cancellationReason).toBe('I’m sick');
+    const [notification] = await Notification.find({ accountId: buddyAccount._id });
+    expect(notification.message).toContain('Reason: “I’m sick”');
+    expect(emailSender.sent.find((m) => m.to === 'buddy@example.com')!.body).toContain('Reason: “I’m sick”');
+  });
+
+  it('is optional: no reason means no "Reason" line', async () => {
+    const { res, lesson, buddyAccount } = await cancelWith({});
+
+    expect(res.status).toBe(200);
+    expect((await Lesson.findById(lesson.id))!.cancellationReason).toBeUndefined();
+    const [notification] = await Notification.find({ accountId: buddyAccount._id });
+    expect(notification.message).not.toContain('Reason');
+  });
+
+  it('refuses a reason over 200 characters or not text, cancelling nothing', async () => {
+    for (const reason of ['x'.repeat(201), 42]) {
+      const { res, lesson, account } = await cancelWith({ reason });
+      expect(res.status).toBe(400);
+      expect((await Lesson.findById(lesson.id))!.status).toBe('upcoming');
+      await Lesson.deleteMany({});
+      await Account.deleteMany({ _id: account._id });
+      await Account.deleteMany({ role: 'buddy' });
+    }
+  });
+});
