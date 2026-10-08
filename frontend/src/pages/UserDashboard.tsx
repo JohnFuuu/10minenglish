@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Calendar, CalendarDays, CalendarX, ChevronDown, ChevronUp, Gem, Receipt, Users } from 'lucide-react';
+import { Bell, Calendar, LifeBuoy, CalendarDays, CalendarX, ChevronDown, ChevronUp, Gem, Receipt, Users } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { EmailConfirmationNotice } from '../auth/EmailConfirmationNotice';
 import { Avatar, BottomNav, Button, Card, Modal, NAV_CLEARANCE_CLASS } from '../components';
@@ -80,6 +80,14 @@ export function UserDashboard() {
             className="flex items-center gap-1 rounded-md border-2 border-b-[3px] border-accent-lime px-3 py-1.5 text-sm font-bold text-brand-primary"
           >
             <Gem size={14} /> {account?.credits ?? 0}
+          </button>
+          <button
+            type="button"
+            aria-label="Help"
+            onClick={() => navigate('/support')}
+            className="flex h-9 w-9 items-center justify-center rounded-md border-2 border-b-[3px] border-border"
+          >
+            <LifeBuoy size={18} color="#3c3c3c" strokeWidth={2.5} />
           </button>
           <button
             type="button"

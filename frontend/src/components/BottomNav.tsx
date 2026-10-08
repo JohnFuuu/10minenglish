@@ -65,6 +65,17 @@ const PRICING_ICON = (active: boolean) => (
   </svg>
 );
 
+const SUPPORT_ICON = (active: boolean) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : INACTIVE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="4" />
+    <line x1="4.93" y1="4.93" x2="9.17" y2="9.17" />
+    <line x1="14.83" y1="14.83" x2="19.07" y2="19.07" />
+    <line x1="14.83" y1="9.17" x2="19.07" y2="4.93" />
+    <line x1="4.93" y1="19.07" x2="9.17" y2="14.83" />
+  </svg>
+);
+
 const ADMINS_ICON = (active: boolean) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : INACTIVE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -86,13 +97,14 @@ const BUDDY_TABS: NavTab[] = [
   { path: '/profile', label: 'PROFILE', icon: PROFILE_ICON },
 ];
 
-// Grouped by job: members and their tags (home), Buddy accounts, Credit
-// Pack prices, and Admin accounts. The audit log is reached from the
+// Grouped by job: members and their tags (home), Buddy accounts, prices,
+// support tickets, and Admin accounts. The audit log is reached from the
 // header (see AdminLayout).
 const ADMIN_TABS: NavTab[] = [
   { path: '/dashboard', label: 'MEMBERS', icon: BUDDIES_ICON },
   { path: '/admin/buddies', label: 'BUDDIES', icon: BUDDY_ROSTER_ICON },
   { path: '/admin/pricing', label: 'PRICING', icon: PRICING_ICON },
+  { path: '/admin/support', label: 'SUPPORT', icon: SUPPORT_ICON },
   { path: '/admin/admins', label: 'ADMINS', icon: ADMINS_ICON },
 ];
 
