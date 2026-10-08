@@ -76,6 +76,23 @@ A web app connecting English learners (Users) with volunteer conversation partne
 
    The backend also sweeps once a minute for pre-lesson reminders and sends them an hour ahead of each upcoming lesson, so a lesson booked for later today will log two reminder "emails" (one to the User, one to the Buddy) when it comes due.
 
+## Deploying the backend (Google Cloud Run)
+
+The backend runs on Cloud Run as `ten-min-english` (project `project-34a4ccf5-309c-4242-a49`, region `australia-southeast1`), built from `backend/Dockerfile`, with MongoDB Atlas as the database.
+
+- **Secrets** (Secret Manager, read by Cloud Run's service account): `mongodb-uri`, `jwt-secret`, `sweep-token`. Add a new version to change one; never put them in the deploy command or the repo.
+- **Background jobs**: Cloud Run pauses CPU between requests, so `SWEEP_MODE=scheduler` turns off the in-process timer and the Cloud Scheduler job `ten-min-english-sweeps` calls `POST /internal/sweeps` every minute with the `X-Sweep-Token` header.
+
+Redeploy from the repo root:
+
+```bash
+cd backend && gcloud run deploy ten-min-english \
+  --project project-34a4ccf5-309c-4242-a49 --region australia-southeast1 \
+  --source . --allow-unauthenticated --max-instances 2
+```
+
+Re-running `deploy` keeps the service's existing environment variables and secrets; pass `--update-env-vars` / `--update-secrets` only to change them. Check `/health` afterwards (`{"status":"ok","db":"connected"}`).
+
 ## Testing
 
 ```bash
