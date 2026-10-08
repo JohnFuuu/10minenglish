@@ -95,6 +95,61 @@ describe('GET /api/admin/members', () => {
     expect(malformed.status).toBe(200);
     expect(malformed.body.members).toEqual([]);
   });
+
+  it('pages 20 members at a time, newest first, with the total that match', async () => {
+    const { token } = await admin();
+    await Account.insertMany(
+      Array.from({ length: 45 }, (_, i) => ({ role: 'user', email: `m${i}@example.com`, name: `Member ${i}` })),
+    );
+    const { app } = createTestApp();
+    const page = (n?: string) =>
+      request(app).get('/api/admin/members').query(n === undefined ? {} : { page: n }).set('Authorization', `Bearer ${token}`);
+
+    const first = await page();
+    expect(first.body).toMatchObject({ page: 1, pageSize: 20, total: 45 });
+    expect(first.body.members).toHaveLength(20);
+    expect(first.body.members[0].name).toBe('Member 44');
+
+    const third = await page('3');
+    expect(third.body.page).toBe(3);
+    expect(third.body.members.map((m: { name: string }) => m.name)).toEqual([
+      'Member 4',
+      'Member 3',
+      'Member 2',
+      'Member 1',
+      'Member 0',
+    ]);
+
+    // Past the end: nothing on the page, but the total still says how many exist.
+    const beyond = await page('9');
+    expect(beyond.body).toMatchObject({ page: 9, total: 45, members: [] });
+  });
+
+  it('treats a missing or malformed page as page 1', async () => {
+    const { token } = await admin();
+    await Account.create({ role: 'user', email: 'only@example.com', name: 'Only' });
+    const { app } = createTestApp();
+
+    for (const bad of ['0', '-2', 'abc', '1.5']) {
+      const res = await request(app).get('/api/admin/members').query({ page: bad }).set('Authorization', `Bearer ${token}`);
+      expect(res.body).toMatchObject({ page: 1, total: 1 });
+      expect(res.body.members.map((m: { name: string }) => m.name)).toEqual(['Only']);
+    }
+  });
+
+  it('counts the total after search and tag filters', async () => {
+    const { token } = await admin();
+    await Account.create({ role: 'user', email: 'sarah@example.com', name: 'Sarah' });
+    await Account.create({ role: 'user', email: 'sara@example.com', name: 'Sara' });
+    await Account.create({ role: 'user', email: 'tom@example.com', name: 'Tom' });
+    const { app } = createTestApp();
+
+    const res = await request(app).get('/api/admin/members').query({ q: 'sar' }).set('Authorization', `Bearer ${token}`);
+
+    expect(res.body.total).toBe(2);
+    const malformedTag = await request(app).get('/api/admin/members').query({ tagId: 'nope' }).set('Authorization', `Bearer ${token}`);
+    expect(malformedTag.body).toMatchObject({ members: [], total: 0, page: 1 });
+  });
 });
 
 describe('assigning tags to a member', () => {

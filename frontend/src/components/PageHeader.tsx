@@ -11,7 +11,7 @@ interface PageHeaderProps {
   className?: string;
 }
 
-// Every persistent-tab screen (Buddies/Lessons/Alerts/Profile, on both the
+// Every persistent-tab screen (Buddies/Lessons/Messages/Profile, on both the
 // User and Buddy side) leads with this so the brand mark shows up
 // consistently, not just on the Dashboard.
 export function PageHeader({ title, right, className = 'px-5 pb-2 pt-8' }: PageHeaderProps) {

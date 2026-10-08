@@ -7,6 +7,7 @@ function serializeNotification(notification: NotificationDocument) {
     id: notification._id.toString(),
     type: notification.type,
     message: notification.message,
+    ...(notification.details ? { details: notification.details } : {}),
     read: notification.read,
     createdAt: notification.createdAt.toISOString(),
   };

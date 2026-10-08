@@ -17,7 +17,7 @@ A single booked 1:1 slot between a User and a Buddy at a specific time, consumin
 _Avoid_: Session, meeting, booking (booking is the act, Lesson is the resulting record)
 
 **Credit**:
-A fixed-cost, fungible unit purchased in packs (1/10/20/30) and consumed one-per-Lesson at booking time. Cost is flat regardless of Buddy or duration — packs are bulk-discount bundles of the same unit, not different products.
+A fixed-cost, fungible unit purchased in packs (1/10/20/30/50), or awarded by an Admin with a reason, and consumed one-per-Lesson at booking time. Cost is flat regardless of Buddy or duration — packs are bulk-discount bundles of the same unit, not different products.
 _Avoid_: Token, balance (balance is the count of Credits a User holds, not the unit itself)
 
 **Buddy Availability Schedule**:
@@ -25,7 +25,7 @@ A Buddy-set recurring weekly window of hours (e.g. "Mon/Wed/Fri 9am–1pm") defi
 _Avoid_: Calendar (Calendar is the UI view; this is the underlying rule data)
 
 **Credit Pack**:
-A purchasable bundle (sizes: 1/10/20/30 credits) with a price that is not fixed at build time — pricing must be configurable/changeable without a code deploy (e.g. admin-editable), not hardcoded constants.
+A purchasable bundle (sizes: 1/10/20/30/50 credits) with a price that is not fixed at build time — pricing must be configurable/changeable without a code deploy (e.g. admin-editable), not hardcoded constants.
 _Avoid_: Plan, tier
 
 **Member tag**:
@@ -33,7 +33,7 @@ An Admin-managed label on a User (e.g. "low-income"), chosen from a managed list
 _Avoid_: Label, category, segment
 
 **Audit log**:
-An append-only history of every change an Admin makes — tag create/rename/delete, tagging and untagging members, creating and (de)activating Buddies, and Credit Pack price changes — each recording which Admin, what, the target, and when, with names snapshotted at the time. Admin-only to read; nothing can edit or delete an entry. Member and Buddy activity is not part of it (see docs/superpowers/specs/2026-10-05-admin-audit-log-design.md).
+An append-only history of every change an Admin makes — tag create/rename/delete, tagging and untagging members, awarding credits to a member (always with a reason), creating and (de)activating Buddies, and Credit Pack price changes — each recording which Admin, what, the target, and when, with names snapshotted at the time. Admin-only to read; nothing can edit or delete an entry. Member and Buddy activity is not part of it (see docs/superpowers/specs/2026-10-05-admin-audit-log-design.md).
 _Avoid_: History, activity feed
 
 **Notification**:

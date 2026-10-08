@@ -9,6 +9,7 @@ const CATEGORY_OPTIONS = [
   { value: '', label: 'All actions' },
   { value: 'tags', label: 'Tags' },
   { value: 'memberTags', label: 'Member tags' },
+  { value: 'credits', label: 'Credit awards' },
   { value: 'buddies', label: 'Buddies' },
   { value: 'pricing', label: 'Pricing' },
   { value: 'admins', label: 'Admins' },
@@ -38,6 +39,13 @@ function describe(entry: AuditLogEntry): ReactNode {
       return <>{who} added {tag} to {target}</>;
     case 'member.tag_removed':
       return <>{who} removed {tag} from {target}</>;
+    case 'member.credits_awarded':
+      return (
+        <>
+          {who} awarded {plural(entry.details.amount, 'credit')} to {target} — “{String(entry.details.reason)}” (balance now{' '}
+          {Number(entry.details.balanceAfter)})
+        </>
+      );
     case 'buddy.created':
       return <>{who} created Buddy account {target}</>;
     case 'buddy.activated':

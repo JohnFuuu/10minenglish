@@ -5,6 +5,7 @@ import { Button } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import { ApiError, createAdmin, fetchAdmins, removeAdmin, setAdminActive, type AdminAccount } from '../../lib/api';
+import { AdminDetails } from './AdminDetails';
 import { AdminLayout } from './AdminLayout';
 import { AuditLogSection } from './AuditLogSection';
 import { NewAccountForm } from './NewAccountForm';
@@ -20,6 +21,8 @@ export function AdminAdminsPage() {
   // Which other Admin is asking "are you sure?", and about what.
   const [confirming, setConfirming] = useState<{ id: string; action: 'deactivate' | 'remove' } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // The open row, showing that Admin's details.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function act(admin: AdminAccount, action: 'deactivate' | 'activate' | 'remove') {
     if (!token) return;
@@ -127,26 +130,27 @@ export function AdminAdminsPage() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-2">
+                      <button
+                        type="button"
+                        aria-expanded={expandedId === admin.id}
+                        onClick={() => setExpandedId((open) => (open === admin.id ? null : admin.id))}
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                      >
                         <span
                           aria-hidden="true"
                           className={`h-2 w-2 shrink-0 rounded-full ${admin.active ? 'bg-brand-primary' : 'bg-border-strong/40'}`}
                         />
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-text-heading">
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-bold text-text-heading">
                             {name}
                             {isMe && <span className="font-medium text-text-secondary"> (you)</span>}
-                          </p>
-                          {admin.isSuperAdmin && (
-                            <span className="mt-0.5 inline-block rounded-full bg-brand-secondary/15 px-2 py-0.5 text-xs font-bold text-brand-secondary">
-                              Super admin
-                            </span>
-                          )}
-                          <p className="truncate text-xs text-text-secondary">
-                            {admin.active ? 'Active' : 'Inactive'} · {admin.email}
-                          </p>
-                        </div>
-                      </div>
+                          </span>
+                          <span className="block truncate text-xs text-text-secondary">
+                            {admin.active ? 'Active' : 'Inactive'}
+                            {admin.isSuperAdmin && <span className="font-bold text-brand-secondary"> · Super admin</span>}
+                          </span>
+                        </span>
+                      </button>
                       {/* The backend also keeps at least one Admin active at all times. */}
                       {canManage && (
                         <div className="flex shrink-0 items-center gap-2">
@@ -171,6 +175,7 @@ export function AdminAdminsPage() {
                       )}
                     </div>
                   )}
+                  {expandedId === admin.id && confirming?.id !== admin.id && <AdminDetails admin={admin} />}
                 </li>
               );
             })}

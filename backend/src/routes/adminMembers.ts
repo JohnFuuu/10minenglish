@@ -4,6 +4,8 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { Account, type AccountDocument } from '../models/Account.js';
 import { Tag, tagNameKey, type TagDocument } from '../models/Tag.js';
 import { accountLabel, recordAdminAction } from '../services/auditLog.js';
+import type { EmailSender } from '../services/email.js';
+import { createNotification } from '../services/notifications.js';
 
 // Admin-only member tags (see docs/superpowers/specs/2026-10-05-admin-member-tags-design.md).
 // Everything about tags lives behind these routes: no User- or Buddy-facing
@@ -35,7 +37,16 @@ function tagResponse(tag: TagDocument, count: number) {
   return { id: String(tag._id), name: tag.name, memberCount: count };
 }
 
-const MEMBER_LIST_LIMIT = 200;
+const MEMBER_PAGE_SIZE = 20;
+
+// Caps one award, so a slipped key (1000 for 10) can't hand out a fortune.
+export const MAX_CREDIT_AWARD = 100;
+const MAX_AWARD_REASON_LENGTH = 200;
+
+// ?page= is 1-based; anything that isn't a positive whole number means page 1.
+function readPage(value: unknown): number {
+  return typeof value === 'string' && /^[1-9]\d*$/.test(value) ? Number(value) : 1;
+}
 
 function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -83,7 +94,30 @@ async function findMember(id: unknown) {
   return isObjectIdString(id) ? Account.findOne({ _id: id, role: 'user' }) : null;
 }
 
-export function createAdminMembersRouter(): Router {
+// What the member is told about an award: the amount and the Admin's reason
+// (kept as details too, so the app can highlight them).
+function creditsAwardedNotification(params: { name?: string; email?: string; amount: number; reason: string }) {
+  const free = `${params.amount} free credit${params.amount === 1 ? '' : 's'}`;
+  return {
+    message: `Good news! The 10ME team has added ${free} to your account: “${params.reason}”.`,
+    details: { amount: params.amount, reason: params.reason },
+    email: params.email
+      ? {
+          to: params.email,
+          subject: `Good news: ${free} added to your 10ME account`,
+          body: [
+            `Hi ${params.name ?? 'there'},`,
+            `The 10ME team has added ${free} to your account.`,
+            `Note from the team: “${params.reason}”`,
+            'Book your next lesson whenever you like. Happy practising!',
+            '— The 10ME team',
+          ].join('\n\n'),
+        }
+      : undefined,
+  };
+}
+
+export function createAdminMembersRouter({ emailSender }: { emailSender: EmailSender }): Router {
   const router = Router();
 
   router.get('/api/admin/tags', ...adminOnly, async (_req, res) => {
@@ -172,6 +206,7 @@ export function createAdminMembersRouter(): Router {
 
   router.get('/api/admin/members', ...adminOnly, async (req, res) => {
     const { q, tagId } = req.query;
+    const page = readPage(req.query.page);
     const filter: Record<string, unknown> = { role: 'user' };
 
     if (typeof q === 'string' && q.trim() !== '') {
@@ -180,14 +215,20 @@ export function createAdminMembersRouter(): Router {
     }
     if (tagId !== undefined && tagId !== '') {
       if (!isObjectIdString(tagId)) {
-        res.status(200).json({ members: [] });
+        res.status(200).json({ members: [], total: 0, page, pageSize: MEMBER_PAGE_SIZE });
         return;
       }
       filter['memberTags.tagId'] = tagId;
     }
 
-    const members = await Account.find(filter).sort({ _id: -1 }).limit(MEMBER_LIST_LIMIT);
-    res.status(200).json({ members: await memberResponses(members) });
+    const [members, total] = await Promise.all([
+      Account.find(filter)
+        .sort({ _id: -1 })
+        .skip((page - 1) * MEMBER_PAGE_SIZE)
+        .limit(MEMBER_PAGE_SIZE),
+      Account.countDocuments(filter),
+    ]);
+    res.status(200).json({ members: await memberResponses(members), total, page, pageSize: MEMBER_PAGE_SIZE });
   });
 
   router.post('/api/admin/members/:id/tags', ...adminOnly, async (req, res) => {
@@ -241,6 +282,51 @@ export function createAdminMembersRouter(): Router {
 
     const reloaded = await Account.findById(member._id);
     res.status(200).json((await memberResponses([reloaded!]))[0]);
+  });
+
+  // Admin-granted credits (e.g. a hardship grant), always with a reason, and
+  // logged like every other Admin change. Adds only; nothing here takes
+  // credits away.
+  router.post('/api/admin/members/:id/credits', ...adminOnly, async (req, res) => {
+    const { amount, reason } = req.body ?? {};
+    const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+    if (!Number.isInteger(amount) || amount < 1 || amount > MAX_CREDIT_AWARD) {
+      res.status(400).json({ error: `amount must be a whole number from 1 to ${MAX_CREDIT_AWARD}` });
+      return;
+    }
+    if (trimmedReason === '' || trimmedReason.length > MAX_AWARD_REASON_LENGTH) {
+      res.status(400).json({ error: `reason is required (up to ${MAX_AWARD_REASON_LENGTH} characters)` });
+      return;
+    }
+
+    // One atomic $inc, so two awards at once both land.
+    const member = isObjectIdString(req.params.id)
+      ? await Account.findOneAndUpdate({ _id: req.params.id, role: 'user' }, { $inc: { credits: amount } }, { new: true })
+      : null;
+    if (!member) {
+      res.status(404).json({ error: 'Member not found' });
+      return;
+    }
+
+    await recordAdminAction(
+      req.account!.accountId,
+      'member.credits_awarded',
+      { type: 'member', id: String(member._id), label: accountLabel(member) },
+      { amount, reason: trimmedReason, balanceAfter: member.credits },
+    );
+    try {
+      await createNotification({
+        emailSender,
+        accountId: member._id,
+        type: 'credits_awarded',
+        ...creditsAwardedNotification({ name: member.name, email: member.email, amount, reason: trimmedReason }),
+      });
+    } catch (err) {
+      // The credits are already on the balance; a failed notice (e.g. the
+      // email leg throwing) mustn't report the award as failed.
+      console.error('Failed to send credits-awarded notification', err);
+    }
+    res.status(200).json((await memberResponses([member]))[0]);
   });
 
   return router;

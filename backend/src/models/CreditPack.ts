@@ -1,6 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 
-export const CREDIT_PACK_SIZES = [1, 10, 20, 30] as const;
+export const CREDIT_PACK_SIZES = [1, 10, 20, 30, 50] as const;
 export type CreditPackSize = (typeof CREDIT_PACK_SIZES)[number];
 
 // Single system-wide currency — NZD, matching the product's NZ base and
@@ -29,6 +29,7 @@ const DEFAULT_PRICES_CENTS: Record<CreditPackSize, number> = {
   10: 1000,
   20: 2000,
   30: 3000,
+  50: 5000,
 };
 
 // Seeds any missing pack sizes with a starter price — keeps GET /api/credit-packs

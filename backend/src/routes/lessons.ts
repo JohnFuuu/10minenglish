@@ -9,6 +9,8 @@ import {
   bookLesson,
   buildConfirmationEmail,
   buildLessonRescheduledNotification,
+  buildLessonCancelledByUserNotification,
+  buildUserCancellationEmail,
   cancelLesson,
   CANCELLATION_REFUND_CUTOFF_HOURS,
   findAvailableBuddy,
@@ -142,7 +144,11 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
 
     const lesson = await bookLesson({ user, buddy, startTime: instant });
     await emailSender.send(
-      buildConfirmationEmail(user.email!, [{ startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: buddy.meetingLink! }]),
+      buildConfirmationEmail(
+        user.email!,
+        [{ startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: buddy.meetingLink! }],
+        user.timezone,
+      ),
     );
 
     res.status(201).json({ lesson: serializeLesson(lesson), creditsRemaining: user.credits });
@@ -213,6 +219,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
             buddyName: buddy.name ?? 'your Buddy',
             meetingLink: buddy.meetingLink!,
           })),
+          user.timezone,
         ),
       );
     }
@@ -330,7 +337,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       await emailSender.send(
         buildConfirmationEmail(user.email!, [
           { startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: lesson.meetingLink },
-        ]),
+        ], user.timezone),
       );
 
       const { message, email } = buildLessonRescheduledNotification({
@@ -338,6 +345,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
         buddyEmail: buddy.email!,
         previousStartTime,
         startTime: instant,
+        timezone: buddy.timezone,
       });
       try {
         await createNotification({
@@ -378,6 +386,43 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     if (!result) {
       res.status(409).json({ error: 'Lesson is not upcoming' });
       return;
+    }
+
+    // The cancellation (and any refund) is already committed; failing to
+    // email either side must not surface as a failed cancel.
+    const buddy = await Account.findById(lesson.buddyId);
+    try {
+      if (user.email) {
+        await emailSender.send(
+          buildUserCancellationEmail({
+            to: user.email,
+            name: user.name,
+            buddyName: buddy?.name ?? 'your Buddy',
+            startTime: result.lesson.startTime,
+            timezone: user.timezone,
+            refunded: result.refunded,
+          }),
+        );
+      }
+    } catch (err) {
+      console.error('Failed to send cancellation email to User', err);
+    }
+    if (buddy) {
+      try {
+        await createNotification({
+          emailSender,
+          accountId: buddy._id,
+          type: 'lesson_cancelled',
+          ...buildLessonCancelledByUserNotification({
+            userName: user.name ?? 'Your learner',
+            buddyEmail: buddy.email,
+            startTime: result.lesson.startTime,
+            timezone: buddy.timezone,
+          }),
+        });
+      } catch (err) {
+        console.error('Failed to send lesson-cancelled notification to Buddy', err);
+      }
     }
 
     res.status(200).json({

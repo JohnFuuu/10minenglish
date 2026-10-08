@@ -202,8 +202,10 @@ export async function bookLesson(params: {
 export function buildConfirmationEmail(
   to: string,
   entries: { startTime: Date; buddyName: string; meetingLink: string }[],
+  // The User's, so times read in their own day.
+  timezone?: string,
 ): EmailMessage {
-  const lines = entries.map((e) => `${e.startTime.toISOString()} with ${e.buddyName} — ${e.meetingLink}`);
+  const lines = entries.map((e) => `${formatLessonTimeFor(e.startTime, timezone)} with ${e.buddyName} — ${e.meetingLink}`);
   return {
     to,
     subject: entries.length > 1 ? `Your ${entries.length} 10ME lessons are booked` : 'Your 10ME lesson is booked',
@@ -216,8 +218,9 @@ export function buildBuddyCancellationNotification(params: {
   userEmail: string;
   startTime: Date;
   creditsRemaining: number;
+  timezone?: string;
 }): { message: string; email: EmailMessage } {
-  const startTimeText = params.startTime.toISOString();
+  const startTimeText = formatLessonTimeFor(params.startTime, params.timezone);
   return {
     message: `${params.buddyName} cancelled your lesson on ${startTimeText}. Your credit has been refunded.`,
     email: {
@@ -233,9 +236,10 @@ export function buildLessonRescheduledNotification(params: {
   buddyEmail: string;
   previousStartTime: Date;
   startTime: Date;
+  timezone?: string;
 }): { message: string; email: EmailMessage } {
-  const from = params.previousStartTime.toISOString();
-  const to = params.startTime.toISOString();
+  const from = formatLessonTimeFor(params.previousStartTime, params.timezone);
+  const to = formatLessonTimeFor(params.startTime, params.timezone);
   return {
     message: `${params.userName} moved your lesson from ${from} to ${to}.`,
     email: {
@@ -274,4 +278,59 @@ export function* generateRecurringCandidates(
     }
     current = current.plus({ days: step });
   }
+}
+
+// A lesson time as the reader would say it, in their own timezone, e.g.
+// "Sat 31 Oct 2099, 1:30 pm". Falls back to UTC (and says so) for an
+// account without a timezone.
+export function formatLessonTimeFor(startTime: Date, timezone?: string): string {
+  const zoned = DateTime.fromJSDate(startTime, { zone: timezone ?? 'UTC' });
+  const zone = zoned.isValid ? zoned : DateTime.fromJSDate(startTime, { zone: 'UTC' });
+  const text = zone.setLocale('en-NZ').toFormat('ccc d LLL yyyy, h:mm a').replace(/AM$|PM$/, (m) => m.toLowerCase());
+  return timezone && zoned.isValid ? text : `${text} (UTC)`;
+}
+
+// The User cancelled, so they get a plain confirmation that says whether
+// their credit came back, in short sentences for learners.
+export function buildUserCancellationEmail(params: {
+  to: string;
+  name?: string;
+  buddyName: string;
+  startTime: Date;
+  timezone?: string;
+  refunded: boolean;
+}): EmailMessage {
+  const when = formatLessonTimeFor(params.startTime, params.timezone);
+  const refundLine = params.refunded
+    ? 'Your 1 credit is back in your account.'
+    : `You cancelled less than ${CANCELLATION_REFUND_CUTOFF_HOURS} hours before the lesson, so the credit was not returned.`;
+  return {
+    to: params.to,
+    subject: 'Your 10ME lesson is cancelled',
+    body: [
+      `Hi ${params.name ?? 'there'},`,
+      `Your lesson with ${params.buddyName} on ${when} is cancelled.`,
+      refundLine,
+      'Book another lesson whenever you like.',
+      '— The 10ME team',
+    ].join('\n\n'),
+  };
+}
+
+// The Buddy didn't cancel, so they get a Notification (in the app and by
+// email), like a reschedule.
+export function buildLessonCancelledByUserNotification(params: {
+  userName: string;
+  buddyEmail?: string;
+  startTime: Date;
+  timezone?: string;
+}): { message: string; email?: EmailMessage } {
+  const when = formatLessonTimeFor(params.startTime, params.timezone);
+  const message = `${params.userName} cancelled your lesson on ${when}. That time is free again.`;
+  return {
+    message,
+    email: params.buddyEmail
+      ? { to: params.buddyEmail, subject: 'A 10ME lesson was cancelled', body: `${message} You don't need to do anything.` }
+      : undefined,
+  };
 }

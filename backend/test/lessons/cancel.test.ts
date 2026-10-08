@@ -3,6 +3,7 @@ import request from 'supertest';
 import { DateTime } from 'luxon';
 import { Account } from '../../src/models/Account.js';
 import { Lesson } from '../../src/models/Lesson.js';
+import { Notification } from '../../src/models/Notification.js';
 import { signAccountToken } from '../../src/middleware/auth.js';
 import { createTestApp } from '../testApp.js';
 import { clearTestDb, startTestDb, stopTestDb } from '../dbTestSetup.js';
@@ -156,5 +157,71 @@ describe('POST /api/lessons/:id/cancel', () => {
 
     const updatedAccount = await Account.findById(account.id);
     expect(updatedAccount!.credits).toBe(3);
+  });
+});
+
+describe('emails after a User cancels', () => {
+  // A fixed future time, so the formatted text is predictable: 00:30 UTC is
+  // 9:30 am in Tokyo (the Buddy) and 1:30 pm in Auckland (the User).
+  const startTime = DateTime.fromISO('2099-10-31T00:30:00Z').toJSDate();
+
+  async function cancelAt(start: Date, now: 'early' | 'late' = 'early') {
+    const b = await buddy();
+    const { account, token } = await userToken({ name: 'Sarah', timezone: 'Pacific/Auckland' });
+    const lesson = await Lesson.create({
+      userId: account.id,
+      buddyId: b.id,
+      startTime: now === 'early' ? start : DateTime.now().plus({ hours: 2 }).toJSDate(),
+      meetingLink: b.meetingLink,
+    });
+    const created = createTestApp();
+    const res = await request(created.app).post(`/api/lessons/${lesson.id}/cancel`).set('Authorization', `Bearer ${token}`);
+    return { ...created, res, buddyAccount: b, account };
+  }
+
+  it('emails the User a confirmation with their refund, in their own timezone', async () => {
+    const { emailSender } = await cancelAt(startTime);
+
+    const toUser = emailSender.sent.find((m) => m.to === 'user@example.com')!;
+    expect(toUser.subject).toBe('Your 10ME lesson is cancelled');
+    expect(toUser.body).toContain('Sat 31 Oct 2099, 1:30 pm');
+    expect(toUser.body).toContain('Kenji');
+    expect(toUser.body).toContain('Your 1 credit is back in your account');
+  });
+
+  it('tells the User plainly when a late cancellation is not refunded', async () => {
+    const { emailSender } = await cancelAt(startTime, 'late');
+
+    const toUser = emailSender.sent.find((m) => m.to === 'user@example.com')!;
+    expect(toUser.body).toContain('less than 12 hours');
+    expect(toUser.body).not.toContain('credit is back');
+  });
+
+  it('notifies the Buddy in the app and by email, in the Buddy’s timezone', async () => {
+    const { emailSender, buddyAccount } = await cancelAt(startTime);
+
+    const toBuddy = emailSender.sent.find((m) => m.to === 'buddy@example.com')!;
+    expect(toBuddy.subject).toBe('A 10ME lesson was cancelled');
+    expect(toBuddy.body).toContain('Sarah cancelled');
+    expect(toBuddy.body).toContain('Sat 31 Oct 2099, 9:30 am');
+    const [notification] = await Notification.find({ accountId: buddyAccount._id });
+    expect(notification.type).toBe('lesson_cancelled');
+    expect(notification.message).toBe('Sarah cancelled your lesson on Sat 31 Oct 2099, 9:30 am. That time is free again.');
+  });
+
+  it('still cancels and refunds when an email fails to send', async () => {
+    const b = await buddy();
+    const { account, token } = await userToken({ credits: 2 });
+    const lesson = await Lesson.create({ userId: account.id, buddyId: b.id, startTime, meetingLink: b.meetingLink });
+    const { app, emailSender } = createTestApp();
+    emailSender.send = async () => {
+      throw new Error('email provider down');
+    };
+
+    const res = await request(app).post(`/api/lessons/${lesson.id}/cancel`).set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.refunded).toBe(true);
+    expect((await Account.findById(account.id))!.credits).toBe(3);
   });
 });
