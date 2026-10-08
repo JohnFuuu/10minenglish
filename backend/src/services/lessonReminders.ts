@@ -7,10 +7,6 @@ import { createNotification } from './notifications.js';
 // How far ahead of a Lesson its reminder goes out.
 export const REMINDER_LEAD_MINUTES = 60;
 
-// How often the server sweeps for due reminders. Anything smaller than the lead
-// time works; this only bounds how late a reminder can be.
-export const REMINDER_SWEEP_INTERVAL_MS = 60_000;
-
 export function buildLessonReminderNotification(params: {
   recipientEmail: string;
   otherPartyName: string;

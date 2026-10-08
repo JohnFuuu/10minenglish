@@ -5,8 +5,6 @@ import { Tag } from '../models/Tag.js';
 import type { EmailSender } from './email.js';
 import { cancelLessonAsBuddy } from './buddyCancellation.js';
 
-export const RECONCILE_SWEEP_INTERVAL_MS = 60_000;
-
 // Cancels, refunds, and notifies every still-upcoming Lesson of one Buddy.
 // Safe to repeat and to race: each Lesson is claimed with a single
 // "only if still upcoming" update, so it is cancelled, refunded, and

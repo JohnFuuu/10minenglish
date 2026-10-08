@@ -7,6 +7,7 @@ import { onboardingRouter } from './routes/onboarding.js';
 import { createAdminRouter } from './routes/admin.js';
 import { createAdminMembersRouter } from './routes/adminMembers.js';
 import { createSupportRouter } from './routes/support.js';
+import { createSweepsRouter } from './routes/sweeps.js';
 import { createAdminAuditRouter } from './routes/adminAudit.js';
 import { buddyRouter } from './routes/buddy.js';
 import { creditPacksRouter } from './routes/creditPacks.js';
@@ -56,6 +57,7 @@ export function createApp(deps: AppDependencies = {}) {
   app.use(createLessonsRouter({ emailSender }));
   app.use(createMediaRouter({ mediaStorage }));
   app.use(createSupportRouter({ emailSender }));
+  app.use(createSweepsRouter({ emailSender }));
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err);

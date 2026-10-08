@@ -2,13 +2,8 @@ import 'dotenv/config';
 import { createApp } from './app.js';
 import { connectToDatabase } from './db.js';
 import { consoleEmailSender, emailSenderFromEnv } from './services/email.js';
-import {
-  REMINDER_LEAD_MINUTES,
-  REMINDER_SWEEP_INTERVAL_MS,
-  sendDueLessonReminders,
-} from './services/lessonReminders.js';
-import { COMPLETION_SWEEP_INTERVAL_MS, completeDueLessons } from './services/lessonCompletion.js';
-import { RECONCILE_SWEEP_INTERVAL_MS, reconcileBuddyState } from './services/buddyReconciliation.js';
+import { REMINDER_LEAD_MINUTES } from './services/lessonReminders.js';
+import { SWEEP_INTERVAL_MS, runAllSweeps } from './services/sweeps.js';
 import { mockPoliClient, mockStripeClient } from './services/mockPaymentClients.js';
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
@@ -39,44 +34,23 @@ async function main() {
     console.log(`10ME backend listening on port ${PORT}`);
   });
 
-  // Reminders are time-scheduled rather than request-driven, so the server
-  // sweeps for them itself. Swap this for an external scheduler calling
-  // sendDueLessonReminders if the app is ever run as more than one instance.
-  // Uses the same emailSender passed into createApp above, so there is one
-  // place — not two — that decides how this process sends email.
-  setInterval(() => {
-    sendDueLessonReminders({ emailSender }).catch((err) => {
-      console.error('Lesson reminder sweep failed', err);
-    });
-  }, REMINDER_SWEEP_INTERVAL_MS);
-  console.log(`Lesson reminders sweeping every ${REMINDER_SWEEP_INTERVAL_MS / 1000}s, ${REMINDER_LEAD_MINUTES}min ahead of each lesson.`);
-
-  // Same rationale as the reminder sweep above: there's no external signal
-  // for "the call ended", so completion is driven by this timer instead
-  // of a request.
-  setInterval(() => {
-    completeDueLessons().catch((err) => {
-      console.error('Lesson completion sweep failed', err);
-    });
-  }, COMPLETION_SWEEP_INTERVAL_MS);
-  console.log(`Lesson completion sweeping every ${COMPLETION_SWEEP_INTERVAL_MS / 1000}s.`);
-
-  // Backstop for Admin actions that aren't all-or-nothing (#29): cancels any
-  // upcoming Lesson still attached to an inactive or removed Buddy (after a
-  // crash mid-deactivation, or a booking that raced it) and drops member
-  // references to deleted tags. Idempotent, like the sweeps above.
-  setInterval(() => {
-    reconcileBuddyState({ emailSender })
-      .then(({ cancelledLessons, membersWithDanglingTagsCleaned }) => {
-        if (cancelledLessons || membersWithDanglingTagsCleaned) {
-          console.log(`Reconciliation: cancelled ${cancelledLessons} stranded lesson(s), cleaned ${membersWithDanglingTagsCleaned} member(s) of deleted tags.`);
+  // Reminders, lesson completion and the Buddy/tag reconciliation are
+  // time-driven, not request-driven. Locally this process runs them on a
+  // timer. On Cloud Run CPU pauses between requests, so SWEEP_MODE=scheduler
+  // turns the timer off and Cloud Scheduler calls POST /internal/sweeps
+  // every minute instead (see routes/sweeps.ts).
+  if (process.env.SWEEP_MODE === 'scheduler') {
+    console.log('SWEEP_MODE=scheduler — background jobs run when Cloud Scheduler calls POST /internal/sweeps.');
+  } else {
+    setInterval(() => {
+      runAllSweeps(emailSender).then((r) => {
+        if (r.strandedLessonsCancelled || r.membersCleanedOfDeletedTags) {
+          console.log(`Reconciliation: cancelled ${r.strandedLessonsCancelled} stranded lesson(s), cleaned ${r.membersCleanedOfDeletedTags} member(s) of deleted tags.`);
         }
-      })
-      .catch((err) => {
-        console.error('Reconciliation sweep failed', err);
       });
-  }, RECONCILE_SWEEP_INTERVAL_MS);
-  console.log(`Reconciliation sweeping every ${RECONCILE_SWEEP_INTERVAL_MS / 1000}s.`);
+    }, SWEEP_INTERVAL_MS);
+    console.log(`Background jobs (reminders ${REMINDER_LEAD_MINUTES}min ahead, completion, reconciliation) every ${SWEEP_INTERVAL_MS / 1000}s.`);
+  }
 }
 
 main().catch((err) => {

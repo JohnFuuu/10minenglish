@@ -1,16 +1,13 @@
 import { Lesson } from '../models/Lesson.js';
 
-// How often the server sweeps for Lessons whose scheduled time has fully
-// elapsed. The class itself happens on a Buddy-supplied meeting link (see
-// ADR 0002) that the app has no visibility into, so there's no way to verify
+// The class itself happens on a Buddy-supplied meeting link (see ADR 0002)
+// that the app has no visibility into, so there's no way to verify
 // attendance — completion is purely time-based: once startTime +
-// durationMinutes has passed, an upcoming Lesson is auto-completed. Mirrors
-// the reminder sweep in lessonReminders.ts.
-export const COMPLETION_SWEEP_INTERVAL_MS = 60_000;
+// durationMinutes has passed, an upcoming Lesson is auto-completed.
 
-// Marks every Lesson whose end time has passed as completed. Driven by the
-// server's sweep timer rather than a request, so it is the scheduler's entry
-// point; safe to call repeatedly.
+// Marks every Lesson whose end time has passed as completed. Run by the
+// time-driven sweep (services/sweeps.ts) rather than a request; safe to
+// call repeatedly.
 export async function completeDueLessons(params: { now?: Date } = {}): Promise<{ completed: number }> {
   const { now = new Date() } = params;
 
