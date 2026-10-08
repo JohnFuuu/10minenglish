@@ -213,8 +213,10 @@ export function BookLesson() {
   // confirmation rather than always showing two more lines of text.
   const [showHints, setShowHints] = useState(false);
 
+  // Only for arriving with no credits: a booking that spends the last one
+  // must still land on the "Booked!" screen (result is set by then).
   useEffect(() => {
-    if (account && account.credits < 1) {
+    if (account && account.credits < 1 && !result) {
       showToast('Buy credits to book a lesson.', 'error');
       navigate('/credits');
     }
@@ -234,7 +236,7 @@ export function BookLesson() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!token || !account || account.credits < 1) return null;
+  if (!token || !account || (account.credits < 1 && !result)) return null;
 
   async function startByBuddy() {
     setIsLoading(true);
@@ -743,6 +745,15 @@ export function BookLesson() {
               </div>
             )}
           </div>
+          {account.credits < 1 && (
+            <div className="rounded-md border-2 border-brand-secondary bg-brand-secondary/10 p-4 text-left">
+              <p className="text-sm font-extrabold text-text-heading">You have 0 credits left.</p>
+              <p className="mt-0.5 text-xs font-bold text-text-secondary">Top up now to book your next lesson.</p>
+              <Button tone="blue" size="sm" className="mt-3 w-full" onClick={() => navigate('/credits')}>
+                Buy credits
+              </Button>
+            </div>
+          )}
           <Button onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
         </div>
       )}
