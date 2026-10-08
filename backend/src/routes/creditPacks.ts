@@ -6,6 +6,7 @@ import {
   ensureDefaultCreditPacks,
   type CreditPackSize,
 } from '../models/CreditPack.js';
+import { LessonPrice, MAX_CREDITS_PER_LESSON, currentCreditsPerLesson } from '../models/LessonPrice.js';
 import { recordAdminAction } from '../services/auditLog.js';
 
 export const creditPacksRouter = Router();
@@ -57,3 +58,31 @@ creditPacksRouter.patch(
     res.status(200).json({ size: packSize, priceCents });
   },
 );
+
+creditPacksRouter.get('/api/lesson-price', requireAuth, async (_req, res) => {
+  res.status(200).json({ creditsPerLesson: await currentCreditsPerLesson() });
+});
+
+creditPacksRouter.patch('/api/admin/lesson-price', requireAuth, requireRole('admin'), async (req, res) => {
+  const { creditsPerLesson } = req.body ?? {};
+  if (!Number.isInteger(creditsPerLesson) || creditsPerLesson < 1 || creditsPerLesson > MAX_CREDITS_PER_LESSON) {
+    res.status(400).json({ error: `creditsPerLesson must be a whole number from 1 to ${MAX_CREDITS_PER_LESSON}` });
+    return;
+  }
+
+  await currentCreditsPerLesson(); // seed the default if missing
+  // Conditional update returning the old document: only an actual change is audited.
+  const previous = await LessonPrice.findOneAndUpdate(
+    { key: 'global', creditsPerLesson: { $ne: creditsPerLesson } },
+    { $set: { creditsPerLesson } },
+  );
+  if (previous) {
+    await recordAdminAction(
+      req.account!.accountId,
+      'lesson_price.changed',
+      { type: 'lessonPrice', label: 'Lesson price' },
+      { from: previous.creditsPerLesson, to: creditsPerLesson },
+    );
+  }
+  res.status(200).json({ creditsPerLesson });
+});

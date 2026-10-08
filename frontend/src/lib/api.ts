@@ -197,6 +197,21 @@ export function fetchCreditPacks(token: string) {
   });
 }
 
+// Credits one Lesson costs — a single Admin-set price.
+export function fetchLessonPrice(token: string) {
+  return request<{ creditsPerLesson: number }>('/api/lesson-price', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function adminUpdateLessonPrice(token: string, creditsPerLesson: number) {
+  return request<{ creditsPerLesson: number }>('/api/admin/lesson-price', {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ creditsPerLesson }),
+  });
+}
+
 export function adminUpdateCreditPackPrice(token: string, size: number, priceCents: number) {
   return request<CreditPack>(`/api/admin/credit-packs/${size}`, {
     method: 'PATCH',
@@ -301,6 +316,8 @@ export interface Lesson {
   durationMinutes: number;
   status: 'upcoming' | 'cancelled' | 'completed';
   meetingLink: string;
+  // Credits charged when booked — what a cancellation refunds.
+  creditsCost: number;
 }
 
 export function bookLesson(token: string, buddyId: string, startTime: string) {

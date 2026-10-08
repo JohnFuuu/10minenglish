@@ -5,6 +5,7 @@ import { Avatar, Button, Input } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { EmailConfirmationNotice } from '../auth/EmailConfirmationNotice';
 import { LessonCalendarPreview } from './LessonCalendarPreview';
+import { creditsLabel, useLessonPrice } from '../lib/useLessonPrice';
 import { useToast } from '../toast/ToastContext';
 import {
   ApiError,
@@ -234,15 +235,18 @@ export function BookLesson() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  // Only for arriving with no credits: a booking that spends the last one
-  // must still land on the "Booked!" screen (result is set by then).
+  const creditsPerLesson = useLessonPrice();
+
+  // Only for arriving without enough credits for one lesson: a booking that
+  // spends the last of them must still land on the "Booked!" screen (result
+  // is set by then).
   useEffect(() => {
-    if (account && account.credits < 1 && !result) {
-      showToast('Buy credits to book a lesson.', 'error');
+    if (account && account.credits < creditsPerLesson && !result) {
+      showToast(`You need ${creditsLabel(creditsPerLesson)} to book a lesson.`, 'error');
       navigate('/credits');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account]);
+  }, [account, creditsPerLesson]);
 
   useEffect(() => {
     const prefill = location.state as BookLessonPrefill | null;
@@ -257,11 +261,12 @@ export function BookLesson() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!token || !account || (account.credits < 1 && !result)) return null;
+  if (!token || !account || (account.credits < creditsPerLesson && !result)) return null;
 
-  // One per free planned date (busy ones aren't booked or charged).
-  const creditsToUse =
+  // The lesson price for each free planned date (busy ones aren't booked or charged).
+  const lessonsToBook =
     bookingType === 'single' ? 1 : preview ? preview.filter((o) => o.available).length : occurrenceCount;
+  const creditsToUse = lessonsToBook * creditsPerLesson;
 
   async function startByBuddy() {
     setIsLoading(true);
@@ -605,7 +610,12 @@ export function BookLesson() {
 
               <div className="mb-3 flex items-center gap-2 text-sm font-bold text-text-heading">
                 How many lessons?
-                <Stepper value={occurrenceCount} min={1} max={account.credits} onChange={setOccurrenceCount} />
+                <Stepper
+                  value={occurrenceCount}
+                  min={1}
+                  max={Math.max(1, Math.floor(account.credits / creditsPerLesson))}
+                  onChange={setOccurrenceCount}
+                />
               </div>
 
               {selectedBuddy && (
@@ -620,7 +630,8 @@ export function BookLesson() {
               )}
 
               <p className="mt-3 text-xs font-medium text-success">
-                You only pay 1 credit for each lesson we book. If a time is not free, we skip it and tell you.
+                You only pay {creditsLabel(creditsPerLesson)} for each lesson we book. If a time is not free, we skip it and
+                tell you.
               </p>
             </div>
           )}
@@ -669,7 +680,7 @@ export function BookLesson() {
           </div>
 
           {account.emailConfirmed ? (
-            <Button onClick={handleConfirm} disabled={isSubmitting || creditsToUse === 0}>
+            <Button onClick={handleConfirm} disabled={isSubmitting || lessonsToBook === 0}>
               {isSubmitting ? 'Confirming…' : 'Confirm & book'}
             </Button>
           ) : (
@@ -769,9 +780,11 @@ export function BookLesson() {
               </div>
             )}
           </div>
-          {account.credits < 1 && (
+          {account.credits < creditsPerLesson && (
             <div className="rounded-md border-2 border-brand-secondary bg-brand-secondary/10 p-4 text-left">
-              <p className="text-sm font-extrabold text-text-heading">You have 0 credits left.</p>
+              <p className="text-sm font-extrabold text-text-heading">
+                You have {creditsLabel(account.credits)} left — a lesson costs {creditsLabel(creditsPerLesson)}.
+              </p>
               <p className="mt-0.5 text-xs font-bold text-text-secondary">Top up now to book your next lesson.</p>
               <Button tone="blue" size="sm" className="mt-3 w-full" onClick={() => navigate('/credits')}>
                 Buy credits

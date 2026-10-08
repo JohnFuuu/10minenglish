@@ -23,6 +23,7 @@ import {
 } from '../services/lessonBooking.js';
 import { cancelLessonAsBuddy } from '../services/buddyCancellation.js';
 import { createNotification } from '../services/notifications.js';
+import { currentCreditsPerLesson } from '../models/LessonPrice.js';
 
 export interface LessonsRouterDependencies {
   emailSender: EmailSender;
@@ -37,6 +38,7 @@ function serializeLesson(lesson: LessonDocument) {
     durationMinutes: lesson.durationMinutes,
     status: lesson.status,
     meetingLink: lesson.meetingLink,
+    creditsCost: lesson.creditsCost,
   };
 }
 
@@ -125,8 +127,9 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       return;
     }
 
+    const creditsCost = await currentCreditsPerLesson();
     const user = await Account.findById(req.account!.accountId);
-    if (!user || user.credits < 1) {
+    if (!user || user.credits < creditsCost) {
       res.status(402).json({ error: 'Not enough credits — buy more to book a lesson' });
       return;
     }
@@ -142,7 +145,12 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       return;
     }
 
-    const lesson = await bookLesson({ user, buddy, startTime: instant });
+    const lesson = await bookLesson({ user, buddy, startTime: instant, creditsCost });
+    if (!lesson) {
+      // Spent elsewhere (e.g. another booking) since the check above.
+      res.status(402).json({ error: 'Not enough credits — buy more to book a lesson' });
+      return;
+    }
     await emailSender.send(
       buildConfirmationEmail(
         user.email!,
@@ -208,8 +216,9 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     }
     const { planned, fixedBuddy, occurrenceCount } = request;
 
+    const creditsCost = await currentCreditsPerLesson();
     const user = await Account.findById(req.account!.accountId);
-    if (!user || user.credits < occurrenceCount) {
+    if (!user || user.credits < occurrenceCount * creditsCost) {
       res.status(402).json({ error: 'Not enough credits for the full series' });
       return;
     }
@@ -229,7 +238,12 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
         });
         continue;
       }
-      const lesson = await bookLesson({ user, buddy: targetBuddy, startTime: candidate });
+      const lesson = await bookLesson({ user, buddy: targetBuddy, startTime: candidate, creditsCost });
+      if (!lesson) {
+        // Credits spent elsewhere mid-series.
+        skipped.push({ startTime: candidate.toISOString(), reason: 'Not enough credits' });
+        continue;
+      }
       booked.push({ lesson, buddy: targetBuddy });
     }
 
@@ -250,7 +264,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     res.status(201).json({
       booked: booked.map(({ lesson }) => serializeLesson(lesson)),
       skipped,
-      creditsDeducted: booked.length,
+      creditsDeducted: booked.reduce((sum, { lesson }) => sum + lesson.creditsCost, 0),
       creditsRemaining: user.credits,
       lessonDurationMinutes: LESSON_DURATION_MINUTES,
     });
@@ -424,6 +438,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
             startTime: result.lesson.startTime,
             timezone: user.timezone,
             refunded: result.refunded,
+            creditsCost: result.lesson.creditsCost,
           }),
         );
       }
