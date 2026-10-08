@@ -21,7 +21,8 @@ describe('lesson times in emails and notifications', () => {
 
   it('booking confirmation', () => {
     const email = buildConfirmationEmail('u@example.com', [{ startTime: start, buddyName: 'Kenji', meetingLink: 'https://zoom.test/1' }], 'Pacific/Auckland');
-    expect(email.body).toContain('Sat 31 Oct 2099, 1:30 pm with Kenji');
+    expect(email.body).toContain('1. Sat 31 Oct 2099 · 1:30 pm');
+    expect(email.subject).toBe('You’re booked: 1 lesson with Kenji');
     expect(email.body).not.toMatch(ISO);
   });
 

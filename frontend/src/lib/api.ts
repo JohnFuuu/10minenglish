@@ -322,11 +322,13 @@ export interface Lesson {
   cancellationReason?: string;
 }
 
+// The browser's timezone goes along so the server can show this member's
+// local times in emails.
 export function bookLesson(token: string, buddyId: string, startTime: string) {
   return request<{ lesson: Lesson; creditsRemaining: number }>('/api/lessons', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ buddyId, startTime }),
+    body: JSON.stringify({ buddyId, startTime, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
   });
 }
 

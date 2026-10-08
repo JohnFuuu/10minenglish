@@ -1,7 +1,12 @@
+import { brandedHtmlFromText } from './emailLayout.js';
+
 export interface EmailMessage {
   to: string;
   subject: string;
+  // Plain text — always sent, for clients that don't show HTML.
   body: string;
+  // A custom HTML version; without one, the text is sent in the branded layout.
+  html?: string;
 }
 
 export interface EmailSender {
@@ -32,7 +37,13 @@ export function createResendEmailSender({ apiKey, from, fetchFn = fetch }: Resen
       const res = await fetchFn(RESEND_API_URL, {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from, to: message.to, subject: message.subject, text: message.body }),
+        body: JSON.stringify({
+          from,
+          to: message.to,
+          subject: message.subject,
+          text: message.body,
+          html: message.html ?? brandedHtmlFromText(message.subject, message.body),
+        }),
       });
       if (!res.ok) {
         const detail = (await res.json().catch(() => null)) as { message?: string } | null;

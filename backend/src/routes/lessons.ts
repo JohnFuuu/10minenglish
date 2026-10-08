@@ -1,3 +1,4 @@
+import { DateTime } from 'luxon';
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { requireConfirmedEmail } from '../middleware/requireConfirmedEmail.js';
@@ -26,6 +27,15 @@ import { createNotification } from '../services/notifications.js';
 import { currentCreditsPerLesson } from '../models/LessonPrice.js';
 
 const MAX_CANCELLATION_REASON_LENGTH = 200;
+
+// Members never set a timezone themselves, so remember the one their browser
+// sends with a booking — emails then show their local time instead of UTC.
+async function rememberTimezone(user: AccountDocument, timezone: unknown): Promise<void> {
+  if (typeof timezone !== 'string' || !timezone || timezone === user.timezone) return;
+  if (!DateTime.local().setZone(timezone).isValid) return;
+  user.timezone = timezone;
+  await Account.updateOne({ _id: user._id }, { $set: { timezone } });
+}
 
 export interface LessonsRouterDependencies {
   emailSender: EmailSender;
@@ -136,6 +146,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       res.status(402).json({ error: 'Not enough credits — buy more to book a lesson' });
       return;
     }
+    await rememberTimezone(user, req.body?.timezone);
 
     const buddy = await Account.findById(buddyId);
     if (!buddy || buddy.role !== 'buddy') {
@@ -159,6 +170,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
         user.email!,
         [{ startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: buddy.meetingLink! }],
         user.timezone,
+        user.name,
       ),
     );
 
@@ -225,6 +237,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       res.status(402).json({ error: 'Not enough credits for the full series' });
       return;
     }
+    await rememberTimezone(user, req.body?.timezone);
     if (planned.length === 0) {
       res.status(400).json({ error: 'No dates fit this pattern (every one falls on a weekend, and weekends are off)' });
       return;
@@ -260,6 +273,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
             meetingLink: buddy.meetingLink!,
           })),
           user.timezone,
+          user.name,
         ),
       );
     }
@@ -377,7 +391,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       await emailSender.send(
         buildConfirmationEmail(user.email!, [
           { startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: lesson.meetingLink },
-        ], user.timezone),
+        ], user.timezone, user.name),
       );
 
       const { message, email } = buildLessonRescheduledNotification({

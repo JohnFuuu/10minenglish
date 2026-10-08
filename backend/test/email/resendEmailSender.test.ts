@@ -25,12 +25,25 @@ describe('Resend email sender', () => {
     expect(calls[0].url).toBe('https://api.resend.com/emails');
     expect(calls[0].init.method).toBe('POST');
     expect(new Headers(calls[0].init.headers).get('Authorization')).toBe('Bearer re_test');
-    expect(JSON.parse(String(calls[0].init.body))).toEqual({
+    const sent = JSON.parse(String(calls[0].init.body));
+    expect(sent).toMatchObject({
       from: '10ME <hello@10me.test>',
       to: 'sarah@example.com',
       subject: 'Confirm your 10ME email',
       text: 'Confirm: https://x/confirm',
     });
+    // Plain-text emails are sent in the 10 Minute English layout too, links made clickable.
+    expect(sent.html).toContain('10 Minute English');
+    expect(sent.html).toContain('<a href="https://x/confirm"');
+  });
+
+  it('sends a message’s own HTML when it has one', async () => {
+    const { calls, fetchFn } = fakeFetch({ status: 200, body: { id: 'email_1' } });
+    const sender = createResendEmailSender({ apiKey: 're_test', from: 'hello@10me.test', fetchFn });
+
+    await sender.send({ ...message, html: '<p>custom</p>' });
+
+    expect(JSON.parse(String(calls[0].init.body)).html).toBe('<p>custom</p>');
   });
 
   it('rejects with the status and Resend error message when delivery is refused', async () => {

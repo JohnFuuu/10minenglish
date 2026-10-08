@@ -5,6 +5,7 @@ import type { AvailabilityBlock } from '../models/Account.js';
 import { Account } from '../models/Account.js';
 import { Lesson, LESSON_DURATION_MINUTES, type LessonDocument } from '../models/Lesson.js';
 import type { EmailMessage } from './email.js';
+import { EMAIL_COLORS, brandedHtml, button, escapeHtml, paragraph } from './emailLayout.js';
 
 // UI granularity for slot pickers — coarser than the 10-minute lesson length
 // itself so a full day's bookable grid stays a manageable size.
@@ -217,17 +218,86 @@ export async function bookLesson(params: {
   }
 }
 
+// The member's booking confirmation: a greeting, a one-line summary, then
+// each lesson numbered with its date and time in their own timezone. A
+// meeting link shared by every lesson is shown once (as a Join button)
+// instead of on every line.
 export function buildConfirmationEmail(
   to: string,
   entries: { startTime: Date; buddyName: string; meetingLink: string }[],
   // The User's, so times read in their own day.
   timezone?: string,
+  name?: string,
 ): EmailMessage {
-  const lines = entries.map((e) => `${formatLessonTimeFor(e.startTime, timezone)} with ${e.buddyName} — ${e.meetingLink}`);
+  const lessons = entries.map((e) => ({ ...e, ...lessonDateAndTime(e.startTime, timezone) }));
+  const count = lessons.length;
+  const buddies = [...new Set(lessons.map((l) => l.buddyName))];
+  const oneBuddy = buddies.length === 1 ? buddies[0] : undefined;
+  const sharedLink = new Set(lessons.map((l) => l.meetingLink)).size === 1 ? lessons[0]?.meetingLink : undefined;
+  const what = `${count} lesson${count === 1 ? '' : 's'}${oneBuddy ? ` with ${oneBuddy}` : ''}`;
+  const greeting = `Hi ${name ?? 'there'},`;
+  const intro = count === 1 ? `Your lesson${oneBuddy ? ` with ${oneBuddy}` : ''} is booked. See you there!` : `Your ${what} are booked. See you there!`;
+  const zoneNote = lessons.some((l) => l.utc) ? 'Times are in UTC.' : undefined;
+
+  const textLines = lessons.map(
+    (l, i) => `${i + 1}. ${l.date} · ${l.time}${oneBuddy ? '' : ` · with ${l.buddyName}`}${sharedLink ? '' : ` · ${l.meetingLink}`}`,
+  );
+  const body = [
+    greeting,
+    intro,
+    textLines.join('\n'),
+    ...(sharedLink ? [`${count === 1 ? 'Join with this link' : 'Join every lesson with this link'}: ${sharedLink}`] : []),
+    ...(zoneNote ? [zoneNote] : []),
+    'Need to change something? You can move or cancel a lesson in the app (free up to 12 hours before).',
+    '— The 10 Minute English team',
+  ].join('\n\n');
+
+  const { BRAND_GREEN, TEXT, MUTED } = EMAIL_COLORS;
+  const rows = lessons
+    .map(
+      (l, i) => `<tr><td style="padding:8px 0;border-bottom:1px solid #f0f0f0;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr>
+<td width="56" style="vertical-align:middle;">
+<div style="width:48px;border:2px solid ${BRAND_GREEN};border-radius:10px;text-align:center;overflow:hidden;">
+<div style="background:${BRAND_GREEN};color:#fff;font-size:11px;font-weight:bold;padding:2px 0;">${escapeHtml(l.month.toUpperCase())}</div>
+<div style="font-size:20px;font-weight:900;color:${TEXT};padding:2px 0 0;">${escapeHtml(l.day)}</div>
+<div style="font-size:10px;font-weight:bold;color:${MUTED};padding:0 0 3px;">${escapeHtml(l.weekday.toUpperCase())}</div>
+</div></td>
+<td style="vertical-align:middle;padding-left:10px;font-size:15px;color:${TEXT};">
+<div style="font-weight:bold;">${escapeHtml(l.date)} · ${escapeHtml(l.time)}${oneBuddy ? '' : ` · ${escapeHtml(l.buddyName)}`}</div>
+<div style="font-size:13px;color:${MUTED};">Lesson ${i + 1} of ${count}${sharedLink ? '' : ` · <a href="${escapeHtml(l.meetingLink)}" style="color:${EMAIL_COLORS.BRAND_BLUE};font-weight:bold;">Join</a>`}</div>
+</td></tr></table></td></tr>`,
+    )
+    .join('');
+  const html = brandedHtml(
+    'Your lessons are booked',
+    [
+      paragraph(escapeHtml(greeting)),
+      `<h1 style="margin:0 0 8px;font-size:22px;font-weight:900;color:${TEXT};">You’re booked! 🎉</h1>`,
+      paragraph(
+        count === 1
+          ? `Your lesson${oneBuddy ? ` with <strong>${escapeHtml(oneBuddy)}</strong>` : ''} is booked. See you there!`
+          : `Your <strong>${escapeHtml(what)}</strong> are booked. See you there!`,
+      ),
+      `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;">${rows}</table>`,
+      ...(sharedLink
+        ? [
+            ...(count > 1 ? [paragraph('Use the same link for every lesson:')] : []),
+            button('Join your lesson', sharedLink),
+          ]
+        : []),
+      ...(zoneNote ? [paragraph(`<span style="color:${MUTED};font-size:13px;">${zoneNote}</span>`)] : []),
+      paragraph(
+        `<span style="color:${MUTED};font-size:14px;">Need to change something? You can move or cancel a lesson in the app — free up to 12 hours before.</span>`,
+      ),
+    ].join(''),
+  );
+
   return {
     to,
-    subject: entries.length > 1 ? `Your ${entries.length} 10ME lessons are booked` : 'Your 10ME lesson is booked',
-    body: `Your lesson${entries.length > 1 ? 's are' : ' is'} booked:\n\n${lines.join('\n')}`,
+    subject: `You’re booked: ${what}`,
+    body,
+    html,
   };
 }
 
@@ -310,10 +380,24 @@ export function planRecurringOccurrences(
 // "Sat 31 Oct 2099, 1:30 pm". Falls back to UTC (and says so) for an
 // account without a timezone.
 export function formatLessonTimeFor(startTime: Date, timezone?: string): string {
+  const { date, time, utc } = lessonDateAndTime(startTime, timezone);
+  return `${date}, ${time}${utc ? ' (UTC)' : ''}`;
+}
+
+// The parts of a lesson time in the reader's timezone, e.g. date "Sun 18 Oct
+// 2099", time "1:30 pm"; `utc` when there was no usable timezone.
+export function lessonDateAndTime(startTime: Date, timezone?: string) {
   const zoned = DateTime.fromJSDate(startTime, { zone: timezone ?? 'UTC' });
-  const zone = zoned.isValid ? zoned : DateTime.fromJSDate(startTime, { zone: 'UTC' });
-  const text = zone.setLocale('en-NZ').toFormat('ccc d LLL yyyy, h:mm a').replace(/AM$|PM$/, (m) => m.toLowerCase());
-  return timezone && zoned.isValid ? text : `${text} (UTC)`;
+  const usable = Boolean(timezone) && zoned.isValid;
+  const dt = (usable ? zoned : DateTime.fromJSDate(startTime, { zone: 'UTC' })).setLocale('en-NZ');
+  return {
+    date: dt.toFormat('ccc d LLL yyyy'),
+    time: dt.toFormat('h:mm a').replace(/AM$|PM$/, (m) => m.toLowerCase()),
+    weekday: dt.toFormat('ccc'),
+    day: dt.toFormat('d'),
+    month: dt.toFormat('LLL'),
+    utc: !usable,
+  };
 }
 
 // The User cancelled, so they get a plain confirmation that says whether
@@ -344,7 +428,7 @@ export function buildUserCancellationEmail(params: {
       ...(params.reason ? [`Your reason: “${params.reason}” (we told ${params.buddyName}).`] : []),
       refundLine,
       'Book another lesson whenever you like.',
-      '— The 10ME team',
+      '— The 10 Minute English team',
     ].join('\n\n'),
   };
 }
