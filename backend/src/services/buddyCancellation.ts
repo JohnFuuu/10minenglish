@@ -4,6 +4,7 @@ import type { LessonDocument } from '../models/Lesson.js';
 import type { EmailSender } from './email.js';
 import { buddyCancelLesson, buildBuddyCancellationNotification } from './lessonBooking.js';
 import { createNotification } from './notifications.js';
+import { calendarForLessons, withCalendar } from './calendar.js';
 
 // The one Buddy-initiated cancellation path: always refund, always notify,
 // whatever triggered it. A Buddy cancelling their own Lesson and an Admin
@@ -35,7 +36,14 @@ export async function cancelLessonAsBuddy(params: {
         accountId: user._id,
         type: 'buddy_cancellation_refund',
         message,
-        email,
+        email: withCalendar(
+          email,
+          calendarForLessons(
+            'CANCEL',
+            [{ id: String(result.lesson._id), startTime: result.lesson.startTime, durationMinutes: result.lesson.durationMinutes, meetingLink: result.lesson.meetingLink }],
+            buddyName ?? 'your Buddy',
+          ),
+        ),
       });
     } catch (err) {
       // The cancellation and refund are already committed — a failure to notify

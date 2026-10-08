@@ -46,6 +46,17 @@ describe('Resend email sender', () => {
     expect(JSON.parse(String(calls[0].init.body)).html).toBe('<p>custom</p>');
   });
 
+  it('sends attachments base64-encoded with their content type', async () => {
+    const { calls, fetchFn } = fakeFetch({ status: 200, body: { id: 'email_1' } });
+    const sender = createResendEmailSender({ apiKey: 're_test', from: 'hello@10me.test', fetchFn });
+
+    await sender.send({ ...message, attachments: [{ filename: 'lesson.ics', contentType: 'text/calendar', content: 'BEGIN:VCALENDAR' }] });
+
+    expect(JSON.parse(String(calls[0].init.body)).attachments).toEqual([
+      { filename: 'lesson.ics', content: Buffer.from('BEGIN:VCALENDAR').toString('base64'), content_type: 'text/calendar' },
+    ]);
+  });
+
   it('rejects with the status and Resend error message when delivery is refused', async () => {
     const { fetchFn } = fakeFetch({ status: 403, body: { name: 'validation_error', message: 'The 10me.test domain is not verified.' } });
     const sender = createResendEmailSender({ apiKey: 're_test', from: 'hello@10me.test', fetchFn });

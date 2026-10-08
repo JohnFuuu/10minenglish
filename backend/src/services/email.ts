@@ -7,6 +7,14 @@ export interface EmailMessage {
   body: string;
   // A custom HTML version; without one, the text is sent in the branded layout.
   html?: string;
+  attachments?: EmailAttachment[];
+}
+
+export interface EmailAttachment {
+  filename: string;
+  contentType: string;
+  // Text content (e.g. a calendar file); base64-encoded when sent.
+  content: string;
 }
 
 export interface EmailSender {
@@ -17,7 +25,8 @@ export interface EmailSender {
 // configured (see emailSenderFromEnv), so local dev needs no email account.
 export const consoleEmailSender: EmailSender = {
   async send(message) {
-    console.log(`[email] to=${message.to} subject="${message.subject}"\n${message.body}`);
+    const attached = message.attachments?.length ? `\n[attached: ${message.attachments.map((a) => a.filename).join(', ')}]` : '';
+    console.log(`[email] to=${message.to} subject="${message.subject}"\n${message.body}${attached}`);
   },
 };
 
@@ -43,6 +52,15 @@ export function createResendEmailSender({ apiKey, from, fetchFn = fetch }: Resen
           subject: message.subject,
           text: message.body,
           html: message.html ?? brandedHtmlFromText(message.subject, message.body),
+          ...(message.attachments?.length
+            ? {
+                attachments: message.attachments.map((a) => ({
+                  filename: a.filename,
+                  content: Buffer.from(a.content, 'utf8').toString('base64'),
+                  content_type: a.contentType,
+                })),
+              }
+            : {}),
         }),
       });
       if (!res.ok) {
