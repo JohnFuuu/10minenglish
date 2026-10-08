@@ -114,7 +114,6 @@ export function UserDashboard() {
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-accent-lime-light">Your credits</p>
             <p className="font-display text-4xl font-black text-text-inverse">{account?.credits ?? 0}</p>
-            <p className="text-xs font-bold text-accent-lime-light">lessons available</p>
           </div>
           <button
             type="button"
@@ -223,7 +222,6 @@ export function UserDashboard() {
           <div className="mb-5 rounded-md border-2 border-b-[3px] border-brand-primary-border bg-brand-primary p-4">
             <p className="text-xs font-bold uppercase tracking-widest text-accent-lime-light">Current balance</p>
             <p className="font-display text-3xl font-black text-text-inverse">{account?.credits ?? 0}</p>
-            <p className="text-xs font-bold text-accent-lime-light">lessons available</p>
           </div>
 
           <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Top-up history</p>
