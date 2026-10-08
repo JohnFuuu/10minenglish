@@ -4,7 +4,8 @@ import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import { adminUpdateLessonPrice, fetchLessonPrice } from '../../lib/api';
 import { creditsLabel } from '../../lib/useLessonPrice';
-import { SectionHeading } from './SectionHeading';
+import { Ticket } from 'lucide-react';
+import { MODULE_FRAME, SectionHeading } from './SectionHeading';
 
 // Matches the backend's MAX_CREDITS_PER_LESSON.
 const MAX_CREDITS_PER_LESSON = 20;
@@ -44,13 +45,17 @@ export function LessonPriceSetting() {
   }
 
   return (
-    <section className="mb-10">
-      <SectionHeading className="mb-1">Lesson price</SectionHeading>
+    <section className={`mb-6 ${MODULE_FRAME}`}>
+      <div className="mb-1 flex items-center gap-2">
+        <Ticket size={20} className="text-brand-primary" aria-hidden="true" />
+        <SectionHeading className="mb-0">Lesson price</SectionHeading>
+      </div>
       <p className="mb-4 text-sm font-medium text-text-secondary">
-        Credits charged for each lesson. Changes apply to new bookings; booked lessons keep their price.
+        What members <span className="font-bold text-text-body">spend</span>: credits taken from their balance for each
+        lesson they book. New bookings only; booked lessons keep their price.
       </p>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-b-4 border-border-strong bg-bg-surface p-4">
-        <p className="font-bold text-text-heading">1 lesson</p>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-border bg-bg-surface p-3">
+        <p className="font-bold text-text-heading">1 lesson costs</p>
         {mode === 'edit' ? (
           <div className="flex items-center gap-2">
             <Input
