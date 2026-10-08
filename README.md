@@ -93,6 +93,17 @@ cd backend && gcloud run deploy ten-min-english \
 
 Re-running `deploy` keeps the service's existing environment variables and secrets; pass `--update-env-vars` / `--update-secrets` only to change them. Check `/health` afterwards (`{"status":"ok","db":"connected"}`).
 
+## Deploying the frontend (Cloudflare Workers)
+
+The frontend is served by the Cloudflare Worker `ten-min-eng` at https://ten-min-eng.fza516194177.workers.dev, configured in `frontend/wrangler.jsonc` (static assets from `dist/`, unknown paths fall back to `index.html` for client-side routes). `frontend/.env.production` holds the production build settings — the Cloud Run backend URL and the public Google/Facebook IDs — and overrides `.env` for `npm run build`.
+
+```bash
+cd frontend && npx wrangler login   # once per machine
+npm run build && npx wrangler deploy
+```
+
+The backend's `FRONTEND_URL` must match the site's address (CORS and email links).
+
 ## Testing
 
 ```bash
