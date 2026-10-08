@@ -164,3 +164,37 @@ describe('POST /api/lessons', () => {
     expect(emailSender.sent[0].body).toContain(buddy.meetingLink);
   });
 });
+
+describe('remembering the member’s timezone', () => {
+  it('saves the browser timezone sent with a booking, so emails show local times', async () => {
+    const buddy = await bookableBuddy();
+    const { account, token } = await userToken({ name: 'Sarah' });
+    const anchor = anchorLocal();
+    const { app, emailSender } = createTestApp();
+
+    await request(app)
+      .post('/api/lessons')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ buddyId: buddy.id, startTime: anchor.toJSDate().toISOString(), timezone: 'Pacific/Auckland' });
+
+    expect((await Account.findById(account.id))!.timezone).toBe('Pacific/Auckland');
+    const confirmation = emailSender.sent.find((m) => m.to === 'user@example.com')!;
+    expect(confirmation.body).toMatch(/^Hi Sarah,/);
+    expect(confirmation.body).not.toContain('(UTC)');
+    expect(confirmation.body).not.toContain('UTC');
+  });
+
+  it('ignores a timezone that isn’t real, keeping what was saved', async () => {
+    const buddy = await bookableBuddy();
+    const { account, token } = await userToken({ timezone: 'Asia/Tokyo' });
+    const { app } = createTestApp();
+
+    const res = await request(app)
+      .post('/api/lessons')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ buddyId: buddy.id, startTime: anchorLocal().toJSDate().toISOString(), timezone: 'Not/AZone' });
+
+    expect(res.status).toBe(201);
+    expect((await Account.findById(account.id))!.timezone).toBe('Asia/Tokyo');
+  });
+});

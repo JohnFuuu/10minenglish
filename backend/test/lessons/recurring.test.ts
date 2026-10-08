@@ -113,7 +113,7 @@ describe('POST /api/lessons/recurring', () => {
     expect(await Lesson.countDocuments()).toBe(3);
 
     expect(emailSender.sent).toHaveLength(1);
-    expect(emailSender.sent[0].subject).toContain('3 10ME lessons');
+    expect(emailSender.sent[0].subject).toBe('You’re booked: 3 lessons with Buddy');
   });
 
   it('books only the planned dates: a busy one is skipped and reported, not replaced by a later date', async () => {

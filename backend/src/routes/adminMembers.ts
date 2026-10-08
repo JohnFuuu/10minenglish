@@ -110,7 +110,7 @@ function creditsAwardedNotification(params: { name?: string; email?: string; amo
             `The 10ME team has added ${free} to your account.`,
             `Note from the team: “${params.reason}”`,
             'Book your next lesson whenever you like. Happy practising!',
-            '— The 10ME team',
+            '— The 10 Minute English team',
           ].join('\n\n'),
         }
       : undefined,
