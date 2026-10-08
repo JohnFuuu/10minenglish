@@ -449,6 +449,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
             timezone: user.timezone,
             refunded: result.refunded,
             creditsCost: result.lesson.creditsCost,
+            reason: trimmedReason,
           }),
         );
       }

@@ -247,15 +247,17 @@ describe('cancellation reason', () => {
     const [notification] = await Notification.find({ accountId: buddyAccount._id });
     expect(notification.message).toContain('Reason: “I’m sick”');
     expect(emailSender.sent.find((m) => m.to === 'buddy@example.com')!.body).toContain('Reason: “I’m sick”');
+    expect(emailSender.sent.find((m) => m.to === 'user@example.com')!.body).toContain('Your reason: “I’m sick”');
   });
 
   it('is optional: no reason means no "Reason" line', async () => {
-    const { res, lesson, buddyAccount } = await cancelWith({});
+    const { res, lesson, buddyAccount, emailSender } = await cancelWith({});
 
     expect(res.status).toBe(200);
     expect((await Lesson.findById(lesson.id))!.cancellationReason).toBeUndefined();
     const [notification] = await Notification.find({ accountId: buddyAccount._id });
     expect(notification.message).not.toContain('Reason');
+    expect(emailSender.sent.find((m) => m.to === 'user@example.com')!.body).not.toContain('reason');
   });
 
   it('refuses a reason over 200 characters or not text, cancelling nothing', async () => {
