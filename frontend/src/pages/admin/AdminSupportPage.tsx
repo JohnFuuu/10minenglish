@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { CheckCircle2, Inbox } from 'lucide-react';
 import { Button } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
@@ -96,53 +97,67 @@ export function AdminSupportPage() {
         </div>
 
         {data && data.tickets.length === 0 && (
-          <p className="text-sm text-text-secondary">{filter === 'open' ? 'Nothing waiting — all caught up!' : 'No tickets here.'}</p>
+          <div className="rounded-md bg-border/30 px-4 py-8 text-center">
+            {filter === 'open' ? (
+              <CheckCircle2 size={36} className="mx-auto mb-2 text-brand-primary" aria-hidden="true" />
+            ) : (
+              <Inbox size={36} className="mx-auto mb-2 text-text-secondary" aria-hidden="true" />
+            )}
+            <p className="text-sm font-bold uppercase tracking-widest text-text-secondary">
+              {filter === 'open' ? 'All caught up!' : 'No tickets here'}
+            </p>
+            {filter === 'open' && (
+              <p className="mt-1 text-xs font-medium text-text-secondary">No questions are waiting for a reply.</p>
+            )}
+          </div>
         )}
 
-        <ul className="divide-y-2 divide-border overflow-hidden rounded-md border-2 border-border">
-          {data?.tickets.map((t) => {
-            const open = openId === t.id;
-            const last = t.messages[t.messages.length - 1];
-            return (
-              <li key={t.id} className="bg-bg-surface">
-                <button
-                  type="button"
-                  aria-expanded={open}
-                  onClick={() => setOpenId(open ? null : t.id)}
-                  className="flex w-full flex-col gap-1 px-4 py-3 text-left"
-                >
-                  <span className="flex w-full items-center justify-between gap-2">
-                    <span className="min-w-0 truncate text-sm font-bold text-text-heading">
-                      {TOPIC_LABELS[t.topic]} · {t.sender.name}
+        {data && data.tickets.length > 0 && (
+          <ul className="divide-y-2 divide-border overflow-hidden rounded-md border-2 border-border">
+            {data?.tickets.map((t) => {
+              const open = openId === t.id;
+              const last = t.messages[t.messages.length - 1];
+              return (
+                <li key={t.id} className="bg-bg-surface">
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    onClick={() => setOpenId(open ? null : t.id)}
+                    className="flex w-full flex-col gap-1 px-4 py-3 text-left"
+                  >
+                    <span className="flex w-full items-center justify-between gap-2">
+                      <span className="min-w-0 truncate text-sm font-bold text-text-heading">
+                        {TOPIC_LABELS[t.topic]} · {t.sender.name}
+                      </span>
+                      <StatusBadge status={t.status} />
                     </span>
-                    <StatusBadge status={t.status} />
-                  </span>
-                  <span className="line-clamp-2 text-sm text-text-body">{last.body}</span>
-                  <span className="text-xs text-text-secondary">
-                    {t.sender.role === 'buddy' ? 'Buddy' : 'Member'}
-                    {t.sender.email && ` · ${t.sender.email}`} · {formatDateTime(t.lastActivityAt)}
-                  </span>
-                </button>
-                {open && (
-                  <div className="border-t-2 border-border px-4 py-3">
-                    <SupportThread ticket={t} viewer="admin" onUpdated={updated} />
-                    <div className="mt-3 flex justify-end">
-                      {t.status === 'closed' ? (
-                        <Button variant="secondary" size="sm" disabled={busyId === t.id} onClick={() => setStatus(t, 'open')}>
-                          Reopen
-                        </Button>
-                      ) : (
-                        <Button variant="secondary" size="sm" disabled={busyId === t.id} onClick={() => setStatus(t, 'closed')}>
-                          Close ticket
-                        </Button>
-                      )}
+                    <span className="line-clamp-2 text-sm text-text-body">{last.body}</span>
+                    <span className="text-xs text-text-secondary">
+                      {t.sender.role === 'buddy' ? 'Buddy' : 'Member'}
+                      {t.sender.email && ` · ${t.sender.email}`} · {formatDateTime(t.lastActivityAt)}
+                    </span>
+                  </button>
+                  {open && (
+                    <div className="border-t-2 border-border px-4 py-3">
+                      <SupportThread ticket={t} viewer="admin" onUpdated={updated} />
+                      <div className="mt-3 flex justify-end">
+                        {t.status === 'closed' ? (
+                          <Button variant="secondary" size="sm" disabled={busyId === t.id} onClick={() => setStatus(t, 'open')}>
+                            Reopen
+                          </Button>
+                        ) : (
+                          <Button variant="secondary" size="sm" disabled={busyId === t.id} onClick={() => setStatus(t, 'closed')}>
+                            Close ticket
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         {pageCount > 1 && (
           <div className="mt-4 flex items-center justify-between gap-3">
