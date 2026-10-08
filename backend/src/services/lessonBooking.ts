@@ -452,3 +452,31 @@ export function buildLessonCancelledByUserNotification(params: {
       : undefined,
   };
 }
+
+// Tells a Buddy about new Lessons with a member (one email per booking, all
+// of that Buddy's Lessons in it), times in the Buddy's own timezone. The
+// route attaches the calendar file.
+export function buildBuddyBookingEmail(params: {
+  to: string;
+  buddyName?: string;
+  memberName: string;
+  startTimes: Date[];
+  timezone?: string;
+}): EmailMessage {
+  const count = params.startTimes.length;
+  const lines = params.startTimes.map((t, i) => {
+    const { date, time, utc } = lessonDateAndTime(t, params.timezone);
+    return `${count > 1 ? `${i + 1}. ` : ''}${date} · ${time}${utc ? ' (UTC)' : ''}`;
+  });
+  return {
+    to: params.to,
+    subject: count === 1 ? `New lesson booked: ${params.memberName}` : `New lessons booked: ${count} with ${params.memberName}`,
+    body: [
+      `Hi ${params.buddyName ?? 'there'},`,
+      `${params.memberName} booked ${count === 1 ? 'a lesson' : `${count} lessons`} with you:`,
+      lines.join('\n'),
+      'Tap the attached calendar file to add ' + (count === 1 ? 'it' : 'them') + ' to your calendar. Your usual meeting link is in each event.',
+      '— The 10 Minute English team',
+    ].join('\n\n'),
+  };
+}

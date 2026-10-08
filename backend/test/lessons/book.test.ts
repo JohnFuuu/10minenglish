@@ -159,9 +159,9 @@ describe('POST /api/lessons', () => {
     expect(lessons).toHaveLength(1);
     expect(lessons[0].startTime.toISOString()).toBe(anchor.toJSDate().toISOString());
 
-    expect(emailSender.sent).toHaveLength(1);
-    expect(emailSender.sent[0].to).toBe('user@example.com');
-    expect(emailSender.sent[0].body).toContain(buddy.meetingLink);
+    // One confirmation to the member, one heads-up to the Buddy.
+    expect(emailSender.sent.map((m) => m.to).sort()).toEqual(['buddy@example.com', 'user@example.com']);
+    expect(emailSender.sent.find((m) => m.to === 'user@example.com')!.body).toContain(buddy.meetingLink);
   });
 });
 

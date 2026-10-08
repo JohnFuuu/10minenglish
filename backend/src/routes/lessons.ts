@@ -8,6 +8,7 @@ import type { EmailSender } from '../services/email.js';
 import {
   BOOKABLE_BUDDY_QUERY,
   bookLesson,
+  buildBuddyBookingEmail,
   buildConfirmationEmail,
   buildLessonRescheduledNotification,
   buildLessonCancelledByUserNotification,
@@ -24,6 +25,7 @@ import {
 } from '../services/lessonBooking.js';
 import { cancelLessonAsBuddy } from '../services/buddyCancellation.js';
 import { createNotification } from '../services/notifications.js';
+import { calendarForLessons, lessonCalendarAttachment, withCalendar } from '../services/calendar.js';
 import { currentCreditsPerLesson } from '../models/LessonPrice.js';
 
 const MAX_CANCELLATION_REASON_LENGTH = 200;
@@ -35,6 +37,39 @@ async function rememberTimezone(user: AccountDocument, timezone: unknown): Promi
   if (!DateTime.local().setZone(timezone).isValid) return;
   user.timezone = timezone;
   await Account.updateOne({ _id: user._id }, { $set: { timezone } });
+}
+
+// Emails each Buddy their newly booked Lessons with a calendar file. Never
+// throws: the bookings are already made.
+async function emailBuddiesAboutBookings(
+  emailSender: EmailSender,
+  member: AccountDocument,
+  booked: { lesson: LessonDocument; buddy: AccountDocument }[],
+): Promise<void> {
+  const byBuddy = new Map<string, { buddy: AccountDocument; lessons: LessonDocument[] }>();
+  for (const { lesson, buddy } of booked) {
+    const entry = byBuddy.get(String(buddy._id)) ?? { buddy, lessons: [] };
+    entry.lessons.push(lesson);
+    byBuddy.set(String(buddy._id), entry);
+  }
+  const memberName = member.name ?? 'A member';
+  for (const { buddy, lessons } of byBuddy.values()) {
+    if (!buddy.email) continue;
+    try {
+      await emailSender.send(
+        withCalendar(
+          buildBuddyBookingEmail({ to: buddy.email, buddyName: buddy.name, memberName, startTimes: lessons.map((l) => l.startTime), timezone: buddy.timezone }),
+          calendarForLessons('PUBLISH', lessons.map(calendarLesson), memberName),
+        ),
+      );
+    } catch (err) {
+      console.error('Failed to email Buddy about new bookings', err);
+    }
+  }
+}
+
+function calendarLesson(lesson: LessonDocument) {
+  return { id: String(lesson._id), startTime: lesson.startTime, durationMinutes: lesson.durationMinutes, meetingLink: lesson.meetingLink };
 }
 
 export interface LessonsRouterDependencies {
@@ -166,13 +201,17 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       return;
     }
     await emailSender.send(
-      buildConfirmationEmail(
-        user.email!,
-        [{ startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: buddy.meetingLink! }],
-        user.timezone,
-        user.name,
+      withCalendar(
+        buildConfirmationEmail(
+          user.email!,
+          [{ startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: buddy.meetingLink! }],
+          user.timezone,
+          user.name,
+        ),
+        calendarForLessons('PUBLISH', [calendarLesson(lesson)], buddy.name ?? 'your Buddy'),
       ),
     );
+    await emailBuddiesAboutBookings(emailSender, user, [{ lesson, buddy }]);
 
     res.status(201).json({ lesson: serializeLesson(lesson), creditsRemaining: user.credits });
   });
@@ -265,17 +304,28 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
 
     if (booked.length > 0) {
       await emailSender.send(
-        buildConfirmationEmail(
-          user.email!,
-          booked.map(({ lesson, buddy }) => ({
-            startTime: lesson.startTime,
-            buddyName: buddy.name ?? 'your Buddy',
-            meetingLink: buddy.meetingLink!,
-          })),
-          user.timezone,
-          user.name,
+        withCalendar(
+          buildConfirmationEmail(
+            user.email!,
+            booked.map(({ lesson, buddy }) => ({
+              startTime: lesson.startTime,
+              buddyName: buddy.name ?? 'your Buddy',
+              meetingLink: buddy.meetingLink!,
+            })),
+            user.timezone,
+            user.name,
+          ),
+          // Each event names its own Buddy ("any Buddy" series can mix them).
+          lessonCalendarAttachment({
+            method: 'PUBLISH',
+            lessons: booked.map(({ lesson, buddy }) => ({
+              ...calendarLesson(lesson),
+              title: `English lesson with ${buddy.name ?? 'your Buddy'}`,
+            })),
+          }),
         ),
       );
+      await emailBuddiesAboutBookings(emailSender, user, booked);
     }
 
     res.status(201).json({
@@ -389,9 +439,12 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       // the booking one. The Buddy didn't, so they get a Notification.
       // (Booking required a confirmed email, so this User has one.)
       await emailSender.send(
-        buildConfirmationEmail(user.email!, [
-          { startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: lesson.meetingLink },
-        ], user.timezone, user.name),
+        withCalendar(
+          buildConfirmationEmail(user.email!, [
+            { startTime: instant, buddyName: buddy.name ?? 'your Buddy', meetingLink: lesson.meetingLink },
+          ], user.timezone, user.name),
+          calendarForLessons('PUBLISH', [calendarLesson(lesson)], buddy.name ?? 'your Buddy'),
+        ),
       );
 
       const { message, email } = buildLessonRescheduledNotification({
@@ -407,7 +460,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
           accountId: buddy._id,
           type: 'lesson_rescheduled',
           message,
-          email,
+          email: withCalendar(email, calendarForLessons('PUBLISH', [calendarLesson(lesson)], user.name ?? 'your learner')),
         });
       } catch (err) {
         // The move is already committed — failing to notify must not surface
@@ -454,7 +507,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     const buddy = await Account.findById(lesson.buddyId);
     try {
       if (user.email) {
-        await emailSender.send(
+        await emailSender.send(withCalendar(
           buildUserCancellationEmail({
             to: user.email,
             name: user.name,
@@ -465,24 +518,27 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
             creditsCost: result.lesson.creditsCost,
             reason: trimmedReason,
           }),
-        );
+          calendarForLessons('CANCEL', [calendarLesson(result.lesson)], buddy?.name ?? 'your Buddy'),
+        ));
       }
     } catch (err) {
       console.error('Failed to send cancellation email to User', err);
     }
     if (buddy) {
       try {
+        const notice = buildLessonCancelledByUserNotification({
+          userName: user.name ?? 'Your learner',
+          buddyEmail: buddy.email,
+          startTime: result.lesson.startTime,
+          timezone: buddy.timezone,
+          reason: trimmedReason,
+        });
         await createNotification({
           emailSender,
           accountId: buddy._id,
           type: 'lesson_cancelled',
-          ...buildLessonCancelledByUserNotification({
-            userName: user.name ?? 'Your learner',
-            buddyEmail: buddy.email,
-            startTime: result.lesson.startTime,
-            timezone: buddy.timezone,
-            reason: trimmedReason,
-          }),
+          message: notice.message,
+          email: withCalendar(notice.email, calendarForLessons('CANCEL', [calendarLesson(result.lesson)], user.name ?? 'your learner')),
         });
       } catch (err) {
         console.error('Failed to send lesson-cancelled notification to Buddy', err);

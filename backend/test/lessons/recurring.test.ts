@@ -112,8 +112,11 @@ describe('POST /api/lessons/recurring', () => {
     expect(updated!.credits).toBe(7);
     expect(await Lesson.countDocuments()).toBe(3);
 
-    expect(emailSender.sent).toHaveLength(1);
-    expect(emailSender.sent[0].subject).toBe('You’re booked: 3 lessons with Buddy');
+    // One combined email each for the member and the Buddy.
+    const toMember = emailSender.sent.filter((m) => m.to === 'user@example.com');
+    expect(toMember).toHaveLength(1);
+    expect(toMember[0].subject).toBe('You’re booked: 3 lessons with Buddy');
+    expect(emailSender.sent.filter((m) => m.to === 'buddy@example.com')).toHaveLength(1);
   });
 
   it('books only the planned dates: a busy one is skipped and reported, not replaced by a later date', async () => {
