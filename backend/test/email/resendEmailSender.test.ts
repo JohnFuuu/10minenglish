@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { consoleEmailSender, createResendEmailSender, emailSenderFromEnv } from '../../src/services/email.js';
+import {
+  consoleEmailSender,
+  createGmailEmailSender,
+  createResendEmailSender,
+  describeEmailSetup,
+  emailSenderFromEnv,
+  gmailFrom,
+} from '../../src/services/email.js';
 
 // Stands in for the network: records what would have been sent to Resend and
 // answers with a canned response.
@@ -79,5 +86,70 @@ describe('emailSenderFromEnv', () => {
   it('refuses a half-configured setup instead of silently not sending', () => {
     expect(() => emailSenderFromEnv({ RESEND_API_KEY: 're_test' })).toThrow(/EMAIL_FROM/);
     expect(() => emailSenderFromEnv({ EMAIL_FROM: 'hello@10me.test' })).toThrow(/RESEND_API_KEY/);
+  });
+});
+
+describe('Gmail email sender', () => {
+  function fakeTransport() {
+    const sent: Record<string, unknown>[] = [];
+    return { sent, transport: { sendMail: async (mail: Record<string, unknown>) => void sent.push(mail) } };
+  }
+
+  it('sends from the Gmail account, as text plus branded HTML, with attachments', async () => {
+    const { sent, transport } = fakeTransport();
+    const sender = createGmailEmailSender({ user: 'tenme@gmail.com', appPassword: 'x', transport });
+
+    await sender.send({ ...message, attachments: [{ filename: 'lesson.ics', contentType: 'text/calendar; method=PUBLISH', content: 'BEGIN:VCALENDAR' }] });
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({
+      from: '10 Minute English <tenme@gmail.com>',
+      to: 'sarah@example.com',
+      subject: 'Confirm your 10ME email',
+      text: 'Confirm: https://x/confirm',
+      attachments: [{ filename: 'lesson.ics', contentType: 'text/calendar; method=PUBLISH', content: 'BEGIN:VCALENDAR' }],
+    });
+    expect(String(sent[0].html)).toContain('10 Minute English');
+  });
+
+  it('uses a custom From name when given', async () => {
+    const { sent, transport } = fakeTransport();
+    const sender = createGmailEmailSender({ user: 'tenme@gmail.com', appPassword: 'x', from: '10ME Team <tenme@gmail.com>', transport });
+
+    await sender.send(message);
+
+    expect(sent[0].from).toBe('10ME Team <tenme@gmail.com>');
+  });
+});
+
+describe('EMAIL_PROVIDER switch', () => {
+  it('gmail: uses EMAIL_FROM only when it is the Gmail address', () => {
+    expect(gmailFrom('tenme@gmail.com', 'onboarding@resend.dev')).toBeUndefined();
+    expect(gmailFrom('tenme@gmail.com', '10ME Team <TenMe@gmail.com>')).toBe('10ME Team <TenMe@gmail.com>');
+    expect(gmailFrom('tenme@gmail.com')).toBeUndefined();
+  });
+
+  it('describes the setup for the startup log', () => {
+    expect(describeEmailSetup({ EMAIL_PROVIDER: 'gmail', GMAIL_USER: 'tenme@gmail.com', GMAIL_APP_PASSWORD: 'p' })).toBe('Sending email via Gmail as tenme@gmail.com.');
+    expect(describeEmailSetup({})).toBe('Emails are logged here, not delivered.');
+  });
+
+  it('gmail: needs GMAIL_USER and GMAIL_APP_PASSWORD, and ignores Resend settings', () => {
+    expect(emailSenderFromEnv({ EMAIL_PROVIDER: 'gmail', GMAIL_USER: 'a@gmail.com', GMAIL_APP_PASSWORD: 'p', RESEND_API_KEY: 're_x' })).not.toBe(consoleEmailSender);
+    expect(() => emailSenderFromEnv({ EMAIL_PROVIDER: 'gmail', GMAIL_USER: 'a@gmail.com' })).toThrow(/GMAIL_APP_PASSWORD/);
+    expect(() => emailSenderFromEnv({ EMAIL_PROVIDER: 'gmail', GMAIL_APP_PASSWORD: 'p' })).toThrow(/GMAIL_USER/);
+  });
+
+  it('resend: needs its key and from address', () => {
+    expect(emailSenderFromEnv({ EMAIL_PROVIDER: 'resend', RESEND_API_KEY: 're_x', EMAIL_FROM: 'a@b.test' })).not.toBe(consoleEmailSender);
+    expect(() => emailSenderFromEnv({ EMAIL_PROVIDER: 'resend' })).toThrow(/RESEND_API_KEY/);
+  });
+
+  it('console: logs only, even with providers configured', () => {
+    expect(emailSenderFromEnv({ EMAIL_PROVIDER: 'console', RESEND_API_KEY: 're_x', EMAIL_FROM: 'a@b.test' })).toBe(consoleEmailSender);
+  });
+
+  it('refuses an unknown provider', () => {
+    expect(() => emailSenderFromEnv({ EMAIL_PROVIDER: 'pigeon' })).toThrow(/EMAIL_PROVIDER/);
   });
 });
