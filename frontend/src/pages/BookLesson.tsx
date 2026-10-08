@@ -4,12 +4,13 @@ import { CalendarCheck, Info, PartyPopper, Repeat } from 'lucide-react';
 import { Avatar, Button, Input } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { EmailConfirmationNotice } from '../auth/EmailConfirmationNotice';
-import { LessonCalendarPreview, planLessonDates } from './LessonCalendarPreview';
+import { LessonCalendarPreview } from './LessonCalendarPreview';
 import { useToast } from '../toast/ToastContext';
 import {
   ApiError,
   bookLesson,
   bookRecurringLessons,
+  previewRecurringLessons,
   fetchAvailableBuddies,
   fetchBookableBuddies,
   fetchBuddySlots,
@@ -213,6 +214,26 @@ export function BookLesson() {
   // confirmation rather than always showing two more lines of text.
   const [showHints, setShowHints] = useState(false);
 
+  // The confirm screen's calendar for a recurring booking: the server's
+  // planned dates and which are free (busy ones are skipped, not replaced).
+  const [preview, setPreview] = useState<{ date: Date; available: boolean }[] | null>(null);
+  useEffect(() => {
+    if (step !== 'confirm' || bookingType !== 'recurring' || !token || !selectedStartTime) return;
+    let superseded = false;
+    setPreview(null);
+    previewRecurringLessons(token, recurringPayload())
+      .then((res) => {
+        if (!superseded) setPreview(res.occurrences.map((o) => ({ date: new Date(o.startTime), available: o.available })));
+      })
+      .catch(() => {
+        if (!superseded) showToast('Could not check your lesson days. Please try again.', 'error');
+      });
+    return () => {
+      superseded = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
   // Only for arriving with no credits: a booking that spends the last one
   // must still land on the "Booked!" screen (result is set by then).
   useEffect(() => {
@@ -237,6 +258,10 @@ export function BookLesson() {
   }, []);
 
   if (!token || !account || (account.credits < 1 && !result)) return null;
+
+  // One per free planned date (busy ones aren't booked or charged).
+  const creditsToUse =
+    bookingType === 'single' ? 1 : preview ? preview.filter((o) => o.available).length : occurrenceCount;
 
   async function startByBuddy() {
     setIsLoading(true);
@@ -329,6 +354,17 @@ export function BookLesson() {
     return { type: frequencyType };
   }
 
+  function recurringPayload() {
+    return {
+      buddyId: recurringBuddyMode === 'fixed' ? selectedBuddy!.id : undefined,
+      startTime: selectedStartTime!,
+      frequency: frequencyPayload(),
+      includeWeekends,
+      occurrenceCount,
+      timezone: VIEWER_TIMEZONE,
+    };
+  }
+
   async function handleConfirm() {
     setIsSubmitting(true);
     try {
@@ -337,14 +373,7 @@ export function BookLesson() {
         setCredits(res.creditsRemaining);
         setResult({ kind: 'single', lesson: res.lesson });
       } else {
-        const res = await bookRecurringLessons(token!, {
-          buddyId: recurringBuddyMode === 'fixed' ? selectedBuddy!.id : undefined,
-          startTime: selectedStartTime!,
-          frequency: frequencyPayload(),
-          includeWeekends,
-          occurrenceCount,
-          timezone: VIEWER_TIMEZONE,
-        });
+        const res = await bookRecurringLessons(token!, recurringPayload());
         setCredits(res.creditsRemaining);
         setResult({ kind: 'recurring', booked: res.booked, skipped: res.skipped });
       }
@@ -615,7 +644,7 @@ export function BookLesson() {
               { label: 'Buddy', value: recurringBuddyMode === 'any' ? 'First available' : buddyLabel(selectedBuddy) },
               { label: 'Time', value: selectedStartTime ? formatDateTime(selectedStartTime) : '' },
               { label: 'Lessons', value: bookingType === 'recurring' ? `Many · ${frequencyLabel(frequencyType, everyXDays)}` : 'One' },
-              { label: 'Credits', value: bookingType === 'single' ? '1 credit' : `Up to ${occurrenceCount} credits` },
+              { label: 'Credits', value: `${creditsToUse} credit${creditsToUse === 1 ? '' : 's'}` },
             ].map((row) => (
               <div key={row.label} className="flex items-center justify-between border-t border-border bg-bg-surface px-4 py-3 first:border-t-0">
                 <span className="text-xs font-bold uppercase tracking-widest text-text-secondary">{row.label}</span>
@@ -627,25 +656,20 @@ export function BookLesson() {
           {selectedStartTime && (
             <LessonCalendarPreview
               recurring={bookingType === 'recurring'}
-              dates={planLessonDates({
-                start: new Date(selectedStartTime),
-                stepDays: frequencyType === 'daily' ? 1 : frequencyType === 'weekly' ? 7 : everyXDays,
-                includeWeekends: bookingType === 'single' || includeWeekends,
-                count: bookingType === 'single' ? 1 : occurrenceCount,
-              })}
+              loading={bookingType === 'recurring' && preview === null}
+              lessons={bookingType === 'single' ? [{ date: new Date(selectedStartTime), available: true }] : (preview ?? [])}
             />
           )}
 
           <div className="rounded-md border-2 border-accent-lime bg-accent-lime-light p-4">
             <p className="text-xs font-bold uppercase tracking-widest text-success">Balance after booking</p>
             <p className="mt-0.5 text-base font-bold text-text-heading">
-              {account.credits - (bookingType === 'single' ? 1 : occurrenceCount)} credits remaining
-              {bookingType === 'recurring' && ' if all sessions book'}
+              {account.credits - creditsToUse} credits remaining
             </p>
           </div>
 
           {account.emailConfirmed ? (
-            <Button onClick={handleConfirm} disabled={isSubmitting}>
+            <Button onClick={handleConfirm} disabled={isSubmitting || creditsToUse === 0}>
               {isSubmitting ? 'Confirming…' : 'Confirm & book'}
             </Button>
           ) : (

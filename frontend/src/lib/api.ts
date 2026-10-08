@@ -322,6 +322,16 @@ export interface RecurringBookingPayload {
   timezone: string;
 }
 
+// The planned dates for a recurring booking and whether each is free now.
+// Books nothing; busy dates are skipped (not replaced) when booking.
+export function previewRecurringLessons(token: string, payload: RecurringBookingPayload) {
+  return request<{ occurrences: { startTime: string; available: boolean }[] }>('/api/lessons/recurring/preview', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+}
+
 export function bookRecurringLessons(token: string, payload: RecurringBookingPayload) {
   return request<{
     booked: Lesson[];

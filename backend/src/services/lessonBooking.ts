@@ -263,21 +263,29 @@ function stepDays(frequency: RecurringFrequency): number {
   }
 }
 
-export function* generateRecurringCandidates(
+// The dates a recurring booking will try: the first `count` steps of the
+// pattern in the viewer's own calendar (same clock time), leaving out Sat/Sun
+// unless weekends are included. A busy date is skipped at booking time, never
+// replaced by a later one (see docs/adr/0001). Bounded, so a pattern that only
+// ever lands on a weekend (weekly from a Sunday, weekends off) yields no
+// dates instead of searching forever.
+export function planRecurringOccurrences(
   anchor: Date,
   frequency: RecurringFrequency,
   includeWeekends: boolean,
+  count: number,
   timezone: string = 'utc',
-): Generator<Date> {
+): Date[] {
   const step = stepDays(frequency);
+  const dates: Date[] = [];
   let current = DateTime.fromJSDate(anchor, { zone: 'utc' }).setZone(timezone);
-  while (true) {
+  // Weekdays-only still lands at least 2 of every 7 steps, so count * 7 is ample.
+  for (let steps = 0; dates.length < count && steps < count * 7; steps += 1) {
     const isWeekend = current.weekday === 6 || current.weekday === 7; // luxon: 6=Sat, 7=Sun
-    if (includeWeekends || !isWeekend) {
-      yield current.toJSDate();
-    }
+    if (includeWeekends || !isWeekend) dates.push(current.toJSDate());
     current = current.plus({ days: step });
   }
+  return dates;
 }
 
 // A lesson time as the reader would say it, in their own timezone, e.g.

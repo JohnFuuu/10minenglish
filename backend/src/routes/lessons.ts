@@ -15,7 +15,7 @@ import {
   CANCELLATION_REFUND_CUTOFF_HOURS,
   findAvailableBuddy,
   generateCandidateSlots,
-  generateRecurringCandidates,
+  planRecurringOccurrences,
   isLessonJoinable,
   isLessonUpcoming,
   isSlotBookable,
@@ -154,58 +154,81 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     res.status(201).json({ lesson: serializeLesson(lesson), creditsRemaining: user.credits });
   });
 
-  router.post('/api/lessons/recurring', requireAuth, requireRole('user'), requireConfirmedEmail, async (req, res) => {
-    const { buddyId, startTime, frequency, includeWeekends, occurrenceCount, timezone } = req.body ?? {};
-
+  // Shared by the booking and its preview: the planned dates for a request
+  // body, or an error message for a malformed one.
+  async function readRecurringRequest(body: unknown): Promise<
+    | { error: string; status: number }
+    | { planned: Date[]; fixedBuddy?: AccountDocument; occurrenceCount: number }
+  > {
+    const { buddyId, startTime, frequency, includeWeekends, occurrenceCount, timezone } = (body ?? {}) as Record<string, unknown>;
     if (typeof startTime !== 'string' || !isValidFrequency(frequency) || typeof occurrenceCount !== 'number' || occurrenceCount < 1) {
-      res.status(400).json({ error: 'Missing or invalid startTime, frequency, or occurrenceCount' });
-      return;
+      return { status: 400, error: 'Missing or invalid startTime, frequency, or occurrenceCount' };
     }
-    if (buddyId !== undefined && typeof buddyId !== 'string') {
-      res.status(400).json({ error: 'Invalid buddyId' });
-      return;
-    }
+    if (buddyId !== undefined && typeof buddyId !== 'string') return { status: 400, error: 'Invalid buddyId' };
     const anchor = new Date(startTime);
-    if (Number.isNaN(anchor.getTime())) {
-      res.status(400).json({ error: 'Invalid startTime' });
+    if (Number.isNaN(anchor.getTime())) return { status: 400, error: 'Invalid startTime' };
+
+    let fixedBuddy: AccountDocument | undefined;
+    if (buddyId) {
+      const found = await Account.findById(buddyId);
+      if (!found || found.role !== 'buddy') return { status: 404, error: 'Buddy not found' };
+      fixedBuddy = found;
+    }
+    const viewerTimezone = typeof timezone === 'string' && timezone ? timezone : 'utc';
+    const planned = planRecurringOccurrences(anchor, frequency, includeWeekends === true, occurrenceCount, viewerTimezone);
+    return { planned, fixedBuddy, occurrenceCount };
+  }
+
+  // The chosen Buddy if free then, or else the first free Buddy; null if none.
+  async function buddyFor(candidate: Date, fixedBuddy?: AccountDocument): Promise<AccountDocument | null> {
+    if (!fixedBuddy) return findAvailableBuddy(candidate);
+    return (await isSlotBookable(fixedBuddy, candidate)) ? fixedBuddy : null;
+  }
+
+  // What the confirm screen's calendar draws: each planned date, and whether
+  // it's free right now. Books nothing.
+  router.post('/api/lessons/recurring/preview', requireAuth, requireRole('user'), async (req, res) => {
+    const request = await readRecurringRequest(req.body);
+    if ('error' in request) {
+      res.status(request.status).json({ error: request.error });
       return;
     }
+    const occurrences = [];
+    for (const candidate of request.planned) {
+      occurrences.push({ startTime: candidate.toISOString(), available: (await buddyFor(candidate, request.fixedBuddy)) !== null });
+    }
+    res.status(200).json({ occurrences });
+  });
+
+  router.post('/api/lessons/recurring', requireAuth, requireRole('user'), requireConfirmedEmail, async (req, res) => {
+    const request = await readRecurringRequest(req.body);
+    if ('error' in request) {
+      res.status(request.status).json({ error: request.error });
+      return;
+    }
+    const { planned, fixedBuddy, occurrenceCount } = request;
 
     const user = await Account.findById(req.account!.accountId);
     if (!user || user.credits < occurrenceCount) {
       res.status(402).json({ error: 'Not enough credits for the full series' });
       return;
     }
-
-    let fixedBuddy: AccountDocument | undefined;
-    if (buddyId) {
-      const found = await Account.findById(buddyId);
-      if (!found || found.role !== 'buddy') {
-        res.status(404).json({ error: 'Buddy not found' });
-        return;
-      }
-      fixedBuddy = found;
+    if (planned.length === 0) {
+      res.status(400).json({ error: 'No dates fit this pattern (every one falls on a weekend, and weekends are off)' });
+      return;
     }
 
     const booked: { lesson: LessonDocument; buddy: AccountDocument }[] = [];
     const skipped: { startTime: string; reason: string }[] = [];
-    const maxCandidates = Math.max(occurrenceCount * 6, 60);
-    let examined = 0;
-
-    const viewerTimezone = typeof timezone === 'string' && timezone ? timezone : 'utc';
-    for (const candidate of generateRecurringCandidates(anchor, frequency, includeWeekends === true, viewerTimezone)) {
-      if (booked.length >= occurrenceCount || examined >= maxCandidates) break;
-      examined += 1;
-
-      const targetBuddy = fixedBuddy ?? (await findAvailableBuddy(candidate));
-      if (!targetBuddy || !(await isSlotBookable(targetBuddy, candidate))) {
+    for (const candidate of planned) {
+      const targetBuddy = await buddyFor(candidate, fixedBuddy);
+      if (!targetBuddy) {
         skipped.push({
           startTime: candidate.toISOString(),
           reason: fixedBuddy ? 'Buddy unavailable at this time' : 'No Buddy available at this time',
         });
         continue;
       }
-
       const lesson = await bookLesson({ user, buddy: targetBuddy, startTime: candidate });
       booked.push({ lesson, buddy: targetBuddy });
     }
