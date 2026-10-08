@@ -87,6 +87,24 @@ describe('POST /api/payments/poli/confirm', () => {
     expect(updated!.credits).toBe(10);
   });
 
+  it('credits once when two confirms of the same transaction arrive at the same time', async () => {
+    const { account, token } = await userToken({ location: 'Auckland, NZ' });
+    const { app, poliClient } = createTestApp();
+    const checkoutRes = await request(app)
+      .post('/api/payments/poli/checkout')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ packSize: 1 });
+    const { token: poliToken } = checkoutRes.body;
+    poliClient.setStatus(poliToken, 'completed');
+
+    const confirm = () =>
+      request(app).post('/api/payments/poli/confirm').set('Authorization', `Bearer ${token}`).send({ token: poliToken });
+    const results = await Promise.all([confirm(), confirm(), confirm()]);
+
+    expect(results.map((r) => r.body)).toEqual(Array(3).fill({ status: 'succeeded', credits: 1 }));
+    expect((await Account.findById(account._id))!.credits).toBe(1);
+  });
+
   it('resolves to the same failed outcome as Stripe when POLi reports failure', async () => {
     const { account, token } = await userToken({ location: 'Auckland, NZ' });
     const { app, poliClient } = createTestApp();

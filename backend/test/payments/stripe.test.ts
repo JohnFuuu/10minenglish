@@ -129,6 +129,26 @@ describe('POST /api/payments/stripe/confirm', () => {
     expect(updated!.credits).toBe(10);
   });
 
+  it('credits once when two confirms of the same session arrive at the same time', async () => {
+    // e.g. React StrictMode running the return page's effect twice, or a
+    // refresh while the first confirm is still in flight.
+    const { account, token } = await userToken();
+    const { app, stripeClient } = createTestApp();
+    const checkoutRes = await request(app)
+      .post('/api/payments/stripe/checkout')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ packSize: 1 });
+    const { sessionId } = checkoutRes.body;
+    stripeClient.setStatus(sessionId, 'paid');
+
+    const confirm = () =>
+      request(app).post('/api/payments/stripe/confirm').set('Authorization', `Bearer ${token}`).send({ sessionId });
+    const results = await Promise.all([confirm(), confirm(), confirm()]);
+
+    expect(results.map((r) => r.body)).toEqual(Array(3).fill({ status: 'succeeded', credits: 1 }));
+    expect((await Account.findById(account._id))!.credits).toBe(1);
+  });
+
   it('marks the Payment failed and adds no credits when Stripe reports unpaid', async () => {
     const { account, token } = await userToken();
     const { app, stripeClient } = createTestApp();
