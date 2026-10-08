@@ -2,6 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../src/app.js';
 import { Account } from '../../src/models/Account.js';
+import { Lesson } from '../../src/models/Lesson.js';
+import { reconcileBuddyState } from '../../src/services/buddyReconciliation.js';
+import { consoleEmailSender } from '../../src/services/email.js';
 import { signAccountToken } from '../../src/middleware/auth.js';
 import { clearTestDb, startTestDb, stopTestDb } from '../dbTestSetup.js';
 
@@ -97,5 +100,31 @@ describe('GET /api/buddies/:id/availability', () => {
       .set('Authorization', `Bearer ${requesterToken}`);
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe('changing availability keeps booked lessons', () => {
+  it('leaves an upcoming lesson booked when its time drops out of the new hours, even after the clean-up sweep', async () => {
+    const { account, token } = await buddyToken({
+      timezone: 'Pacific/Auckland',
+      meetingLink: 'https://zoom.us/j/1',
+      availabilityBlocks: Array.from({ length: 7 }, (_, dayOfWeek) => ({ dayOfWeek, startTime: '08:00', endTime: '18:00' })),
+    });
+    const member = await Account.create({ role: 'user', email: 'sarah@example.com', credits: 0 });
+    const lesson = await Lesson.create({
+      userId: member._id,
+      buddyId: account._id,
+      startTime: new Date(Date.now() + 3 * 864e5),
+      meetingLink: 'https://zoom.us/j/1',
+    });
+    const app = createApp();
+
+    // Clear every hour: the booked lesson is now outside availability.
+    const res = await request(app).put('/api/buddy/availability').set('Authorization', `Bearer ${token}`).send({ blocks: [] });
+    await reconcileBuddyState({ emailSender: consoleEmailSender });
+
+    expect(res.status).toBe(200);
+    expect((await Lesson.findById(lesson.id))!.status).toBe('upcoming');
+    expect((await Account.findById(member.id))!.credits).toBe(0);
   });
 });
