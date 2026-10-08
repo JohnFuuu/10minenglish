@@ -9,7 +9,7 @@ import {
   ensureDefaultCreditPacks,
   type CreditPackSize,
 } from '../models/CreditPack.js';
-import { Payment } from '../models/Payment.js';
+import { Payment, type PaymentDocument } from '../models/Payment.js';
 import type { StripeClient } from '../services/stripeClient.js';
 import type { PoliClient } from '../services/poliClient.js';
 import { isLikelyNewZealand } from '../services/location.js';
@@ -23,6 +23,22 @@ const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
 
 function isValidPackSize(size: unknown): size is CreditPackSize {
   return typeof size === 'number' && CREDIT_PACK_SIZES.includes(size as CreditPackSize);
+}
+
+// Adds a paid Payment's credits exactly once, then marks it succeeded.
+// The credit and the "already credited" mark are one atomic update on the
+// Account, so confirms racing each other (React StrictMode, a refresh, two
+// tabs) can't both add credits, and every caller reads the settled balance.
+// If the process dies before the Payment is marked, the next confirm finishes
+// it without crediting again (see docs/adr/0008).
+async function creditPaidPayment(payment: PaymentDocument): Promise<number> {
+  const credited = await Account.findOneAndUpdate(
+    { _id: payment.accountId, creditedPaymentIds: { $ne: payment._id } },
+    { $inc: { credits: payment.packSize }, $push: { creditedPaymentIds: payment._id } },
+    { returnDocument: 'after' },
+  );
+  await Payment.updateOne({ _id: payment._id }, { $set: { status: 'succeeded' } });
+  return (credited ?? (await Account.findById(payment.accountId)))!.credits;
 }
 
 export function createPaymentsRouter(deps: PaymentsRouterDependencies): Router {
@@ -95,14 +111,7 @@ export function createPaymentsRouter(deps: PaymentsRouterDependencies): Router {
 
     const status = await stripeClient.getCheckoutSessionStatus(sessionId);
     if (status === 'paid') {
-      payment.status = 'succeeded';
-      await payment.save();
-      const account = await Account.findByIdAndUpdate(
-        payment.accountId,
-        { $inc: { credits: payment.packSize } },
-        { returnDocument: 'after' },
-      );
-      res.status(200).json({ status: 'succeeded', credits: account!.credits });
+      res.status(200).json({ status: 'succeeded', credits: await creditPaidPayment(payment) });
       return;
     }
 
@@ -190,14 +199,7 @@ export function createPaymentsRouter(deps: PaymentsRouterDependencies): Router {
 
     const status = await poliClient.getTransactionStatus(token);
     if (status === 'completed') {
-      payment.status = 'succeeded';
-      await payment.save();
-      const account = await Account.findByIdAndUpdate(
-        payment.accountId,
-        { $inc: { credits: payment.packSize } },
-        { returnDocument: 'after' },
-      );
-      res.status(200).json({ status: 'succeeded', credits: account!.credits });
+      res.status(200).json({ status: 'succeeded', credits: await creditPaidPayment(payment) });
       return;
     }
     if (status === 'failed') {

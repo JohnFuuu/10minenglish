@@ -65,6 +65,9 @@ export interface AccountDocument extends mongoose.Document {
   motivation?: string;
   lessonsPerWeekGoal?: string;
   credits: number;
+  // Payments whose credits are already on this balance — the guard that
+  // lets confirming a payment twice (or at once) add its credits only once.
+  creditedPaymentIds: mongoose.Types.ObjectId[];
 }
 
 const accountSchema = new Schema<AccountDocument>({
@@ -131,6 +134,7 @@ const accountSchema = new Schema<AccountDocument>({
   motivation: { type: String },
   lessonsPerWeekGoal: { type: String },
   credits: { type: Number, required: true, default: 0 },
+  creditedPaymentIds: { type: [Schema.Types.ObjectId], default: [] },
 });
 
 export const Account = mongoose.model<AccountDocument>('Account', accountSchema);
