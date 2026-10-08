@@ -205,7 +205,14 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
     // Removed (archived) Admins are gone from the list; deactivated ones stay.
     const admins = await Account.find({ role: 'admin', removedAt: { $exists: false } }).sort({ name: 1 });
     res.status(200).json({
-      admins: admins.map((a) => ({ id: a.id, name: a.name, email: a.email, active: a.active !== false, isSuperAdmin: isSuperAdmin(a.email) })),
+      admins: admins.map((a) => ({
+        id: a.id,
+        name: a.name,
+        email: a.email,
+        active: a.active !== false,
+        isSuperAdmin: isSuperAdmin(a.email),
+        joinedAt: a._id.getTimestamp().toISOString(),
+      })),
     });
   });
 

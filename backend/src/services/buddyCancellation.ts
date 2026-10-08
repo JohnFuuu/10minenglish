@@ -27,6 +27,7 @@ export async function cancelLessonAsBuddy(params: {
       userEmail: user.email!,
       startTime: result.lesson.startTime,
       creditsRemaining: result.creditsRemaining,
+      timezone: user.timezone,
     });
     try {
       await createNotification({

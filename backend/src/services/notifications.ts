@@ -7,13 +7,17 @@ export async function createNotification(params: {
   accountId: string | mongoose.Types.ObjectId;
   type: NotificationType;
   message: string;
-  email: EmailMessage;
+  details?: Record<string, unknown>;
+  // Omitted for an account with no email (e.g. a Facebook sign-up that
+  // shared none): the in-app notification is all they get.
+  email?: EmailMessage;
 }): Promise<NotificationDocument> {
   const notification = await Notification.create({
     accountId: params.accountId,
     type: params.type,
     message: params.message,
+    details: params.details,
   });
-  await params.emailSender.send(params.email);
+  if (params.email) await params.emailSender.send(params.email);
   return notification;
 }

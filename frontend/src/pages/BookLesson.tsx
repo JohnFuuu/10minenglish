@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Info, PartyPopper } from 'lucide-react';
+import { CalendarCheck, Info, PartyPopper, Repeat } from 'lucide-react';
 import { Avatar, Button, Input } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { EmailConfirmationNotice } from '../auth/EmailConfirmationNotice';
+import { LessonCalendarPreview, planLessonDates } from './LessonCalendarPreview';
 import { useToast } from '../toast/ToastContext';
 import {
   ApiError,
@@ -20,6 +21,13 @@ import { formatDateTime } from '../lib/formatDateTime';
 
 type Step = 'entry' | 'buddy-pick' | 'buddy-day' | 'buddy-time' | 'time-pick' | 'time-buddy' | 'options' | 'confirm' | 'success';
 type FrequencyType = 'daily' | 'weekly' | 'everyXDays';
+
+// Plain words for the repeat choice, e.g. "Every week" / "Every 3 days".
+function frequencyLabel(frequency: FrequencyType, everyXDays: number): string {
+  if (frequency === 'daily') return 'Every day';
+  if (frequency === 'weekly') return 'Every week';
+  return `Every ${everyXDays} day${everyXDays === 1 ? '' : 's'}`;
+}
 
 interface SingleResult {
   kind: 'single';
@@ -429,7 +437,13 @@ export function BookLesson() {
               );
             })}
           </div>
-          <button type="button" onClick={() => setStep('buddy-pick')} className="mt-4 text-sm font-bold text-brand-secondary">
+          {/* Arriving with a Buddy already chosen (e.g. from the Buddies tab)
+              skips the picker, so its list was never loaded: load it now. */}
+          <button
+            type="button"
+            onClick={() => (buddies.length > 0 ? setStep('buddy-pick') : startByBuddy())}
+            className="mt-4 text-sm font-bold text-brand-secondary"
+          >
             ← Back
           </button>
         </div>
@@ -497,36 +511,38 @@ export function BookLesson() {
 
       {step === 'options' && (
         <div className="flex flex-col gap-4">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Booking type</h2>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setBookingType('single')}
-              className={
-                bookingType === 'single'
-                  ? 'flex-1 rounded-md border-2 border-b-[4px] border-brand-primary-border bg-brand-primary p-3 text-sm font-bold text-text-inverse'
-                  : 'flex-1 rounded-md border-2 border-b-[4px] border-border bg-bg-surface p-3 text-sm font-bold text-text-heading'
-              }
-            >
-              Single lesson
-            </button>
-            <button
-              type="button"
-              onClick={() => setBookingType('recurring')}
-              className={
-                bookingType === 'recurring'
-                  ? 'flex-1 rounded-md border-2 border-b-[4px] border-brand-primary-border bg-brand-primary p-3 text-sm font-bold text-text-inverse'
-                  : 'flex-1 rounded-md border-2 border-b-[4px] border-border bg-bg-surface p-3 text-sm font-bold text-text-heading'
-              }
-            >
-              Recurring
-            </button>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-text-secondary">How many lessons?</h2>
+          {/* Icon + big number + short word, so the choice reads at a glance
+              for learners still building their English. */}
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                { type: 'single', Icon: CalendarCheck, number: '1', label: 'One lesson' },
+                { type: 'recurring', Icon: Repeat, number: '2+', label: 'Many lessons' },
+              ] as const
+            ).map(({ type, Icon, number, label }) => (
+              <button
+                key={type}
+                type="button"
+                aria-pressed={bookingType === type}
+                onClick={() => setBookingType(type)}
+                className={
+                  bookingType === type
+                    ? 'flex flex-col items-center gap-1 rounded-md border-2 border-b-[4px] border-brand-primary-border bg-brand-primary p-3 text-text-inverse'
+                    : 'flex flex-col items-center gap-1 rounded-md border-2 border-b-[4px] border-border bg-bg-surface p-3 text-text-heading'
+                }
+              >
+                <Icon size={26} aria-hidden="true" />
+                <span className="text-3xl font-extrabold leading-none">{number}</span>
+                <span className="text-sm font-bold">{label}</span>
+              </button>
+            ))}
           </div>
 
           {bookingType === 'recurring' && (
             <div className="rounded-md border-2 border-accent-lime bg-accent-lime-light p-4">
-              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-success">Repeat pattern</p>
-              <div className="mb-3 flex gap-2">
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-success">How often?</p>
+              <div className="mb-3 flex flex-wrap gap-2">
                 {(['daily', 'weekly', 'everyXDays'] as const).map((f) => (
                   <button
                     key={f}
@@ -538,7 +554,7 @@ export function BookLesson() {
                         : 'rounded-md border-2 border-b-[3px] border-accent-lime bg-bg-surface px-3 py-2 text-xs font-bold uppercase text-success'
                     }
                   >
-                    {f === 'daily' ? 'Daily' : f === 'weekly' ? 'Weekly' : 'Every X days'}
+                    {f === 'daily' ? 'Every day' : f === 'weekly' ? 'Every week' : 'Other'}
                   </button>
                 ))}
               </div>
@@ -553,11 +569,11 @@ export function BookLesson() {
 
               <label className="mb-3 flex items-center gap-2 text-sm font-bold text-text-heading">
                 <input type="checkbox" checked={includeWeekends} onChange={(e) => setIncludeWeekends(e.target.checked)} />
-                Include weekends
+                Also on Saturday and Sunday
               </label>
 
               <div className="mb-3 flex items-center gap-2 text-sm font-bold text-text-heading">
-                Number of sessions
+                How many lessons?
                 <Stepper value={occurrenceCount} min={1} max={account.credits} onChange={setOccurrenceCount} />
               </div>
 
@@ -573,7 +589,7 @@ export function BookLesson() {
               )}
 
               <p className="mt-3 text-xs font-medium text-success">
-                Credits deducted only for successfully booked sessions. Unfillable slots are skipped and reported.
+                You only pay 1 credit for each lesson we book. If a time is not free, we skip it and tell you.
               </p>
             </div>
           )}
@@ -596,7 +612,7 @@ export function BookLesson() {
             {[
               { label: 'Buddy', value: recurringBuddyMode === 'any' ? 'First available' : buddyLabel(selectedBuddy) },
               { label: 'Time', value: selectedStartTime ? formatDateTime(selectedStartTime) : '' },
-              { label: 'Type', value: bookingType === 'recurring' ? `Recurring (${frequencyType})` : 'Single lesson' },
+              { label: 'Lessons', value: bookingType === 'recurring' ? `Many · ${frequencyLabel(frequencyType, everyXDays)}` : 'One' },
               { label: 'Credits', value: bookingType === 'single' ? '1 credit' : `Up to ${occurrenceCount} credits` },
             ].map((row) => (
               <div key={row.label} className="flex items-center justify-between border-t border-border bg-bg-surface px-4 py-3 first:border-t-0">
@@ -605,6 +621,18 @@ export function BookLesson() {
               </div>
             ))}
           </div>
+
+          {selectedStartTime && (
+            <LessonCalendarPreview
+              recurring={bookingType === 'recurring'}
+              dates={planLessonDates({
+                start: new Date(selectedStartTime),
+                stepDays: frequencyType === 'daily' ? 1 : frequencyType === 'weekly' ? 7 : everyXDays,
+                includeWeekends: bookingType === 'single' || includeWeekends,
+                count: bookingType === 'single' ? 1 : occurrenceCount,
+              })}
+            />
+          )}
 
           <div className="rounded-md border-2 border-accent-lime bg-accent-lime-light p-4">
             <p className="text-xs font-bold uppercase tracking-widest text-success">Balance after booking</p>

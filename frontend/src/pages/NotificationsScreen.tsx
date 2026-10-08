@@ -8,6 +8,29 @@ import { ApiError, fetchNotifications, markNotificationRead, type AppNotificatio
 import { formatDateTime } from '../lib/formatDateTime';
 import { useCachedFetch } from '../lib/useCachedFetch';
 
+// A credit award highlights its amount and the team's reason; every other
+// type (and an award saved before details existed) is the plain sentence.
+function NotificationMessage({ notification }: { notification: AppNotification }) {
+  const { amount, reason } = notification.details ?? {};
+  if (notification.type !== 'credits_awarded' || typeof amount !== 'number' || typeof reason !== 'string') {
+    return <p className="text-sm font-bold leading-snug text-text-body">{notification.message}</p>;
+  }
+  return (
+    <div className="min-w-0">
+      <p className="text-sm font-bold leading-snug text-text-body">
+        Good news! The 10ME team has added{' '}
+        <span className="whitespace-nowrap rounded-md bg-accent-lime-light px-1.5 py-0.5 text-base font-extrabold text-success">
+          +{amount} free credit{amount === 1 ? '' : 's'}
+        </span>{' '}
+        to your account.
+      </p>
+      <p className="mt-2 break-words rounded-md bg-brand-secondary/10 px-3 py-1.5 text-sm font-bold italic text-text-heading">
+        “{reason}”
+      </p>
+    </div>
+  );
+}
+
 const NOTIFICATIONS_CACHE_KEY = '10me.cache.notifications';
 
 // Cartoon icon tile per real notification type (backend/src/models/Notification.ts).
@@ -36,6 +59,17 @@ const TYPE_CONFIG: Record<string, { bg: string; icon: React.ReactNode }> = {
       </svg>
     ),
   },
+  credits_awarded: {
+    bg: '#fff3cd',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" fill="#ffc800" />
+        <circle cx="12" cy="12" r="6.5" fill="#ffd94d" />
+        <line x1="12" y1="8.5" x2="12" y2="15.5" stroke="#cc9a00" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="8.5" y1="12" x2="15.5" y2="12" stroke="#cc9a00" strokeWidth="2.2" strokeLinecap="round" />
+      </svg>
+    ),
+  },
   buddy_cancellation_refund: {
     bg: '#fee2e2',
     icon: (
@@ -47,6 +81,8 @@ const TYPE_CONFIG: Record<string, { bg: string; icon: React.ReactNode }> = {
     ),
   },
 };
+// A User cancelling looks the same to the Buddy as any other cancellation.
+TYPE_CONFIG.lesson_cancelled = TYPE_CONFIG.buddy_cancellation_refund;
 
 const DEFAULT_TYPE_CONFIG = {
   bg: '#f0f0f0',
@@ -104,7 +140,7 @@ export function NotificationsScreen() {
   return (
     <main className={`mx-auto max-w-3xl ${showBottomNav ? NAV_CLEARANCE_CLASS : ''}`}>
       <PageHeader
-        title={unreadCount > 0 ? `Alerts (${unreadCount})` : 'Alerts'}
+        title={unreadCount > 0 ? `Messages (${unreadCount})` : 'Messages'}
         right={
           !showBottomNav && (
             <Button variant="secondary" size="sm" onClick={() => navigate('/dashboard')}>
@@ -145,7 +181,7 @@ export function NotificationsScreen() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-bold leading-snug text-text-body">{notification.message}</p>
+                      <NotificationMessage notification={notification} />
                       {!notification.read && (
                         <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-brand-primary" />
                       )}

@@ -18,15 +18,15 @@ async function tokenFor(role: 'user' | 'admin') {
 }
 
 describe('GET /api/credit-packs', () => {
-  it('returns all four pack sizes with default prices', async () => {
+  it('returns all five pack sizes with default prices', async () => {
     const token = await tokenFor('user');
     const app = createApp();
     const res = await request(app).get('/api/credit-packs').set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.packs).toHaveLength(4);
+    expect(res.body.packs).toHaveLength(5);
     expect(res.body.packs.map((p: { size: number }) => p.size).sort((a: number, b: number) => a - b)).toEqual([
-      1, 10, 20, 30,
+      1, 10, 20, 30, 50,
     ]);
   });
 

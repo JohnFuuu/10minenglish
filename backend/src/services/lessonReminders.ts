@@ -1,6 +1,7 @@
 import { Account } from '../models/Account.js';
 import { Lesson, type LessonDocument } from '../models/Lesson.js';
 import type { EmailMessage, EmailSender } from './email.js';
+import { formatLessonTimeFor } from './lessonBooking.js';
 import { createNotification } from './notifications.js';
 
 // How far ahead of a Lesson its reminder goes out.
@@ -15,8 +16,9 @@ export function buildLessonReminderNotification(params: {
   otherPartyName: string;
   startTime: Date;
   meetingLink: string;
+  timezone?: string;
 }): { message: string; email: EmailMessage } {
-  const startTimeText = params.startTime.toISOString();
+  const startTimeText = formatLessonTimeFor(params.startTime, params.timezone);
   return {
     message: `Reminder: your lesson with ${params.otherPartyName} starts at ${startTimeText}.`,
     email: {
@@ -51,6 +53,7 @@ async function remindBothParties(
       otherPartyName,
       startTime: lesson.startTime,
       meetingLink: lesson.meetingLink,
+      timezone: account.timezone,
     });
     await createNotification({
       emailSender,

@@ -360,6 +360,8 @@ export interface AppNotification {
   id: string;
   type: string;
   message: string;
+  // Present on some types, e.g. credits_awarded: { amount, reason }.
+  details?: Record<string, unknown>;
   read: boolean;
   createdAt: string;
 }
@@ -571,11 +573,13 @@ export function deleteAdminTag(token: string, tagId: string) {
   });
 }
 
-export function fetchAdminMembers(token: string, filters: { q?: string; tagId?: string }) {
+// One page of members, newest first; total counts every match across pages.
+export function fetchAdminMembers(token: string, filters: { q?: string; tagId?: string; page?: number }) {
   const params = new URLSearchParams();
   if (filters.q) params.set('q', filters.q);
   if (filters.tagId) params.set('tagId', filters.tagId);
-  return request<{ members: AdminMember[] }>(`/api/admin/members?${params.toString()}`, {
+  if (filters.page && filters.page > 1) params.set('page', String(filters.page));
+  return request<{ members: AdminMember[]; total: number; page: number; pageSize: number }>(`/api/admin/members?${params.toString()}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
@@ -592,6 +596,16 @@ export function removeMemberTag(token: string, memberId: string, tagId: string) 
   return request<AdminMember>(`/api/admin/members/${memberId}/tags/${tagId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// Admin-only: adds credits to a member's balance, with a required reason
+// (logged in the audit log). Returns the updated member.
+export function awardMemberCredits(token: string, memberId: string, amount: number, reason: string) {
+  return request<AdminMember>(`/api/admin/members/${memberId}/credits`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ amount, reason }),
   });
 }
 
@@ -623,6 +637,7 @@ export interface AdminAccount {
   // Named in the backend's SUPER_BACKEND_ADMIN: may deactivate/remove other
   // Admins, and can't be deactivated/removed themselves.
   isSuperAdmin: boolean;
+  joinedAt: string;
 }
 
 export function fetchAdmins(token: string) {

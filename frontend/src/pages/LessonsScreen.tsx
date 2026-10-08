@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CalendarX, Video } from 'lucide-react';
+import { AlertTriangle, CalendarX, CheckCircle2, Video } from 'lucide-react';
 import { Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
@@ -64,6 +64,42 @@ function timeOfDayValue(iso: string): string {
 
 function hoursUntil(iso: string): number {
   return (new Date(iso).getTime() - Date.now()) / (60 * 60 * 1000);
+}
+
+// Last moment a cancellation still refunds the credit.
+function freeCancelDeadline(iso: string): string {
+  return formatDateTime(new Date(new Date(iso).getTime() - REFUND_CUTOFF_HOURS * 60 * 60 * 1000).toISOString());
+}
+
+// The cancel rule spelled out before the User confirms, in short plain
+// sentences (many Users are still learning English).
+function CancelRules({ startTime }: { startTime: string }) {
+  if (hoursUntil(startTime) < REFUND_CUTOFF_HOURS) {
+    return (
+      <div className="flex items-start gap-2">
+        <AlertTriangle size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+        <div>
+          <p className="text-sm font-extrabold">You will NOT get your credit back.</p>
+          <p className="mt-0.5 text-xs font-bold">
+            This lesson starts in less than {REFUND_CUTOFF_HOURS} hours. To get your credit back, you must cancel{' '}
+            {REFUND_CUTOFF_HOURS} hours or more before the lesson.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-start gap-2">
+      <CheckCircle2 size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+      <div>
+        <p className="text-sm font-extrabold">You will get your 1 credit back.</p>
+        <p className="mt-0.5 text-xs font-bold">
+          Free to cancel until <span className="whitespace-nowrap underline">{freeCancelDeadline(startTime)}</span> (
+          {REFUND_CUTOFF_HOURS} hours before). After that, no credit back.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function previousStatusLabel(lesson: LessonWithBuddy): string {
@@ -304,14 +340,12 @@ export function LessonsScreen() {
                   <div
                     className={
                       hoursUntil(lesson.startTime) < REFUND_CUTOFF_HOURS
-                        ? 'mt-3 rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-warning'
-                        : 'mt-3 rounded-md bg-success/10 px-3 py-2 text-xs font-bold text-success'
+                        ? 'mt-3 rounded-md border-2 border-warning bg-warning/10 px-3 py-3 text-warning'
+                        : 'mt-3 rounded-md border-2 border-success bg-success/10 px-3 py-3 text-success'
                     }
                   >
-                    {hoursUntil(lesson.startTime) < REFUND_CUTOFF_HOURS
-                      ? "Cancelling now won't refund your credit."
-                      : 'This will cancel your lesson and refund 1 credit.'}
-                    <div className="mt-2 flex gap-2">
+                    <CancelRules startTime={lesson.startTime} />
+                    <div className="mt-3 flex gap-2">
                       <Button
                         size="sm"
                         tone="blue"

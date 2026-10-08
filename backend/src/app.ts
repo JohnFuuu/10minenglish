@@ -45,7 +45,7 @@ export function createApp(deps: AppDependencies = {}) {
   app.use(createMeRouter({ emailSender }));
   app.use(onboardingRouter);
   app.use(createAdminRouter({ emailSender }));
-  app.use(createAdminMembersRouter());
+  app.use(createAdminMembersRouter({ emailSender }));
   app.use(createAdminAuditRouter());
   app.use(buddyRouter);
   app.use(notificationsRouter);

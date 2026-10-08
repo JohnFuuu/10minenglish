@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { Button, Select } from '../../components';
+import { AwardCreditsForm } from './AwardCreditsForm';
 import { MODULE_FRAME, SectionHeading } from './SectionHeading';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
@@ -37,6 +38,10 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
   const [query, setQuery] = useState('');
   const [tagFilter, setTagFilter] = useState('');
   const [members, setMembers] = useState<AdminMember[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const listTop = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Which member's tag is waiting on "Remove / Keep" — removing a label like
@@ -46,16 +51,25 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
   // A tag deleted while it's the active filter would otherwise leave the
   // dropdown reading "All members" over a list filtered by a tag that's gone.
   useEffect(() => {
-    if (tagFilter && !tags.some((tag) => tag.id === tagFilter)) setTagFilter('');
+    if (tagFilter && !tags.some((tag) => tag.id === tagFilter)) {
+      setTagFilter('');
+      setPage(1);
+    }
   }, [tags, tagFilter]);
 
   // Only typing is debounced: the first load and filter changes fetch at
-  // once, rather than every visit paying the typing delay.
+  // once, rather than every visit paying the typing delay. A new search or
+  // filter starts again from page 1, set alongside it so only one fetch runs.
   const [debouncedQuery, setDebouncedQuery] = useState('');
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(query.trim()), SEARCH_DEBOUNCE_MS);
+    const timer = setTimeout(() => {
+      const next = query.trim();
+      if (next === debouncedQuery) return;
+      setDebouncedQuery(next);
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, debouncedQuery]);
 
   // Not keyed on the tag list itself (see refreshKey): the page bumps
   // refreshKey when a tag is renamed or deleted in the Manage tags panel.
@@ -64,9 +78,12 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
     // Set by cleanup once a newer search has started, so a slow, older
     // response that lands late can't overwrite the newer results.
     let superseded = false;
-    fetchAdminMembers(token, { q: debouncedQuery, tagId: tagFilter })
+    fetchAdminMembers(token, { q: debouncedQuery, tagId: tagFilter, page })
       .then((res) => {
-        if (!superseded) setMembers(res.members);
+        if (superseded) return;
+        setMembers(res.members);
+        setTotal(res.total);
+        setPageSize(res.pageSize);
       })
       .catch(() => {
         if (!superseded) showToast('Could not load members.', 'error');
@@ -74,9 +91,22 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
     return () => {
       superseded = true;
     };
-  }, [token, debouncedQuery, tagFilter, refreshKey, showToast]);
+  }, [token, debouncedQuery, tagFilter, page, refreshKey, showToast]);
 
   const selected = members.find((m) => m.id === selectedId) ?? null;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+  // A page left empty (e.g. its last member untagged under a tag filter)
+  // steps back to the new last page.
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  function goToPage(next: number) {
+    setPage(next);
+    setSelectedId(null);
+    listTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   async function change(action: () => Promise<AdminMember>) {
     setBusy(true);
@@ -107,7 +137,10 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
         <Select
           aria-label="Filter by tag"
           value={tagFilter}
-          onChange={setTagFilter}
+          onChange={(value) => {
+            setTagFilter(value);
+            setPage(1);
+          }}
           options={[{ value: '', label: 'All members' }, ...tags.map((tag) => ({ value: tag.id, label: `Tagged: ${tag.name}` }))]}
           className="sm:w-60"
         />
@@ -116,7 +149,7 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
 
       {members.length === 0 && <p className="text-sm text-text-secondary">No members match.</p>}
 
-      <div className="flex flex-col gap-2">
+      <div ref={listTop} className="flex scroll-mt-4 flex-col gap-2">
         {members.map((member) => (
           <div key={member.id} className="rounded-md border-2 border-b-4 border-border-strong bg-bg-surface">
             <button
@@ -140,6 +173,7 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
 
             {selected?.id === member.id && (
               <div className="flex flex-col gap-2 border-t-2 border-border p-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-text-secondary">Tags</p>
                 {member.tags.length === 0 && <p className="text-sm text-text-secondary">No tags yet.</p>}
                 {member.tags.map((t) =>
                   confirmingRemoval?.memberId === member.id && confirmingRemoval.tagId === t.id ? (
@@ -196,11 +230,39 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
                       .map((tag) => ({ value: tag.id, label: tag.name }))}
                   />
                 )}
+
+                <p className="mt-2 text-xs font-bold uppercase tracking-wide text-text-secondary">Award credits</p>
+                <AwardCreditsForm
+                  key={member.id}
+                  member={member}
+                  onAwarded={(updated) => setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))}
+                />
               </div>
             )}
           </div>
         ))}
       </div>
+
+      {total > 0 && (
+        <nav aria-label="Member list pages" className="mt-4 flex flex-col items-center gap-2">
+          {pageCount > 1 && (
+            <div className="flex w-full items-center justify-between gap-3">
+              <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
+                ‹ Prev
+              </Button>
+              <span className="text-sm font-bold text-text-body">
+                Page {page} of {pageCount}
+              </span>
+              <Button variant="secondary" size="sm" disabled={page >= pageCount} onClick={() => goToPage(page + 1)}>
+                Next ›
+              </Button>
+            </div>
+          )}
+          <p className="text-xs text-text-secondary">
+            {total} member{total === 1 ? '' : 's'}
+          </p>
+        </nav>
+      )}
     </section>
   );
 }

@@ -35,7 +35,7 @@ export function summariseAvailability(blocks: Block[]): string[] {
   return [...daysByHours.entries()].map(([hours, days]) => `${days.map((d) => DAY_NAMES[d]).join(', ')} · ${hours}`);
 }
 
-function formatDate(iso: string): string {
+export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
@@ -45,7 +45,7 @@ function formatDateTime(iso: string): string {
 
 // Label above a full-width value: at phone width a side-by-side layout
 // leaves values too narrow (emails and links wrap mid-word).
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
       <p className="text-xs font-bold uppercase tracking-wide text-text-secondary">{label}</p>
