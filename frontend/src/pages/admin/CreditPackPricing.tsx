@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Wallet } from 'lucide-react';
 import { Button, Input } from '../../components';
+import { MODULE_FRAME, SectionHeading } from './SectionHeading';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import { adminUpdateCreditPackPrice, fetchCreditPacks, type CreditPack } from '../../lib/api';
@@ -78,14 +80,21 @@ export function CreditPackPricing() {
   }
 
   return (
-    <section className="mb-10">
-      <p className="mb-4 text-sm font-medium text-text-secondary">Edit prices without a code deploy.</p>
+    <section className={`mb-10 ${MODULE_FRAME}`}>
+      <div className="mb-1 flex items-center gap-2">
+        <Wallet size={20} className="text-brand-secondary" aria-hidden="true" />
+        <SectionHeading className="mb-0">Top-up packs</SectionHeading>
+      </div>
+      <p className="mb-4 text-sm font-medium text-text-secondary">
+        What members <span className="font-bold text-text-body">pay</span>: the price in NZD for each credit pack on the
+        Buy Credits screen.
+      </p>
 
       <div className="flex flex-col gap-3">
         {packs.map((pack) => (
           <div
             key={pack.size}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-b-4 border-border-strong bg-bg-surface p-4"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-border bg-bg-surface p-3"
           >
             <p className="font-bold text-text-heading">{pack.size} credits</p>
             {editingSize === pack.size ? (
