@@ -43,3 +43,7 @@ _Avoid_: Alert, message (Message is reserved for synchronous success/failure fee
 **Payment**:
 A provider-agnostic record of a Credit Pack purchase attempt. Two independent providers exist — Stripe (card) and POLi (NZ bank transfer) — each with their own success/failure callback wiring, but both resolve to the same outcome: credits added to the User's balance on success. A User only sees the POLi option if their Location is New Zealand; everyone sees Stripe.
 _Avoid_: Transaction, Order (this domain has no separate "order" concept — a Payment either succeeds and grants Credits, or it doesn't)
+
+**Support Ticket**:
+A question or problem raised by a User or a Buddy (from the Help icon on their dashboard), with a topic and an optional related Lesson, handled by Admins on the SUPPORT tab. One back-and-forth thread per ticket: an Admin reply marks it `answered` and notifies the sender (in the app and by email); a sender reply sets it back to `open`, even after it was `closed`; only an Admin closes or reopens it. Admin replies and status changes are in the Audit Log.
+_Avoid_: Complaint, case, issue (Issue means a GitHub issue in this repo)

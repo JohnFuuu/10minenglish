@@ -81,6 +81,17 @@ const TYPE_CONFIG: Record<string, { bg: string; icon: React.ReactNode }> = {
     ),
   },
 };
+TYPE_CONFIG.support_reply = {
+  bg: '#ddf4ff',
+  icon: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path d="M4 5h16v11H9l-5 4z" fill="#1cb0f6" />
+      <circle cx="9" cy="10.5" r="1.3" fill="#ffffff" />
+      <circle cx="12" cy="10.5" r="1.3" fill="#ffffff" />
+      <circle cx="15" cy="10.5" r="1.3" fill="#ffffff" />
+    </svg>
+  ),
+};
 // A User cancelling looks the same to the Buddy as any other cancellation.
 TYPE_CONFIG.lesson_cancelled = TYPE_CONFIG.buddy_cancellation_refund;
 
@@ -202,6 +213,21 @@ export function NotificationsScreen() {
                           onClick={() => dismiss(notification)}
                         >
                           Dismiss
+                        </Button>
+                      </div>
+                    )}
+
+                    {notification.type === 'support_reply' && typeof notification.details?.ticketId === 'string' && (
+                      <div className="mt-3">
+                        <Button
+                          size="sm"
+                          tone="blue"
+                          onClick={() => {
+                            if (!notification.read) dismiss(notification);
+                            navigate(`/support?ticket=${notification.details!.ticketId}`);
+                          }}
+                        >
+                          View and reply
                         </Button>
                       </div>
                     )}

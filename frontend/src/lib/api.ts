@@ -732,3 +732,65 @@ export function removeAdmin(token: string, adminId: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+// Support tickets: members and Buddies ask for help; Admins answer on the
+// SUPPORT tab. One back-and-forth thread per ticket.
+export type SupportTopic = 'payment' | 'lesson' | 'buddy' | 'account' | 'app' | 'other';
+export type SupportStatus = 'open' | 'answered' | 'closed';
+
+export interface SupportTicket {
+  id: string;
+  topic: SupportTopic;
+  status: SupportStatus;
+  createdAt: string;
+  lastActivityAt: string;
+  sender: { id: string; role: 'user' | 'buddy'; name: string; email?: string };
+  lesson?: { id: string; startTime: string; buddyName: string };
+  messages: { from: 'sender' | 'admin'; authorName: string; body: string; createdAt: string }[];
+}
+
+export function createSupportTicket(token: string, payload: { topic: SupportTopic; message: string; lessonId?: string }) {
+  return request<SupportTicket>('/api/support/tickets', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fetchMySupportTickets(token: string) {
+  return request<{ tickets: SupportTicket[] }>('/api/support/tickets', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// From the sender or an Admin; returns the updated ticket.
+export function replyToSupportTicket(token: string, ticketId: string, message: string) {
+  return request<SupportTicket>(`/api/support/tickets/${ticketId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ message }),
+  });
+}
+
+export function adminFetchSupportTickets(token: string, filters: { status?: SupportStatus; page?: number }) {
+  const params = new URLSearchParams();
+  if (filters.status) params.set('status', filters.status);
+  if (filters.page && filters.page > 1) params.set('page', String(filters.page));
+  return request<{
+    tickets: SupportTicket[];
+    total: number;
+    page: number;
+    pageSize: number;
+    counts: Record<SupportStatus, number>;
+  }>(`/api/admin/support/tickets?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function adminSetSupportTicketStatus(token: string, ticketId: string, status: 'open' | 'closed') {
+  return request<SupportTicket>(`/api/admin/support/tickets/${ticketId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ status }),
+  });
+}

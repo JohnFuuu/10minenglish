@@ -13,6 +13,7 @@ const CATEGORY_OPTIONS = [
   { value: 'buddies', label: 'Buddies' },
   { value: 'pricing', label: 'Pricing' },
   { value: 'admins', label: 'Admins' },
+  { value: 'support', label: 'Support' },
 ];
 
 const dollars = (cents: unknown) => `$${(Number(cents) / 100).toFixed(2)}`;
@@ -62,6 +63,12 @@ function describe(entry: AuditLogEntry): ReactNode {
           {who} changed the lesson price from {plural(entry.details.from, 'credit')} to {plural(entry.details.to, 'credit')}
         </>
       );
+    case 'support.replied':
+      return <>{who} replied to support ticket {target}</>;
+    case 'support.closed':
+      return <>{who} closed support ticket {target}</>;
+    case 'support.reopened':
+      return <>{who} reopened support ticket {target}</>;
     case 'admin.created':
       return <>{who} created Admin account {target}</>;
     case 'admin.deactivated':

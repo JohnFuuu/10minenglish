@@ -1,6 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 
-export type NotificationType = 'buddy_cancellation_refund' | 'lesson_reminder' | 'lesson_rescheduled' | 'lesson_cancelled' | 'credits_awarded';
+export type NotificationType = 'buddy_cancellation_refund' | 'lesson_reminder' | 'lesson_rescheduled' | 'lesson_cancelled' | 'credits_awarded' | 'support_reply';
 
 export interface NotificationDocument extends mongoose.Document {
   accountId: mongoose.Types.ObjectId;
@@ -15,7 +15,7 @@ export interface NotificationDocument extends mongoose.Document {
 
 const notificationSchema = new Schema<NotificationDocument>({
   accountId: { type: Schema.Types.ObjectId, required: true, ref: 'Account' },
-  type: { type: String, required: true, enum: ['buddy_cancellation_refund', 'lesson_reminder', 'lesson_rescheduled', 'lesson_cancelled', 'credits_awarded'] },
+  type: { type: String, required: true, enum: ['buddy_cancellation_refund', 'lesson_reminder', 'lesson_rescheduled', 'lesson_cancelled', 'credits_awarded', 'support_reply'] },
   message: { type: String, required: true },
   details: { type: Schema.Types.Mixed },
   read: { type: Boolean, required: true, default: false },

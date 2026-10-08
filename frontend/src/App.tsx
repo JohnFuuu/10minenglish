@@ -5,6 +5,8 @@ import { RequireAdmin } from './auth/RequireAdmin';
 import { AdminBuddiesPage } from './pages/admin/AdminBuddiesPage';
 import { AdminPricingPage } from './pages/admin/AdminPricingPage';
 import { AdminAdminsPage } from './pages/admin/AdminAdminsPage';
+import { AdminSupportPage } from './pages/admin/AdminSupportPage';
+import { SupportScreen } from './pages/support/SupportScreen';
 import { ToastProvider } from './toast/ToastContext';
 import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
@@ -47,6 +49,7 @@ function App() {
             <Route path="/book" element={<RequireAuth><BookLesson /></RequireAuth>} />
             <Route path="/lessons" element={<RequireAuth><LessonsScreen /></RequireAuth>} />
             <Route path="/notifications" element={<RequireAuth><NotificationsScreen /></RequireAuth>} />
+            <Route path="/support" element={<RequireAuth><SupportScreen /></RequireAuth>} />
             <Route path="/profile" element={<RequireAuth><ProfileRoute /></RequireAuth>} />
             <Route path="/buddies" element={<RequireAuth><BuddiesScreen /></RequireAuth>} />
             <Route path="/buddies/:id" element={<RequireAuth><BuddyScreen /></RequireAuth>} />
@@ -59,6 +62,7 @@ function App() {
             {/* The audit log is a module on the ADMINS tab now. */}
             <Route path="/admin/audit" element={<Navigate to="/admin/admins#audit-log" replace />} />
             <Route path="/admin/admins" element={<RequireAdmin><AdminAdminsPage /></RequireAdmin>} />
+            <Route path="/admin/support" element={<RequireAdmin><AdminSupportPage /></RequireAdmin>} />
             <Route path="/playground" element={<ComponentPlayground />} />
             {/* Unmatched paths fall through to /dashboard, which already does the
                 right thing either way: RequireAuth sends a signed-out visitor to
