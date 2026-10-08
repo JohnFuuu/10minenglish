@@ -15,13 +15,14 @@ export const AUDIT_ACTIONS = [
   'buddy.deactivated',
   'buddy.removed',
   'price.changed',
+  'lesson_price.changed',
   'admin.created',
   'admin.deactivated',
   'admin.activated',
   'admin.removed',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
-export type AuditTargetType = 'tag' | 'member' | 'buddy' | 'creditPack' | 'admin';
+export type AuditTargetType = 'tag' | 'member' | 'buddy' | 'creditPack' | 'lessonPrice' | 'admin';
 
 // The Audit log tab's filter options.
 export const AUDIT_CATEGORIES: Record<string, AuditAction[]> = {
@@ -29,7 +30,7 @@ export const AUDIT_CATEGORIES: Record<string, AuditAction[]> = {
   memberTags: ['member.tag_added', 'member.tag_removed'],
   credits: ['member.credits_awarded'],
   buddies: ['buddy.created', 'buddy.activated', 'buddy.deactivated', 'buddy.removed'],
-  pricing: ['price.changed'],
+  pricing: ['price.changed', 'lesson_price.changed'],
   admins: ['admin.created', 'admin.deactivated', 'admin.activated', 'admin.removed'],
 };
 
@@ -50,7 +51,7 @@ const adminSnapshotSchema = new Schema(
 
 const targetSnapshotSchema = new Schema(
   {
-    type: { type: String, required: true, enum: ['tag', 'member', 'buddy', 'creditPack', 'admin'] },
+    type: { type: String, required: true, enum: ['tag', 'member', 'buddy', 'creditPack', 'lessonPrice', 'admin'] },
     id: { type: String },
     label: { type: String, required: true },
   },

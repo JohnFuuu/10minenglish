@@ -11,6 +11,9 @@ export interface LessonDocument extends mongoose.Document {
   durationMinutes: number;
   status: LessonStatus;
   meetingLink: string;
+  // Credits charged when booked — what a cancellation refunds. Lessons from
+  // before lesson prices existed read as 1 (the schema default).
+  creditsCost: number;
   // Set when the pre-lesson reminder goes out; doubles as the claim that stops
   // a second sweep sending it again.
   reminderSentAt?: Date;
@@ -24,6 +27,7 @@ const lessonSchema = new Schema<LessonDocument>({
   durationMinutes: { type: Number, required: true, default: LESSON_DURATION_MINUTES },
   status: { type: String, required: true, enum: ['upcoming', 'cancelled', 'completed'], default: 'upcoming' },
   meetingLink: { type: String, required: true },
+  creditsCost: { type: Number, required: true, default: 1, min: 0 },
   reminderSentAt: { type: Date },
   createdAt: { type: Date, required: true, default: Date.now },
 });

@@ -15,6 +15,7 @@ import {
 import type { BookLessonPrefill } from './BookLesson';
 import { formatDateTime } from '../lib/formatDateTime';
 import { initialsOf } from '../lib/initials';
+import { creditsLabel } from '../lib/useLessonPrice';
 import { useCachedFetch } from '../lib/useCachedFetch';
 
 const LESSONS_CACHE_KEY = '10me.cache.lessons';
@@ -73,15 +74,16 @@ function freeCancelDeadline(iso: string): string {
 
 // The cancel rule spelled out before the User confirms, in short plain
 // sentences (many Users are still learning English).
-function CancelRules({ startTime }: { startTime: string }) {
+function CancelRules({ startTime, creditsCost }: { startTime: string; creditsCost: number }) {
+  const credits = creditsLabel(creditsCost);
   if (hoursUntil(startTime) < REFUND_CUTOFF_HOURS) {
     return (
       <div className="flex items-start gap-2">
         <AlertTriangle size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
         <div>
-          <p className="text-sm font-extrabold">You will NOT get your credit back.</p>
+          <p className="text-sm font-extrabold">You will NOT get your {credits} back.</p>
           <p className="mt-0.5 text-xs font-bold">
-            This lesson starts in less than {REFUND_CUTOFF_HOURS} hours. To get your credit back, you must cancel{' '}
+            This lesson starts in less than {REFUND_CUTOFF_HOURS} hours. To get your credits back, you must cancel{' '}
             {REFUND_CUTOFF_HOURS} hours or more before the lesson.
           </p>
         </div>
@@ -92,10 +94,10 @@ function CancelRules({ startTime }: { startTime: string }) {
     <div className="flex items-start gap-2">
       <CheckCircle2 size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
       <div>
-        <p className="text-sm font-extrabold">You will get your 1 credit back.</p>
+        <p className="text-sm font-extrabold">You will get your {credits} back.</p>
         <p className="mt-0.5 text-xs font-bold">
           Free to cancel until <span className="whitespace-nowrap underline">{freeCancelDeadline(startTime)}</span> (
-          {REFUND_CUTOFF_HOURS} hours before). After that, no credit back.
+          {REFUND_CUTOFF_HOURS} hours before). After that, no credits back.
         </p>
       </div>
     </div>
@@ -228,7 +230,7 @@ export function LessonsScreen() {
       setCredits(res.creditsRemaining);
       setConfirmingId(null);
       showToast(
-        res.refunded ? 'Lesson cancelled and your credit was refunded.' : 'Lesson cancelled — no refund for this late cancellation.',
+        res.refunded ? 'Lesson cancelled and your credits were refunded.' : 'Lesson cancelled — no refund for this late cancellation.',
         'success',
       );
     } catch (err) {
@@ -344,7 +346,7 @@ export function LessonsScreen() {
                         : 'mt-3 rounded-md border-2 border-success bg-success/10 px-3 py-3 text-success'
                     }
                   >
-                    <CancelRules startTime={lesson.startTime} />
+                    <CancelRules startTime={lesson.startTime} creditsCost={lesson.creditsCost ?? 1} />
                     <div className="mt-3 flex gap-2">
                       <Button
                         size="sm"

@@ -138,7 +138,7 @@ export function BuddyLessonsScreen() {
 
                 {confirmingId === lesson.id && (
                   <div className="mt-3 rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-warning">
-                    This will cancel the lesson and refund the User's credit, regardless of how soon it starts.
+                    This will cancel the lesson and refund the User's credits, regardless of how soon it starts.
                     <div className="mt-2 flex gap-2">
                       <Button
                         size="sm"

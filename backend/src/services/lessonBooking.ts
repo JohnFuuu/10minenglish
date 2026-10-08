@@ -51,7 +51,7 @@ export async function cancelLesson(params: {
   if (refunded) {
     const updatedAccount = await Account.findOneAndUpdate(
       { _id: accountId },
-      { $inc: { credits: 1 } },
+      { $inc: { credits: claimed.creditsCost } },
       { returnDocument: 'after' },
     );
     creditsRemaining = updatedAccount?.credits ?? 0;
@@ -81,7 +81,7 @@ export async function buddyCancelLesson(params: {
   // cancelLesson — and it refunds the Lesson's User, not the caller.
   const updatedUser = await Account.findOneAndUpdate(
     { _id: claimed.userId },
-    { $inc: { credits: 1 } },
+    { $inc: { credits: claimed.creditsCost } },
     { returnDocument: 'after' },
   );
 
@@ -182,21 +182,38 @@ export async function findAvailableBuddy(instant: Date): Promise<AccountDocument
   return null;
 }
 
+// Charges the User `creditsCost` and books the Lesson, recording its cost.
+// The charge is one conditional update ("only if they still have enough"),
+// so two bookings at once can't spend the same credits; null means they
+// couldn't afford it and nothing was booked. Keeps `user.credits` in step.
 export async function bookLesson(params: {
   user: AccountDocument;
   buddy: AccountDocument;
   startTime: Date;
-}): Promise<LessonDocument> {
-  const { user, buddy, startTime } = params;
-  const lesson = await Lesson.create({
-    userId: user._id,
-    buddyId: buddy._id,
-    startTime,
-    meetingLink: buddy.meetingLink,
-  });
-  user.credits -= 1;
-  await user.save();
-  return lesson;
+  creditsCost: number;
+}): Promise<LessonDocument | null> {
+  const { user, buddy, startTime, creditsCost } = params;
+  const charged = await Account.findOneAndUpdate(
+    { _id: user._id, credits: { $gte: creditsCost } },
+    { $inc: { credits: -creditsCost } },
+    { returnDocument: 'after' },
+  );
+  if (!charged) return null;
+  user.credits = charged.credits;
+  try {
+    return await Lesson.create({
+      userId: user._id,
+      buddyId: buddy._id,
+      startTime,
+      meetingLink: buddy.meetingLink,
+      creditsCost,
+    });
+  } catch (err) {
+    // Don't keep credits for a Lesson that was never created.
+    await Account.updateOne({ _id: user._id }, { $inc: { credits: creditsCost } });
+    user.credits += creditsCost;
+    throw err;
+  }
 }
 
 export function buildConfirmationEmail(
@@ -222,11 +239,11 @@ export function buildBuddyCancellationNotification(params: {
 }): { message: string; email: EmailMessage } {
   const startTimeText = formatLessonTimeFor(params.startTime, params.timezone);
   return {
-    message: `${params.buddyName} cancelled your lesson on ${startTimeText}. Your credit has been refunded.`,
+    message: `${params.buddyName} cancelled your lesson on ${startTimeText}. The credits you paid are back in your account.`,
     email: {
       to: params.userEmail,
       subject: 'Your 10ME lesson was cancelled — credit refunded',
-      body: `${params.buddyName} cancelled your lesson scheduled for ${startTimeText}. We've refunded your credit — you now have ${params.creditsRemaining} credit(s). Book another lesson anytime.`,
+      body: `${params.buddyName} cancelled your lesson scheduled for ${startTimeText}. The credits you paid are back in your account — you now have ${params.creditsRemaining} credit(s). Book another lesson anytime.`,
     },
   };
 }
@@ -307,11 +324,14 @@ export function buildUserCancellationEmail(params: {
   startTime: Date;
   timezone?: string;
   refunded: boolean;
+  // What the Lesson cost — the amount refunded (or not).
+  creditsCost: number;
 }): EmailMessage {
   const when = formatLessonTimeFor(params.startTime, params.timezone);
+  const credits = `${params.creditsCost} credit${params.creditsCost === 1 ? '' : 's'}`;
   const refundLine = params.refunded
-    ? 'Your 1 credit is back in your account.'
-    : `You cancelled less than ${CANCELLATION_REFUND_CUTOFF_HOURS} hours before the lesson, so the credit was not returned.`;
+    ? `Your ${credits} ${params.creditsCost === 1 ? 'is' : 'are'} back in your account.`
+    : `You cancelled less than ${CANCELLATION_REFUND_CUTOFF_HOURS} hours before the lesson, so the ${credits} ${params.creditsCost === 1 ? 'was' : 'were'} not returned.`;
   return {
     to: params.to,
     subject: 'Your 10ME lesson is cancelled',

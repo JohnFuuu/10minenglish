@@ -4,6 +4,7 @@ import { Button } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { EmailConfirmationNotice } from '../auth/EmailConfirmationNotice';
 import { useToast } from '../toast/ToastContext';
+import { creditsLabel, useLessonPrice } from '../lib/useLessonPrice';
 import { fetchCreditPacks, startPoliCheckout, startStripeCheckout, type CreditPack } from '../lib/api';
 
 export function CreditsScreen() {
@@ -12,6 +13,7 @@ export function CreditsScreen() {
   const navigate = useNavigate();
 
   const [packs, setPacks] = useState<CreditPack[]>([]);
+  const creditsPerLesson = useLessonPrice();
   const [selectedSize, setSelectedSize] = useState<number | null>(null);
   const [isPaying, setIsPaying] = useState(false);
 
@@ -68,7 +70,7 @@ export function CreditsScreen() {
       <div className="mb-6 rounded-md border-2 border-b-[5px] border-brand-primary-border bg-brand-primary p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-accent-lime-light">Current balance</p>
         <p className="font-display text-4xl font-black text-text-inverse">{account?.credits ?? 0}</p>
-        <p className="text-xs font-bold text-accent-lime-light">1 credit = 1 lesson</p>
+        <p className="text-xs font-bold text-accent-lime-light">{creditsLabel(creditsPerLesson)} = 1 lesson</p>
       </div>
 
       <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Choose a pack</p>

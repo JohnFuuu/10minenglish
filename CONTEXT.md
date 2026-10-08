@@ -13,11 +13,11 @@ The person a User books a 1:1 session with. Single canonical role — the spec's
 _Avoid_: Teacher, practice partner, tutor
 
 **Lesson**:
-A single booked 1:1 slot between a User and a Buddy at a specific time, consuming one credit. A recurring booking creates multiple independent Lessons up front rather than one grouping/series object — there is no separate "Session" concept. A Lesson's status is `upcoming` until either it's cancelled or its scheduled time elapses, at which point it's automatically marked `completed` — there is no verified-attendance concept (see ADR 0006).
+A single booked 1:1 slot between a User and a Buddy at a specific time, costing the current Lesson Price in credits (recorded on the Lesson, so a cancellation refunds exactly what was paid even if the price has since changed). A recurring booking creates multiple independent Lessons up front rather than one grouping/series object — there is no separate "Session" concept. A Lesson's status is `upcoming` until either it's cancelled or its scheduled time elapses, at which point it's automatically marked `completed` — there is no verified-attendance concept (see ADR 0006).
 _Avoid_: Session, meeting, booking (booking is the act, Lesson is the resulting record)
 
 **Credit**:
-A fixed-cost, fungible unit purchased in packs (1/10/20/30/50), or awarded by an Admin with a reason, and consumed one-per-Lesson at booking time. Cost is flat regardless of Buddy or duration — packs are bulk-discount bundles of the same unit, not different products.
+A fixed-cost, fungible unit purchased in packs (1/10/20/30/50), or awarded by an Admin with a reason, and spent at booking time — each Lesson costs the Lesson Price, a single Admin-set number of credits (starting at 1), the same regardless of Buddy. Never assume one credit per Lesson. Packs are bundles of the same unit, not different products.
 _Avoid_: Token, balance (balance is the count of Credits a User holds, not the unit itself)
 
 **Buddy Availability Schedule**:
