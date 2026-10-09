@@ -425,10 +425,12 @@ export function fetchTeachingLessons(token: string) {
   });
 }
 
-export function buddyCancelLesson(token: string, lessonId: string) {
+// `reason` is optional and shown to the member.
+export function buddyCancelLesson(token: string, lessonId: string, reason?: string) {
   return request<{ lesson: Lesson; creditsRemaining: number }>(`/api/lessons/${lessonId}/buddy-cancel`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(reason ? { reason } : {}),
   });
 }
 

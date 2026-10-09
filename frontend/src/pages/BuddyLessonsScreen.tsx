@@ -4,6 +4,7 @@ import { Avatar, BottomNav, Button, Card, NAV_CLEARANCE_CLASS, PageHeader } from
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import { ApiError, buddyCancelLesson, fetchTeachingLessons, type LessonWithUser } from '../lib/api';
+import { BUDDY_CANCEL_REASONS, CancelReason } from './CancelReason';
 import { formatDateTime } from '../lib/formatDateTime';
 import { initialsOf } from '../lib/initials';
 import { useCachedFetch } from '../lib/useCachedFetch';
@@ -36,11 +37,13 @@ export function BuddyLessonsScreen() {
   const previous = lessons?.previous ?? [];
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  // The open cancel box's optional reason (reset whenever a box opens).
+  const [cancelReason, setCancelReason] = useState<string | undefined>();
 
   async function handleCancel(lesson: LessonWithUser) {
     setCancellingId(lesson.id);
     try {
-      await buddyCancelLesson(token!, lesson.id);
+      await buddyCancelLesson(token!, lesson.id, cancelReason);
       setLessons((current) => {
         if (!current) return current;
         return {
@@ -130,7 +133,10 @@ export function BuddyLessonsScreen() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => setConfirmingId(confirmingId === lesson.id ? null : lesson.id)}
+                    onClick={() => {
+                      setCancelReason(undefined);
+                      setConfirmingId(confirmingId === lesson.id ? null : lesson.id);
+                    }}
                   >
                     Cancel
                   </Button>
@@ -139,7 +145,8 @@ export function BuddyLessonsScreen() {
                 {confirmingId === lesson.id && (
                   <div className="mt-3 rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-warning">
                     This will cancel the lesson and refund the User's credits, regardless of how soon it starts.
-                    <div className="mt-2 flex gap-2">
+                    <CancelReason key={lesson.id} reasons={BUDDY_CANCEL_REASONS} toldTo="the member" onChange={setCancelReason} />
+                    <div className="mt-3 flex gap-2">
                       <Button
                         size="sm"
                         tone="blue"
