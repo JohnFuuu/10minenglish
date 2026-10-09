@@ -30,6 +30,16 @@ import { currentCreditsPerLesson } from '../models/LessonPrice.js';
 
 const MAX_CANCELLATION_REASON_LENGTH = 200;
 
+// The optional reason given when cancelling (by the User or the Buddy):
+// trimmed text, or undefined when none was given; `invalid` when it isn't
+// text or is too long.
+function readCancellationReason(body: unknown): { invalid: true } | { invalid: false; reason?: string } {
+  const { reason } = (body ?? {}) as { reason?: unknown };
+  if (reason === undefined) return { invalid: false };
+  if (typeof reason !== 'string' || reason.trim().length > MAX_CANCELLATION_REASON_LENGTH) return { invalid: true };
+  return { invalid: false, reason: reason.trim() || undefined };
+}
+
 // Members never set a timezone themselves, so remember the one their browser
 // sends with a booking — emails then show their local time instead of UTC.
 async function rememberTimezone(user: AccountDocument, timezone: unknown): Promise<void> {
@@ -483,12 +493,12 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       return;
     }
 
-    const { reason } = req.body ?? {};
-    if (reason !== undefined && (typeof reason !== 'string' || reason.trim().length > MAX_CANCELLATION_REASON_LENGTH)) {
+    const parsedReason = readCancellationReason(req.body);
+    if (parsedReason.invalid) {
       res.status(400).json({ error: `reason must be text, up to ${MAX_CANCELLATION_REASON_LENGTH} characters` });
       return;
     }
-    const trimmedReason = typeof reason === 'string' && reason.trim() !== '' ? reason.trim() : undefined;
+    const trimmedReason = parsedReason.reason;
 
     const user = await Account.findById(req.account!.accountId);
     if (!user) {
@@ -563,11 +573,18 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       return;
     }
 
+    const parsedReason = readCancellationReason(req.body);
+    if (parsedReason.invalid) {
+      res.status(400).json({ error: `reason must be text, up to ${MAX_CANCELLATION_REASON_LENGTH} characters` });
+      return;
+    }
+
     const buddy = await Account.findById(req.account!.accountId);
     const result = await cancelLessonAsBuddy({
       emailSender,
       lessonId: lesson._id,
       buddyName: buddy?.name,
+      reason: parsedReason.reason,
     });
     if (!result) {
       res.status(409).json({ error: 'Lesson is not upcoming' });

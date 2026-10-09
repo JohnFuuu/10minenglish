@@ -14,10 +14,12 @@ export async function cancelLessonAsBuddy(params: {
   emailSender: EmailSender;
   lessonId: mongoose.Types.ObjectId | string;
   buddyName?: string;
+  // Why the Buddy cancelled, if they said; shown to the User.
+  reason?: string;
 }): Promise<{ lesson: LessonDocument; creditsRemaining: number } | null> {
-  const { emailSender, lessonId, buddyName } = params;
+  const { emailSender, lessonId, buddyName, reason } = params;
 
-  const result = await buddyCancelLesson({ lessonId });
+  const result = await buddyCancelLesson({ lessonId, reason });
   if (!result) return null;
 
   const user = await Account.findById(result.lesson.userId);
@@ -29,6 +31,7 @@ export async function cancelLessonAsBuddy(params: {
       startTime: result.lesson.startTime,
       creditsRemaining: result.creditsRemaining,
       timezone: user.timezone,
+      reason,
     });
     try {
       await createNotification({

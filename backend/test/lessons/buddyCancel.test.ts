@@ -148,3 +148,47 @@ describe('POST /api/lessons/:id/buddy-cancel', () => {
     expect(notifications).toHaveLength(0);
   });
 });
+
+describe('Buddy cancellation reason', () => {
+  async function cancelWith(body: Record<string, unknown>) {
+    const { account: buddy, token } = await buddyToken();
+    const member = await user({ name: 'Sarah' });
+    const lesson = await Lesson.create({
+      userId: member.id,
+      buddyId: buddy.id,
+      startTime: new Date(Date.now() + 3 * 864e5),
+      meetingLink: 'https://zoom.us/j/1',
+    });
+    const created = createTestApp();
+    const res = await request(created.app).post(`/api/lessons/${lesson.id}/buddy-cancel`).set('Authorization', `Bearer ${token}`).send(body);
+    return { ...created, res, lesson, member };
+  }
+
+  it('saves the reason and tells the member, in the app and by email', async () => {
+    const { res, lesson, member, emailSender } = await cancelWith({ reason: '  I’m sick  ' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.lesson.cancellationReason).toBe('I’m sick');
+    expect((await Lesson.findById(lesson.id))!.cancellationReason).toBe('I’m sick');
+    const [notification] = await Notification.find({ accountId: member._id });
+    expect(notification.message).toContain('Reason: “I’m sick”');
+    expect(emailSender.sent.find((m) => m.to === 'user@example.com')!.body).toContain('Reason: “I’m sick”');
+  });
+
+  it('is optional: no reason, no "Reason" line', async () => {
+    const { res, member } = await cancelWith({});
+
+    expect(res.status).toBe(200);
+    const [notification] = await Notification.find({ accountId: member._id });
+    expect(notification.message).not.toContain('Reason');
+  });
+
+  it('refuses a reason over 200 characters or not text, cancelling nothing', async () => {
+    for (const reason of ['x'.repeat(201), 42]) {
+      const { res, lesson } = await cancelWith({ reason });
+      expect(res.status).toBe(400);
+      expect((await Lesson.findById(lesson.id))!.status).toBe('upcoming');
+      await clearTestDb();
+    }
+  });
+});

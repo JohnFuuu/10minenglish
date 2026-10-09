@@ -67,14 +67,15 @@ export async function cancelLesson(params: {
 
 export async function buddyCancelLesson(params: {
   lessonId: mongoose.Types.ObjectId | string;
+  reason?: string;
 }): Promise<{ lesson: LessonDocument; creditsRemaining: number } | null> {
-  const { lessonId } = params;
+  const { lessonId, reason } = params;
 
   // Same atomic claim pattern as cancelLesson: only the request that flips
   // upcoming -> cancelled proceeds, so concurrent cancels can't double-refund.
   const claimed = await Lesson.findOneAndUpdate(
     { _id: lessonId, status: 'upcoming' },
-    { $set: { status: 'cancelled' } },
+    { $set: { status: 'cancelled', ...(reason ? { cancellationReason: reason } : {}) } },
     { returnDocument: 'after' },
   );
   if (!claimed) return null;
@@ -307,14 +308,16 @@ export function buildBuddyCancellationNotification(params: {
   startTime: Date;
   creditsRemaining: number;
   timezone?: string;
+  reason?: string;
 }): { message: string; email: EmailMessage } {
   const startTimeText = formatLessonTimeFor(params.startTime, params.timezone);
+  const because = params.reason ? ` Reason: “${params.reason}”.` : '';
   return {
-    message: `${params.buddyName} cancelled your lesson on ${startTimeText}. The credits you paid are back in your account.`,
+    message: `${params.buddyName} cancelled your lesson on ${startTimeText}.${because} The credits you paid are back in your account.`,
     email: {
       to: params.userEmail,
       subject: 'Your 10ME lesson was cancelled — credit refunded',
-      body: `${params.buddyName} cancelled your lesson scheduled for ${startTimeText}. The credits you paid are back in your account — you now have ${params.creditsRemaining} credit(s). Book another lesson anytime.`,
+      body: `${params.buddyName} cancelled your lesson scheduled for ${startTimeText}.${because} The credits you paid are back in your account — you now have ${params.creditsRemaining} credit(s). Book another lesson anytime.`,
     },
   };
 }
