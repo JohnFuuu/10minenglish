@@ -16,7 +16,7 @@ function greeting(): string {
 }
 
 const QUICK_ACTIONS = [
-  { label: 'TEACHING', icon: CalendarDays, path: '/teaching' },
+  { label: 'EVENTS', icon: CalendarDays, path: '/teaching' },
   { label: 'AVAILABILITY', icon: Clock, path: '/availability' },
   { label: 'PROFILE', icon: User, path: '/profile' },
 ] as const;
