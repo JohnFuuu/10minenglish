@@ -5,7 +5,7 @@ import type { AvailabilityBlock } from '../models/Account.js';
 import { Account } from '../models/Account.js';
 import { Lesson, LESSON_DURATION_MINUTES, type LessonDocument } from '../models/Lesson.js';
 import type { EmailMessage } from './email.js';
-import { EMAIL_COLORS, brandedHtml, button, escapeHtml, paragraph } from './emailLayout.js';
+import { EMAIL_COLORS, appUrl, brandedHtml, button, escapeHtml, heading, lessonCard, note, paragraph, quote } from './emailLayout.js';
 
 // UI granularity for slot pickers — coarser than the 10-minute lesson length
 // itself so a full day's bookable grid stays a manageable size.
@@ -302,22 +302,48 @@ export function buildConfirmationEmail(
   };
 }
 
+function creditsLabel(n: number): string {
+  return `${n} credit${n === 1 ? '' : 's'}`;
+}
+
 export function buildBuddyCancellationNotification(params: {
   buddyName: string;
+  userName?: string;
   userEmail: string;
   startTime: Date;
   creditsRemaining: number;
   timezone?: string;
   reason?: string;
 }): { message: string; email: EmailMessage } {
-  const startTimeText = formatLessonTimeFor(params.startTime, params.timezone);
+  const parts = lessonDateAndTime(params.startTime, params.timezone);
+  const when = formatLessonTimeFor(params.startTime, params.timezone);
   const because = params.reason ? ` Reason: “${params.reason}”.` : '';
+  const balance = creditsLabel(params.creditsRemaining);
+  const greeting = `Hi ${params.userName ?? 'there'},`;
   return {
-    message: `${params.buddyName} cancelled your lesson on ${startTimeText}.${because} The credits you paid are back in your account.`,
+    message: `${params.buddyName} cancelled your lesson on ${when}.${because} The credits you paid are back in your account.`,
     email: {
       to: params.userEmail,
-      subject: 'Your 10ME lesson was cancelled — credit refunded',
-      body: `${params.buddyName} cancelled your lesson scheduled for ${startTimeText}.${because} The credits you paid are back in your account — you now have ${params.creditsRemaining} credit(s). Book another lesson anytime.`,
+      subject: `${params.buddyName} cancelled your lesson — credits refunded`,
+      body: [
+        greeting,
+        `${params.buddyName} cancelled your lesson on ${when}.${because}`,
+        `The credits you paid are back in your account. You have ${balance}.`,
+        `Book another lesson whenever you like: ${appUrl('/book')}`,
+        '— The 10 Minute English team',
+      ].join('\n\n'),
+      html: brandedHtml(
+        'Your lesson was cancelled',
+        [
+          paragraph(escapeHtml(greeting)),
+          heading(`${params.buddyName} had to cancel your lesson`),
+          lessonCard({ ...parts, time: parts.time + (parts.utc ? ' (UTC)' : ''), withName: params.buddyName, cancelled: true }),
+          ...(params.reason ? [quote(`${params.buddyName}’s reason`, params.reason)] : []),
+          note(`✓ The credits you paid are back. You have <strong>${escapeHtml(balance)}</strong>.`, 'good'),
+          paragraph('Sorry about that — pick another time that suits you:'),
+          button('Book another lesson', appUrl('/book')),
+        ].join(''),
+      ),
     },
   };
 }
@@ -417,8 +443,10 @@ export function buildUserCancellationEmail(params: {
   // The User's own reason, echoed back so both sides' emails match.
   reason?: string;
 }): EmailMessage {
+  const parts = lessonDateAndTime(params.startTime, params.timezone);
   const when = formatLessonTimeFor(params.startTime, params.timezone);
-  const credits = `${params.creditsCost} credit${params.creditsCost === 1 ? '' : 's'}`;
+  const credits = creditsLabel(params.creditsCost);
+  const greeting = `Hi ${params.name ?? 'there'},`;
   const refundLine = params.refunded
     ? `Your ${credits} ${params.creditsCost === 1 ? 'is' : 'are'} back in your account.`
     : `You cancelled less than ${CANCELLATION_REFUND_CUTOFF_HOURS} hours before the lesson, so the ${credits} ${params.creditsCost === 1 ? 'was' : 'were'} not returned.`;
@@ -426,13 +454,27 @@ export function buildUserCancellationEmail(params: {
     to: params.to,
     subject: 'Your 10ME lesson is cancelled',
     body: [
-      `Hi ${params.name ?? 'there'},`,
+      greeting,
       `Your lesson with ${params.buddyName} on ${when} is cancelled.`,
       ...(params.reason ? [`Your reason: “${params.reason}” (we told ${params.buddyName}).`] : []),
       refundLine,
-      'Book another lesson whenever you like.',
+      `Book another lesson whenever you like: ${appUrl('/book')}`,
       '— The 10 Minute English team',
     ].join('\n\n'),
+    html: brandedHtml(
+      'Your lesson is cancelled',
+      [
+        paragraph(escapeHtml(greeting)),
+        heading('Your lesson is cancelled'),
+        lessonCard({ ...parts, time: parts.time + (parts.utc ? ' (UTC)' : ''), withName: params.buddyName, cancelled: true }),
+        ...(params.reason ? [quote(`Your reason (we told ${params.buddyName})`, params.reason)] : []),
+        note(
+          params.refunded ? `✓ ${escapeHtml(refundLine)}` : escapeHtml(refundLine),
+          params.refunded ? 'good' : 'caution',
+        ),
+        button('Book another lesson', appUrl('/book')),
+      ].join(''),
+    ),
   };
 }
 
@@ -440,18 +482,35 @@ export function buildUserCancellationEmail(params: {
 // email), like a reschedule.
 export function buildLessonCancelledByUserNotification(params: {
   userName: string;
+  buddyName?: string;
   buddyEmail?: string;
   startTime: Date;
   timezone?: string;
   reason?: string;
 }): { message: string; email?: EmailMessage } {
+  const parts = lessonDateAndTime(params.startTime, params.timezone);
   const when = formatLessonTimeFor(params.startTime, params.timezone);
   const because = params.reason ? ` Reason: “${params.reason}”.` : '';
   const message = `${params.userName} cancelled your lesson on ${when}.${because} That time is free again.`;
+  const greeting = `Hi ${params.buddyName ?? 'there'},`;
   return {
     message,
     email: params.buddyEmail
-      ? { to: params.buddyEmail, subject: 'A 10ME lesson was cancelled', body: `${message} You don't need to do anything.` }
+      ? {
+          to: params.buddyEmail,
+          subject: `${params.userName} cancelled a lesson`,
+          body: [greeting, message, "You don't need to do anything.", '— The 10 Minute English team'].join('\n\n'),
+          html: brandedHtml(
+            'A lesson was cancelled',
+            [
+              paragraph(escapeHtml(greeting)),
+              heading(`${params.userName} cancelled a lesson`),
+              lessonCard({ ...parts, time: parts.time + (parts.utc ? ' (UTC)' : ''), withName: params.userName, cancelled: true }),
+              ...(params.reason ? [quote(`${params.userName}’s reason`, params.reason)] : []),
+              note('That time is free again — you don’t need to do anything.', 'good'),
+            ].join(''),
+          ),
+        }
       : undefined,
   };
 }

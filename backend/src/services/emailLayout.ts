@@ -63,4 +63,57 @@ export function brandedHtmlFromText(subject: string, body: string): string {
   return brandedHtml(subject, paragraphs.join(''));
 }
 
+const ERROR_RED = '#ff4b4b';
+
+export function heading(text: string): string {
+  return `<h1 style="margin:0 0 12px;font-size:22px;font-weight:900;line-height:1.3;color:${TEXT};">${escapeHtml(text)}</h1>`;
+}
+
+// One lesson as a card: a calendar-style date badge, then date, time and who
+// it's with. A cancelled lesson's badge turns grey with a red "CANCELLED" tag.
+export function lessonCard(lesson: {
+  date: string;
+  time: string;
+  weekday: string;
+  day: string;
+  month: string;
+  withName: string;
+  cancelled?: boolean;
+}): string {
+  const accent = lesson.cancelled ? '#afafaf' : BRAND_GREEN;
+  const tag = lesson.cancelled
+    ? `<div style="margin-top:4px;"><span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#ffdfe0;color:${ERROR_RED};font-size:11px;font-weight:bold;letter-spacing:0.5px;">CANCELLED</span></div>`
+    : '';
+  return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 16px;border:2px solid #e5e5e5;border-radius:12px;"><tr>
+<td width="64" style="padding:12px 0 12px 12px;vertical-align:middle;">
+<div style="width:48px;border:2px solid ${accent};border-radius:10px;text-align:center;overflow:hidden;">
+<div style="background:${accent};color:#fff;font-size:11px;font-weight:bold;padding:2px 0;">${escapeHtml(lesson.month.toUpperCase())}</div>
+<div style="font-size:20px;font-weight:900;color:${TEXT};padding:2px 0 0;">${escapeHtml(lesson.day)}</div>
+<div style="font-size:10px;font-weight:bold;color:${MUTED};padding:0 0 3px;">${escapeHtml(lesson.weekday.toUpperCase())}</div>
+</div></td>
+<td style="padding:12px;vertical-align:middle;font-size:15px;color:${TEXT};">
+<div style="font-weight:bold;${lesson.cancelled ? `color:${MUTED};text-decoration:line-through;` : ''}">${escapeHtml(lesson.date)} · ${escapeHtml(lesson.time)}</div>
+<div style="font-size:14px;color:${MUTED};">with ${escapeHtml(lesson.withName)}</div>
+${tag}
+</td></tr></table>`;
+}
+
+// Someone's own words (e.g. a cancellation reason), set apart and escaped.
+export function quote(label: string, text: string): string {
+  return `<div style="margin:0 0 16px;padding:12px 14px;border-radius:12px;background:#eef8ff;">
+<div style="font-size:12px;font-weight:bold;color:${MUTED};text-transform:uppercase;letter-spacing:0.5px;">${escapeHtml(label)}</div>
+<div style="margin-top:2px;font-size:16px;font-weight:bold;font-style:italic;color:${TEXT};">“${escapeHtml(text)}”</div>
+</div>`;
+}
+
+// A highlighted line: green for good news (a refund), amber for a caution.
+export function note(html: string, tone: 'good' | 'caution'): string {
+  const [bg, fg] = tone === 'good' ? ['#d7ffb8', '#46a302'] : ['#fff3cd', '#a86a00'];
+  return `<p style="margin:0 0 16px;padding:12px 14px;border-radius:12px;background:${bg};color:${fg};font-size:15px;font-weight:bold;line-height:1.4;">${html}</p>`;
+}
+
+export function appUrl(path: string): string {
+  return `${frontendUrl()}${path}`;
+}
+
 export const EMAIL_COLORS = { BRAND_GREEN, BRAND_BLUE, TEXT, MUTED };

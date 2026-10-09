@@ -538,6 +538,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       try {
         const notice = buildLessonCancelledByUserNotification({
           userName: user.name ?? 'Your learner',
+          buddyName: buddy.name,
           buddyEmail: buddy.email,
           startTime: result.lesson.startTime,
           timezone: buddy.timezone,

@@ -201,7 +201,7 @@ describe('emails after a User cancels', () => {
     const { emailSender, buddyAccount } = await cancelAt(startTime);
 
     const toBuddy = emailSender.sent.find((m) => m.to === 'buddy@example.com')!;
-    expect(toBuddy.subject).toBe('A 10ME lesson was cancelled');
+    expect(toBuddy.subject).toBe('Sarah cancelled a lesson');
     expect(toBuddy.body).toContain('Sarah cancelled');
     expect(toBuddy.body).toContain('Sat 31 Oct 2099, 9:30 am');
     const [notification] = await Notification.find({ accountId: buddyAccount._id });
