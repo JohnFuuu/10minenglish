@@ -5,6 +5,8 @@ import { Account } from '../models/Account.js';
 export interface AuthTokenPayload {
   accountId: string;
   role: string;
+  // Issue time in seconds, added by jsonwebtoken.
+  iat?: number;
 }
 
 function getSecret(): string {
@@ -33,11 +35,16 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  // Tokens last 7 days, so a removed (archived) Buddy or Admin, or a
-  // deactivated (suspended) Admin, is cut off here rather than when the token
-  // expires. Users can't be removed or suspended, so they skip the lookup.
+  // Tokens last 7 days, so a removed (archived) Buddy or Admin, a
+  // deactivated (suspended) Admin, or a login from before an account was
+  // taken back (tokensValidAfter) is cut off here rather than when the token
+  // expires.
+  const account = await Account.findById(payload.accountId, { removedAt: 1, active: 1, tokensValidAfter: 1 });
+  if (account?.tokensValidAfter && (payload.iat ?? 0) * 1000 < account.tokensValidAfter.getTime()) {
+    res.status(401).json({ error: 'Session ended — please sign in again' });
+    return;
+  }
   if (payload.role === 'buddy' || payload.role === 'admin') {
-    const account = await Account.findById(payload.accountId, { removedAt: 1, active: 1 });
     if (account?.removedAt) {
       res.status(401).json({ error: 'Account removed' });
       return;

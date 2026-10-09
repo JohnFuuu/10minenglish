@@ -59,6 +59,9 @@ export interface AccountDocument extends mongoose.Document {
   passwordResetExpires?: Date;
   failedLoginAttempts: number;
   lockedUntil?: Date;
+  // Login tokens issued before this moment are refused (set when an account
+  // is taken back from an unproven registrant — see services/accountClaim.ts).
+  tokensValidAfter?: Date;
   onboardingCompleted: boolean;
   referralSource?: string;
   selfRatedLevel?: number;
@@ -128,6 +131,7 @@ const accountSchema = new Schema<AccountDocument>({
   passwordResetExpires: { type: Date },
   failedLoginAttempts: { type: Number, required: true, default: 0 },
   lockedUntil: { type: Date },
+  tokensValidAfter: { type: Date },
   onboardingCompleted: { type: Boolean, required: true, default: false },
   referralSource: { type: String },
   selfRatedLevel: { type: Number, min: 1, max: 7 },

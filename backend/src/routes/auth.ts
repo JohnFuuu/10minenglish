@@ -1,5 +1,6 @@
 import { Router, type Response } from 'express';
 import { Account } from '../models/Account.js';
+import { claimUnconfirmedAccount } from '../services/accountClaim.js';
 import { hashPassword, verifyPassword } from '../services/password.js';
 import { signAccountToken } from '../middleware/auth.js';
 import type { EmailSender } from '../services/email.js';
@@ -288,9 +289,12 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
 
     let account = await Account.findOne({ googleId: profile.googleId });
     if (!account) {
-      // Link to an existing password account with the same email, if any,
-      // rather than creating a duplicate.
+      // Link to an existing account with the same email, if any, rather than
+      // creating a duplicate. If that email was never confirmed, Google has
+      // just proved this person owns it: take the account back from whoever
+      // registered it (see services/accountClaim.ts).
       account = await Account.findOne({ email: profile.email });
+      if (account && !account.emailConfirmed) claimUnconfirmedAccount(account);
     }
     if (account && refuseLockedOut(account, res)) return;
 
@@ -336,6 +340,9 @@ export function createAuthRouter(deps: AuthRouterDependencies): Router {
       // Link to an existing account with the same email rather than creating
       // a duplicate — Facebook only shares emails it has verified.
       account = await Account.findOne({ email: profile.email });
+      // Never confirmed: Facebook has just proved this person owns the email,
+      // so take the account back from whoever registered it.
+      if (account && !account.emailConfirmed) claimUnconfirmedAccount(account);
     }
     if (account && refuseLockedOut(account, res)) return;
 
