@@ -41,6 +41,9 @@ function toForm(profile: UserProfile): ProfileForm {
   };
 }
 
+// Matches the backend's rule for new passwords.
+const MIN_PASSWORD_LENGTH = 8;
+
 export function ProfileScreen() {
   const { token, account, refreshAccount, logout } = useAuth();
   const { showToast } = useToast();
@@ -72,6 +75,8 @@ export function ProfileScreen() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
 
+  const passwordTooShort =
+    passwordForm.newPassword.length > 0 && passwordForm.newPassword.length < MIN_PASSWORD_LENGTH;
   const passwordsMismatch =
     passwordForm.newPassword.length > 0 &&
     passwordForm.confirmPassword.length > 0 &&
@@ -315,6 +320,12 @@ export function ProfileScreen() {
                       onChange={(e) =>
                         setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
                       }
+                      // Say why the button stays disabled, instead of ignoring the tap.
+                      error={
+                        passwordTooShort
+                          ? `At least ${MIN_PASSWORD_LENGTH} characters (${passwordForm.newPassword.length}/${MIN_PASSWORD_LENGTH})`
+                          : undefined
+                      }
                       required
                       right={
                         <PasswordVisibilityToggle
@@ -348,7 +359,7 @@ export function ProfileScreen() {
                 disabled={
                   isSavingPassword ||
                   (profile.hasPassword && !passwordForm.currentPassword) ||
-                  passwordForm.newPassword.length < 8 ||
+                  passwordForm.newPassword.length < MIN_PASSWORD_LENGTH ||
                   !passwordForm.confirmPassword ||
                   passwordsMismatch
                 }
