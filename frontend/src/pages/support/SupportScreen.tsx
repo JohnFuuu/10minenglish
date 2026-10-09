@@ -84,11 +84,11 @@ function NewTicketForm({ onSent, onCancel }: { onSent: (ticket: SupportTicket) =
 
       {lessons.length > 0 && (topic === 'lesson' || topic === 'buddy') && (
         <Select
-          aria-label="Which lesson? (optional)"
+          aria-label="Which meeting? (optional)"
           value={lessonId}
           onChange={setLessonId}
           options={[
-            { value: '', label: 'Which lesson? (optional)' },
+            { value: '', label: 'Which meeting? (optional)' },
             ...lessons.map((l) => ({ value: l.id, label: `${formatDateTime(l.startTime)} · ${l.buddyName}` })),
           ]}
         />

@@ -105,7 +105,7 @@ export function BuddyDashboard() {
 
       {nextLesson && (
         <div className="mb-5">
-          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Next lesson</p>
+          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Next meeting</p>
           <Card>
             <div className="flex items-center gap-3">
               <Avatar initials={initialsOf(nextLesson.userName)} size={40} />

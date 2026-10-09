@@ -8,7 +8,7 @@ import { formatDateTime } from '../../lib/formatDateTime';
 // Plain words, for learners still building their English.
 export const TOPIC_LABELS: Record<SupportTopic, string> = {
   payment: 'Payment & credits',
-  lesson: 'A lesson',
+  lesson: 'A meeting',
   buddy: 'My Buddy',
   account: 'My account',
   app: 'App problem',
@@ -61,7 +61,7 @@ export function SupportThread({
     <div className="flex flex-col gap-2">
       {ticket.lesson && (
         <p className="text-xs font-bold text-text-secondary">
-          About the lesson with {ticket.lesson.buddyName} on {formatDateTime(ticket.lesson.startTime)}
+          About the meeting with {ticket.lesson.buddyName} on {formatDateTime(ticket.lesson.startTime)}
         </p>
       )}
       {ticket.messages.map((m, i) => {

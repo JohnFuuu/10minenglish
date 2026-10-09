@@ -33,7 +33,7 @@ describe('POST /internal/sweeps (called by Cloud Scheduler)', () => {
     expect((await request(app).post('/internal/sweeps').set('X-Sweep-Token', 'wrong-token')).status).toBe(401);
   });
 
-  it('runs every sweep once: sends due reminders and completes finished lessons', async () => {
+  it('runs every sweep once: sends due reminders and completes finished meetings', async () => {
     process.env.SWEEP_TOKEN = 'right-token';
     const user = await Account.create({ role: 'user', email: 'sarah@example.com', name: 'Sarah' });
     const buddy = await Account.create({ role: 'buddy', email: 'kenji@example.com', name: 'Kenji' });

@@ -14,6 +14,7 @@ _Avoid_: Teacher, practice partner, tutor
 
 **Lesson**:
 A single booked 1:1 slot between a User and a Buddy at a specific time, costing the current Lesson Price in credits (recorded on the Lesson, so a cancellation refunds exactly what was paid even if the price has since changed). A recurring booking creates multiple independent Lessons up front rather than one grouping/series object — there is no separate "Session" concept. A Lesson's status is `upcoming` until either it's cancelled or its scheduled time elapses, at which point it's automatically marked `completed` — there is no verified-attendance concept (see ADR 0006).
+Shown to people as **Meeting** ("Book a Meeting", "My Meetings", emails, calendar invites); a Buddy's list of them is the **Events** tab. Code, API paths and the database keep `Lesson` — use Meeting only in user-facing text.
 _Avoid_: Session, meeting, booking (booking is the act, Lesson is the resulting record)
 
 **Credit**:

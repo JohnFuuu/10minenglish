@@ -25,7 +25,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 const EMPTY_MESSAGE: Record<Tab, string> = {
   all: 'No buddies are bookable yet.',
-  recent: "You haven't had a lesson with anyone yet.",
+  recent: "You haven't had a meeting with anyone yet.",
   favourite: 'No favourites yet — star a buddy to keep them here.',
 };
 

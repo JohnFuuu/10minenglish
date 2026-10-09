@@ -102,7 +102,7 @@ export function ComponentPlayground() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button size="sm">Join Lesson</Button>
+            <Button size="sm">Join Meeting</Button>
             <Button variant="secondary" size="sm">
               Cancel
             </Button>

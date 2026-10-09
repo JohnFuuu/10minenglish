@@ -35,7 +35,7 @@ describe('GET /api/lessons/teaching', () => {
     expect(res.status).toBe(403);
   });
 
-  it('returns empty upcoming and previous lists when the buddy has no lessons', async () => {
+  it('returns empty upcoming and previous lists when the buddy has no meetings', async () => {
     const { token } = await buddyToken();
     const { app } = createTestApp();
 
@@ -45,7 +45,7 @@ describe('GET /api/lessons/teaching', () => {
     expect(res.body).toEqual({ upcoming: [], previous: [] });
   });
 
-  it('splits lessons into upcoming vs previous and includes the student name', async () => {
+  it('splits meetings into upcoming vs previous and includes the student name', async () => {
     const { account: buddy, token } = await buddyToken();
     const student = await Account.create({ role: 'user', email: 'student@example.com', name: 'Aria' });
     const now = DateTime.now();

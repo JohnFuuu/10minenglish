@@ -36,10 +36,10 @@ export async function runAllSweeps(emailSender: EmailSender): Promise<SweepResul
     }
   };
 
-  await attempt('Lesson reminder', async () => {
+  await attempt('Meeting reminder', async () => {
     result.remindersSent = (await sendDueLessonReminders({ emailSender })).remindersSent;
   });
-  await attempt('Lesson completion', async () => {
+  await attempt('Meeting completion', async () => {
     result.lessonsCompleted = (await completeDueLessons()).completed;
   });
   await attempt('Reconciliation', async () => {

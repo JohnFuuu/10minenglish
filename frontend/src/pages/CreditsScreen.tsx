@@ -70,7 +70,7 @@ export function CreditsScreen() {
       <div className="mb-6 rounded-md border-2 border-b-[5px] border-brand-primary-border bg-brand-primary p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-accent-lime-light">Current balance</p>
         <p className="font-display text-4xl font-black text-text-inverse">{account?.credits ?? 0}</p>
-        <p className="text-xs font-bold text-accent-lime-light">{creditsLabel(creditsPerLesson)} = 1 lesson</p>
+        <p className="text-xs font-bold text-accent-lime-light">{creditsLabel(creditsPerLesson)} = 1 meeting</p>
       </div>
 
       <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Choose a pack</p>

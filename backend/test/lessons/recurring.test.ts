@@ -115,7 +115,7 @@ describe('POST /api/lessons/recurring', () => {
     // One combined email each for the member and the Buddy.
     const toMember = emailSender.sent.filter((m) => m.to === 'user@example.com');
     expect(toMember).toHaveLength(1);
-    expect(toMember[0].subject).toBe('You’re booked: 3 lessons with Buddy');
+    expect(toMember[0].subject).toBe('You’re booked: 3 meetings with Buddy');
     expect(emailSender.sent.filter((m) => m.to === 'buddy@example.com')).toHaveLength(1);
   });
 

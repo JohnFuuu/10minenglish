@@ -16,11 +16,11 @@ export function buildLessonReminderNotification(params: {
 }): { message: string; email: EmailMessage } {
   const startTimeText = formatLessonTimeFor(params.startTime, params.timezone);
   return {
-    message: `Reminder: your lesson with ${params.otherPartyName} starts at ${startTimeText}.`,
+    message: `Reminder: your meeting with ${params.otherPartyName} starts at ${startTimeText}.`,
     email: {
       to: params.recipientEmail,
-      subject: 'Your 10ME lesson is coming up',
-      body: `Your lesson with ${params.otherPartyName} starts at ${startTimeText}. Join here: ${params.meetingLink}`,
+      subject: 'Your 10ME meeting is coming up',
+      body: `Your meeting with ${params.otherPartyName} starts at ${startTimeText}. Join here: ${params.meetingLink}`,
     },
   };
 }
@@ -93,7 +93,7 @@ export async function sendDueLessonReminders(params: {
       remindersSent += 1;
     } catch (err) {
       // One bad Lesson must not stop the sweep for the rest.
-      console.error('Failed to send lesson reminder', err);
+      console.error('Failed to send meeting reminder', err);
     }
   }
 

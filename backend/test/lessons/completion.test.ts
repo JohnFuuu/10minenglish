@@ -41,7 +41,7 @@ async function createLesson(params: {
 }
 
 describe('completeDueLessons', () => {
-  it('completes an upcoming Lesson once its end time has passed', async () => {
+  it('completes an upcoming Meeting once its end time has passed', async () => {
     const { user, buddy } = await createPair();
     const lesson = await createLesson({
       userId: user.id,
@@ -57,7 +57,7 @@ describe('completeDueLessons', () => {
     expect(updated!.status).toBe('completed');
   });
 
-  it('leaves an upcoming Lesson alone while it is still in progress', async () => {
+  it('leaves an upcoming Meeting alone while it is still in progress', async () => {
     const { user, buddy } = await createPair();
     // Started 5 minutes ago, runs for 10 — still 5 minutes left.
     const lesson = await createLesson({
@@ -74,7 +74,7 @@ describe('completeDueLessons', () => {
     expect(unchanged!.status).toBe('upcoming');
   });
 
-  it('leaves a future Lesson alone', async () => {
+  it('leaves a future Meeting alone', async () => {
     const { user, buddy } = await createPair();
     const lesson = await createLesson({
       userId: user.id,
@@ -89,7 +89,7 @@ describe('completeDueLessons', () => {
     expect(unchanged!.status).toBe('upcoming');
   });
 
-  it('does not touch a Lesson that was already cancelled', async () => {
+  it('does not touch a Meeting that was already cancelled', async () => {
     const { user, buddy } = await createPair();
     const lesson = await createLesson({
       userId: user.id,
@@ -105,7 +105,7 @@ describe('completeDueLessons', () => {
     expect(unchanged!.status).toBe('cancelled');
   });
 
-  it('completes multiple due Lessons in one sweep', async () => {
+  it('completes multiple due Meetings in one sweep', async () => {
     const { user, buddy } = await createPair();
     await createLesson({ userId: user.id, buddyId: buddy.id, startTime: minutesFromNow(-40) });
     await createLesson({ userId: user.id, buddyId: buddy.id, startTime: minutesFromNow(-20) });

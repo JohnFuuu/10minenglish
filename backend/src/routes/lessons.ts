@@ -188,7 +188,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     const creditsCost = await currentCreditsPerLesson();
     const user = await Account.findById(req.account!.accountId);
     if (!user || user.credits < creditsCost) {
-      res.status(402).json({ error: 'Not enough credits — buy more to book a lesson' });
+      res.status(402).json({ error: 'Not enough credits — buy more to book a meeting' });
       return;
     }
     await rememberTimezone(user, req.body?.timezone);
@@ -207,7 +207,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     const lesson = await bookLesson({ user, buddy, startTime: instant, creditsCost });
     if (!lesson) {
       // Spent elsewhere (e.g. another booking) since the check above.
-      res.status(402).json({ error: 'Not enough credits — buy more to book a lesson' });
+      res.status(402).json({ error: 'Not enough credits — buy more to book a meeting' });
       return;
     }
     await emailSender.send(
@@ -330,7 +330,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
             method: 'PUBLISH',
             lessons: booked.map(({ lesson, buddy }) => ({
               ...calendarLesson(lesson),
-              title: `English lesson with ${buddy.name ?? 'your Buddy'}`,
+              title: `English meeting with ${buddy.name ?? 'your Buddy'}`,
             })),
           }),
         ),
@@ -402,7 +402,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
 
     const lesson = await Lesson.findById(req.params.id);
     if (!lesson) {
-      res.status(404).json({ error: 'Lesson not found' });
+      res.status(404).json({ error: 'Meeting not found' });
       return;
     }
     if (lesson.userId.toString() !== req.account!.accountId) {
@@ -410,7 +410,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       return;
     }
     if (!isLessonUpcoming(lesson)) {
-      res.status(409).json({ error: 'Lesson is not upcoming' });
+      res.status(409).json({ error: 'Meeting is not upcoming' });
       return;
     }
 
@@ -419,7 +419,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     const hoursUntilStart = (lesson.startTime.getTime() - Date.now()) / (60 * 60 * 1000);
     if (hoursUntilStart < CANCELLATION_REFUND_CUTOFF_HOURS) {
       res.status(409).json({
-        error: `Lessons can only be moved more than ${CANCELLATION_REFUND_CUTOFF_HOURS} hours ahead`,
+        error: `Meetings can only be moved more than ${CANCELLATION_REFUND_CUTOFF_HOURS} hours ahead`,
       });
       return;
     }
@@ -485,7 +485,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
   router.post('/api/lessons/:id/cancel', requireAuth, requireRole('user'), async (req, res) => {
     const lesson = await Lesson.findById(req.params.id);
     if (!lesson) {
-      res.status(404).json({ error: 'Lesson not found' });
+      res.status(404).json({ error: 'Meeting not found' });
       return;
     }
     if (lesson.userId.toString() !== req.account!.accountId) {
@@ -508,7 +508,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
 
     const result = await cancelLesson({ lessonId: lesson._id, accountId: user._id, reason: trimmedReason });
     if (!result) {
-      res.status(409).json({ error: 'Lesson is not upcoming' });
+      res.status(409).json({ error: 'Meeting is not upcoming' });
       return;
     }
 
@@ -566,7 +566,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
   router.post('/api/lessons/:id/buddy-cancel', requireAuth, requireRole('buddy'), async (req, res) => {
     const lesson = await Lesson.findById(req.params.id);
     if (!lesson) {
-      res.status(404).json({ error: 'Lesson not found' });
+      res.status(404).json({ error: 'Meeting not found' });
       return;
     }
     if (lesson.buddyId.toString() !== req.account!.accountId) {
@@ -588,7 +588,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       reason: parsedReason.reason,
     });
     if (!result) {
-      res.status(409).json({ error: 'Lesson is not upcoming' });
+      res.status(409).json({ error: 'Meeting is not upcoming' });
       return;
     }
 

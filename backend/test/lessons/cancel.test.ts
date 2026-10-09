@@ -43,7 +43,7 @@ describe('POST /api/lessons/:id/cancel', () => {
     expect(res.status).toBe(403);
   });
 
-  it('404s for an unknown lesson', async () => {
+  it('404s for an unknown meeting', async () => {
     const { token } = await userToken();
     const { app } = createTestApp();
 
@@ -54,7 +54,7 @@ describe('POST /api/lessons/:id/cancel', () => {
     expect(res.status).toBe(404);
   });
 
-  it("403s when cancelling another user's lesson", async () => {
+  it("403s when cancelling another user's meeting", async () => {
     const b = await buddy();
     const owner = await Account.create({ role: 'user', email: 'owner@example.com', credits: 2 });
     const { token } = await userToken();
@@ -71,7 +71,7 @@ describe('POST /api/lessons/:id/cancel', () => {
     expect(res.status).toBe(403);
   });
 
-  it('409s when the lesson is already cancelled', async () => {
+  it('409s when the meeting is already cancelled', async () => {
     const b = await buddy();
     const { account, token } = await userToken();
     const lesson = await Lesson.create({
@@ -133,7 +133,7 @@ describe('POST /api/lessons/:id/cancel', () => {
     expect(updatedAccount!.credits).toBe(2);
   });
 
-  it('only refunds once when two cancel requests race for the same lesson', async () => {
+  it('only refunds once when two cancel requests race for the same meeting', async () => {
     const b = await buddy();
     const { account, token } = await userToken({ credits: 2 });
     const lesson = await Lesson.create({
@@ -183,7 +183,7 @@ describe('emails after a User cancels', () => {
     const { emailSender } = await cancelAt(startTime);
 
     const toUser = emailSender.sent.find((m) => m.to === 'user@example.com')!;
-    expect(toUser.subject).toBe('Your 10ME lesson is cancelled');
+    expect(toUser.subject).toBe('Your 10ME meeting is cancelled');
     expect(toUser.body).toContain('Sat 31 Oct 2099, 1:30 pm');
     expect(toUser.body).toContain('Kenji');
     expect(toUser.body).toContain('Your 1 credit is back in your account');
@@ -201,12 +201,12 @@ describe('emails after a User cancels', () => {
     const { emailSender, buddyAccount } = await cancelAt(startTime);
 
     const toBuddy = emailSender.sent.find((m) => m.to === 'buddy@example.com')!;
-    expect(toBuddy.subject).toBe('Sarah cancelled a lesson');
+    expect(toBuddy.subject).toBe('Sarah cancelled a meeting');
     expect(toBuddy.body).toContain('Sarah cancelled');
     expect(toBuddy.body).toContain('Sat 31 Oct 2099, 9:30 am');
     const [notification] = await Notification.find({ accountId: buddyAccount._id });
     expect(notification.type).toBe('lesson_cancelled');
-    expect(notification.message).toBe('Sarah cancelled your lesson on Sat 31 Oct 2099, 9:30 am. That time is free again.');
+    expect(notification.message).toBe('Sarah cancelled your meeting on Sat 31 Oct 2099, 9:30 am. That time is free again.');
   });
 
   it('still cancels and refunds when an email fails to send', async () => {
@@ -238,7 +238,7 @@ describe('cancellation reason', () => {
     return { ...created, res, lesson, buddyAccount: b, account };
   }
 
-  it('saves the reason on the Lesson and tells the Buddy, in the app and by email', async () => {
+  it('saves the reason on the Meeting and tells the Buddy, in the app and by email', async () => {
     const { res, lesson, emailSender, buddyAccount } = await cancelWith({ reason: '  I’m sick  ' });
 
     expect(res.status).toBe(200);

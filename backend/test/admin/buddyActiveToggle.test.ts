@@ -83,7 +83,7 @@ describe('PATCH /api/admin/buddies/:id', () => {
     expect((await Account.findById(buddy.id))!.active).toBe(true);
   });
 
-  it('auto-cancels upcoming Lessons, refunds the User, and notifies them', async () => {
+  it('auto-cancels upcoming Meetings, refunds the User, and notifies them', async () => {
     const token = await adminToken();
     const buddy = await createBuddy();
     const { account: user } = await createUser(0);
@@ -107,7 +107,7 @@ describe('PATCH /api/admin/buddies/:id', () => {
     expect(emailSender.sent.map((m) => m.to)).toContain(user.email);
   });
 
-  it('refunds every affected Lesson, however close it is', async () => {
+  it('refunds every affected Meeting, however close it is', async () => {
     const token = await adminToken();
     const buddy = await createBuddy();
     const { account: user } = await createUser(0);
@@ -125,7 +125,7 @@ describe('PATCH /api/admin/buddies/:id', () => {
     expect((await Account.findById(user.id))!.credits).toBe(2);
   });
 
-  it('leaves past and already-cancelled Lessons alone', async () => {
+  it('leaves past and already-cancelled Meetings alone', async () => {
     const token = await adminToken();
     const buddy = await createBuddy();
     const { account: user } = await createUser(0);
@@ -269,7 +269,7 @@ describe('GET /api/admin/buddies', () => {
 
   // Shown in the deactivate confirmation, so the Admin knows exactly how many
   // Lessons will be cancelled and refunded.
-  it('reports how many upcoming Lessons each Buddy has', async () => {
+  it('reports how many upcoming Meetings each Buddy has', async () => {
     const token = await adminToken();
     const buddy = await createBuddy();
     const { account: user } = await createUser();

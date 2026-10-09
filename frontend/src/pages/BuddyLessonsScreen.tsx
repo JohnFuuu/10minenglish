@@ -31,7 +31,7 @@ export function BuddyLessonsScreen() {
     TEACHING_LESSONS_CACHE_KEY,
     () => fetchTeachingLessons(token!),
     [token],
-    { enabled: Boolean(token), onError: () => showToast('Could not load your lessons.', 'error') },
+    { enabled: Boolean(token), onError: () => showToast('Could not load your meetings.', 'error') },
   );
   const upcoming = lessons?.upcoming ?? [];
   const previous = lessons?.previous ?? [];
@@ -52,9 +52,9 @@ export function BuddyLessonsScreen() {
         };
       });
       setConfirmingId(null);
-      showToast("Lesson cancelled — the User's credit was refunded.", 'success');
+      showToast("Meeting cancelled — the User's credit was refunded.", 'success');
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Could not cancel this lesson.', 'error');
+      showToast(err instanceof ApiError ? err.message : 'Could not cancel this meeting.', 'error');
     } finally {
       setCancellingId(null);
     }
@@ -62,7 +62,7 @@ export function BuddyLessonsScreen() {
 
   return (
     <main className={`mx-auto max-w-3xl ${NAV_CLEARANCE_CLASS}`}>
-      <PageHeader title="Teaching" />
+      <PageHeader title="Events" />
 
       <div className="mb-5 flex gap-3 px-5 pt-4">
         {(['upcoming', 'previous'] as const).map((t) => (
@@ -81,21 +81,21 @@ export function BuddyLessonsScreen() {
         ))}
       </div>
 
-      {isLoading && <p className="px-5 text-text-secondary">Loading your lessons…</p>}
+      {isLoading && <p className="px-5 text-text-secondary">Loading your meetings…</p>}
 
       {!isLoading && tab === 'upcoming' && upcoming.length === 0 && (
         <div className="px-5 py-16 text-center">
           <CalendarX size={40} className="mx-auto mb-3 text-text-secondary" />
-          <p className="text-sm font-bold uppercase tracking-widest text-text-heading">No upcoming lessons</p>
-          <p className="text-sm text-text-secondary">Lessons Users book with you will show up here.</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-text-heading">No upcoming meetings</p>
+          <p className="text-sm text-text-secondary">Meetings Users book with you will show up here.</p>
         </div>
       )}
 
       {!isLoading && tab === 'previous' && previous.length === 0 && (
         <div className="px-5 py-16 text-center">
           <CalendarX size={40} className="mx-auto mb-3 text-text-secondary" />
-          <p className="text-sm font-bold uppercase tracking-widest text-text-heading">No past lessons</p>
-          <p className="text-sm text-text-secondary">Lessons you've taught appear here.</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-text-heading">No past meetings</p>
+          <p className="text-sm text-text-secondary">Meetings you've taught appear here.</p>
         </div>
       )}
 
@@ -144,7 +144,7 @@ export function BuddyLessonsScreen() {
 
                 {confirmingId === lesson.id && (
                   <div className="mt-3 rounded-md bg-warning/10 px-3 py-2 text-xs font-bold text-warning">
-                    This will cancel the lesson and refund the User's credits, regardless of how soon it starts.
+                    This will cancel the meeting and refund the User's credits, regardless of how soon it starts.
                     <CancelReason key={lesson.id} reasons={BUDDY_CANCEL_REASONS} toldTo="the member" onChange={setCancelReason} />
                     <div className="mt-3 flex gap-2">
                       <Button
@@ -156,7 +156,7 @@ export function BuddyLessonsScreen() {
                         Confirm cancellation
                       </Button>
                       <Button variant="secondary" size="sm" onClick={() => setConfirmingId(null)}>
-                        Keep lesson
+                        Keep meeting
                       </Button>
                     </div>
                   </div>

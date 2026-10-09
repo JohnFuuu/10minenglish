@@ -52,15 +52,15 @@ function describe(entry: AuditLogEntry): ReactNode {
     case 'buddy.activated':
       return <>{who} activated {target}</>;
     case 'buddy.deactivated':
-      return <>{who} deactivated {target} ({plural(entry.details.cancelledLessons, 'upcoming lesson')} cancelled and refunded)</>;
+      return <>{who} deactivated {target} ({plural(entry.details.cancelledLessons, 'upcoming meeting')} cancelled and refunded)</>;
     case 'buddy.removed':
-      return <>{who} removed Buddy {target} ({plural(entry.details.cancelledLessons, 'upcoming lesson')} cancelled and refunded)</>;
+      return <>{who} removed Buddy {target} ({plural(entry.details.cancelledLessons, 'upcoming meeting')} cancelled and refunded)</>;
     case 'price.changed':
       return <>{who} changed {target} from {dollars(entry.details.fromCents)} to {dollars(entry.details.toCents)}</>;
     case 'lesson_price.changed':
       return (
         <>
-          {who} changed the lesson price from {plural(entry.details.from, 'credit')} to {plural(entry.details.to, 'credit')}
+          {who} changed the meeting price from {plural(entry.details.from, 'credit')} to {plural(entry.details.to, 'credit')}
         </>
       );
     case 'support.replied':

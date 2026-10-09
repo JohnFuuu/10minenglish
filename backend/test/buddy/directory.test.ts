@@ -72,7 +72,7 @@ describe('GET /api/buddies', () => {
 });
 
 describe('GET /api/buddies/recent', () => {
-  it('lists Buddies the User has had a Lesson with, most recent first', async () => {
+  it('lists Buddies the User has had a Meeting with, most recent first', async () => {
     const { account, token } = await createUser();
     const maria = await createBuddy('Maria');
     const tom = await createBuddy('Tom');
@@ -90,7 +90,7 @@ describe('GET /api/buddies/recent', () => {
     expect(res.body.buddies.map((b: { name: string }) => b.name)).toEqual(['Maria', 'Tom']);
   });
 
-  it('lists a Buddy once, however many Lessons they taught', async () => {
+  it('lists a Buddy once, however many Meetings they taught', async () => {
     const { account, token } = await createUser();
     const maria = await createBuddy('Maria');
     await createPastLesson(account.id, maria.id, 5);
@@ -104,7 +104,7 @@ describe('GET /api/buddies/recent', () => {
     expect(res.body.buddies).toHaveLength(1);
   });
 
-  it('ignores cancelled and still-upcoming Lessons', async () => {
+  it('ignores cancelled and still-upcoming Meetings', async () => {
     const { account, token } = await createUser();
     const cancelled = await createBuddy('Cancelled');
     const upcoming = await createBuddy('Upcoming');

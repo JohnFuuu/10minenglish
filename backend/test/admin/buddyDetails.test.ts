@@ -49,7 +49,7 @@ describe('GET /api/admin/buddies/:id', () => {
     expect(res.status).toBe(403);
   });
 
-  it('returns the Buddy’s profile, availability, and lesson counts', async () => {
+  it('returns the Buddy’s profile, availability, and meeting counts', async () => {
     const { buddy, lesson, get } = await setup();
     const soon = await lesson(2 * DAY, 'upcoming');
     await lesson(5 * DAY, 'upcoming');
@@ -87,7 +87,7 @@ describe('GET /api/admin/buddies/:id', () => {
     expect(JSON.stringify(res.body)).not.toMatch(/secret-hash|passwordHash/);
   });
 
-  it('reports no next lesson and empty fields for a new Buddy', async () => {
+  it('reports no next meeting and empty fields for a new Buddy', async () => {
     const { get } = await setup();
     const fresh = await Account.create({ role: 'buddy', email: 'new@example.com', name: 'New' });
 

@@ -84,8 +84,8 @@ function CancelRules({ startTime, creditsCost }: { startTime: string; creditsCos
         <div>
           <p className="text-sm font-extrabold">You will NOT get your {credits} back.</p>
           <p className="mt-0.5 text-xs font-bold">
-            This lesson starts in less than {REFUND_CUTOFF_HOURS} hours. To get your credits back, you must cancel{' '}
-            {REFUND_CUTOFF_HOURS} hours or more before the lesson.
+            This meeting starts in less than {REFUND_CUTOFF_HOURS} hours. To get your credits back, you must cancel{' '}
+            {REFUND_CUTOFF_HOURS} hours or more before the meeting.
           </p>
         </div>
       </div>
@@ -142,7 +142,7 @@ export function LessonsScreen() {
     LESSONS_CACHE_KEY,
     () => fetchUserLessons(token!),
     [token],
-    { enabled: Boolean(token), onError: () => showToast('Could not load your lessons.', 'error') },
+    { enabled: Boolean(token), onError: () => showToast('Could not load your meetings.', 'error') },
   );
   const upcoming = lessons?.upcoming ?? [];
   const previous = lessons?.previous ?? [];
@@ -211,9 +211,9 @@ export function LessonsScreen() {
         return { ...current, upcoming: nextUpcoming };
       });
       setReschedulingId(null);
-      showToast('Lesson moved. Your buddy has been notified.', 'success');
+      showToast('Meeting moved. Your buddy has been notified.', 'success');
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Could not move this lesson.', 'error');
+      showToast(err instanceof ApiError ? err.message : 'Could not move this meeting.', 'error');
     } finally {
       setSavingRescheduleId(null);
     }
@@ -233,11 +233,11 @@ export function LessonsScreen() {
       setCredits(res.creditsRemaining);
       setConfirmingId(null);
       showToast(
-        res.refunded ? 'Lesson cancelled and your credits were refunded.' : 'Lesson cancelled — no refund for this late cancellation.',
+        res.refunded ? 'Meeting cancelled and your credits were refunded.' : 'Meeting cancelled — no refund for this late cancellation.',
         'success',
       );
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Could not cancel this lesson.', 'error');
+      showToast(err instanceof ApiError ? err.message : 'Could not cancel this meeting.', 'error');
     } finally {
       setCancellingId(null);
     }
@@ -245,7 +245,7 @@ export function LessonsScreen() {
 
   return (
     <main className={`mx-auto max-w-3xl ${NAV_CLEARANCE_CLASS}`}>
-      <PageHeader title="My Lessons" />
+      <PageHeader title="My Meetings" />
 
       <div className="mb-5 flex gap-3 px-5 pt-4">
         {(['upcoming', 'previous'] as const).map((t) => (
@@ -264,12 +264,12 @@ export function LessonsScreen() {
         ))}
       </div>
 
-      {isLoading && <p className="px-5 text-text-secondary">Loading your lessons…</p>}
+      {isLoading && <p className="px-5 text-text-secondary">Loading your meetings…</p>}
 
       {!isLoading && tab === 'upcoming' && upcoming.length === 0 && (
         <div className="px-5 py-16 text-center">
           <CalendarX size={40} className="mx-auto mb-3 text-text-secondary" />
-          <p className="mb-1 text-sm font-bold uppercase tracking-widest text-text-heading">No upcoming lessons</p>
+          <p className="mb-1 text-sm font-bold uppercase tracking-widest text-text-heading">No upcoming meetings</p>
           <p className="mb-5 text-sm text-text-secondary">Book a session with a Buddy.</p>
           <Button onClick={() => navigate('/buddies')}>Browse buddies</Button>
         </div>
@@ -278,8 +278,8 @@ export function LessonsScreen() {
       {!isLoading && tab === 'previous' && previous.length === 0 && (
         <div className="px-5 py-16 text-center">
           <CalendarX size={40} className="mx-auto mb-3 text-text-secondary" />
-          <p className="text-sm font-bold uppercase tracking-widest text-text-heading">No past lessons</p>
-          <p className="text-sm text-text-secondary">Completed lessons appear here.</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-text-heading">No past meetings</p>
+          <p className="text-sm text-text-secondary">Completed meetings appear here.</p>
         </div>
       )}
 
@@ -321,7 +321,7 @@ export function LessonsScreen() {
                 <div className="mt-3 flex gap-2">
                     {isJoinable(lesson) && MEETING_LINK_PATTERN.test(lesson.meetingLink) && (
                       <Button size="sm" tone="blue" onClick={() => window.open(lesson.meetingLink, '_blank', 'noopener')}>
-                        Join lesson
+                        Join meeting
                       </Button>
                     )}
                     {hoursUntil(lesson.startTime) >= RESCHEDULE_CUTOFF_HOURS && (
@@ -362,7 +362,7 @@ export function LessonsScreen() {
                         Confirm cancellation
                       </Button>
                       <Button variant="secondary" size="sm" onClick={() => setConfirmingId(null)}>
-                        Keep lesson
+                        Keep meeting
                       </Button>
                     </div>
                   </div>

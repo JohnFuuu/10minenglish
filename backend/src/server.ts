@@ -41,7 +41,7 @@ async function main() {
     setInterval(() => {
       runAllSweeps(emailSender).then((r) => {
         if (r.strandedLessonsCancelled || r.membersCleanedOfDeletedTags) {
-          console.log(`Reconciliation: cancelled ${r.strandedLessonsCancelled} stranded lesson(s), cleaned ${r.membersCleanedOfDeletedTags} member(s) of deleted tags.`);
+          console.log(`Reconciliation: cancelled ${r.strandedLessonsCancelled} stranded meeting(s), cleaned ${r.membersCleanedOfDeletedTags} member(s) of deleted tags.`);
         }
       });
     }, SWEEP_INTERVAL_MS);

@@ -83,7 +83,7 @@ export function EmailConfirmationNotice({ action }: { action: string }) {
             <>
               <p className="text-lg font-bold text-text-body">Add your email</p>
               <p className="text-base text-text-body">
-                We'll send your lesson links and reminders there. Then you can {action}.
+                We'll send your meeting links and reminders there. Then you can {action}.
               </p>
             </>
           ) : (

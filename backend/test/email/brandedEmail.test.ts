@@ -30,13 +30,13 @@ describe('booking confirmation email', () => {
   );
 
   it('greets the member and sums up the booking', () => {
-    expect(email.subject).toBe('You’re booked: 3 lessons with Kenji');
+    expect(email.subject).toBe('You’re booked: 3 meetings with Kenji');
     expect(email.body).toMatch(/^Hi Sarah,/);
     expect(email.html).toContain('Hi Sarah,');
-    expect(email.html).toContain('3 lessons with Kenji');
+    expect(email.html).toContain('3 meetings with Kenji');
   });
 
-  it('lists every lesson in the member’s own time, numbered', () => {
+  it('lists every meeting in the member’s own time, numbered', () => {
     for (const text of [email.body, email.html!]) {
       expect(text).toContain('Sun 18 Oct 2099');
       expect(text).toContain('1:30 pm');
@@ -49,10 +49,10 @@ describe('booking confirmation email', () => {
   it('shows a shared meeting link once, as a Join button', () => {
     expect(email.html!.split(kenji).length - 1).toBe(1);
     expect(email.body.split(kenji).length - 1).toBe(1);
-    expect(email.html).toContain('Join your lesson');
+    expect(email.html).toContain('Join your meeting');
   });
 
-  it('keeps a link per lesson when they differ', () => {
+  it('keeps a link per meeting when they differ', () => {
     const mixed = buildConfirmationEmail(
       'sarah@example.com',
       [
@@ -61,7 +61,7 @@ describe('booking confirmation email', () => {
       ],
       'Pacific/Auckland',
     );
-    expect(mixed.subject).toBe('You’re booked: 2 lessons');
+    expect(mixed.subject).toBe('You’re booked: 2 meetings');
     expect(mixed.html).toContain(kenji);
     expect(mixed.html).toContain('https://zoom.us/j/9');
     expect(mixed.body).toMatch(/^Hi there,/);
@@ -71,7 +71,7 @@ describe('booking confirmation email', () => {
 describe('cancellation emails', () => {
   const start = new Date(Date.UTC(2099, 9, 14, 19, 30)); // Thu 15 Oct 2099, 8:30 am in Auckland
 
-  it('when the Buddy cancels: greets the member, shows the lesson as cancelled, the reason, the refund and a Book button', () => {
+  it('when the Buddy cancels: greets the member, shows the meeting as cancelled, the reason, the refund and a Book button', () => {
     const { message, email } = buildBuddyCancellationNotification({
       buddyName: 'EnglandHandsome',
       userName: 'Ziang',
@@ -82,7 +82,7 @@ describe('cancellation emails', () => {
       reason: 'I’m sick',
     });
 
-    expect(email.subject).toBe('EnglandHandsome cancelled your lesson — credits refunded');
+    expect(email.subject).toBe('EnglandHandsome cancelled your meeting — credits refunded');
     expect(email.body).toMatch(/^Hi Ziang,/);
     expect(email.body).toContain('3 credits');
     expect(email.body).not.toContain('credit(s)');

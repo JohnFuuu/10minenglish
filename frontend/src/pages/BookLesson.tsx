@@ -227,7 +227,7 @@ export function BookLesson() {
         if (!superseded) setPreview(res.occurrences.map((o) => ({ date: new Date(o.startTime), available: o.available })));
       })
       .catch(() => {
-        if (!superseded) showToast('Could not check your lesson days. Please try again.', 'error');
+        if (!superseded) showToast('Could not check your meeting days. Please try again.', 'error');
       });
     return () => {
       superseded = true;
@@ -242,7 +242,7 @@ export function BookLesson() {
   // is set by then).
   useEffect(() => {
     if (account && account.credits < creditsPerLesson && !result) {
-      showToast(`You need ${creditsLabel(creditsPerLesson)} to book a lesson.`, 'error');
+      showToast(`You need ${creditsLabel(creditsPerLesson)} to book a meeting.`, 'error');
       navigate('/credits');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -384,7 +384,7 @@ export function BookLesson() {
       }
       setStep('success');
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Something went wrong booking your lesson.', 'error');
+      showToast(err instanceof ApiError ? err.message : 'Something went wrong booking your meeting.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -393,7 +393,7 @@ export function BookLesson() {
   return (
     <main className="mx-auto max-w-lg px-5 py-12">
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-body">Book a Lesson</h1>
+        <h1 className="text-2xl font-bold text-text-body">Book a Meeting</h1>
         {step !== 'success' && (
           <button
             type="button"
@@ -547,14 +547,14 @@ export function BookLesson() {
 
       {step === 'options' && (
         <div className="flex flex-col gap-4">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-text-secondary">How many lessons?</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-text-secondary">How many meetings?</h2>
           {/* Icon + big number + short word, so the choice reads at a glance
               for learners still building their English. */}
           <div className="grid grid-cols-2 gap-2">
             {(
               [
-                { type: 'single', Icon: CalendarCheck, number: '1', label: 'One lesson' },
-                { type: 'recurring', Icon: Repeat, number: '2+', label: 'Many lessons' },
+                { type: 'single', Icon: CalendarCheck, number: '1', label: 'One meeting' },
+                { type: 'recurring', Icon: Repeat, number: '2+', label: 'Many meetings' },
               ] as const
             ).map(({ type, Icon, number, label }) => (
               <button
@@ -609,7 +609,7 @@ export function BookLesson() {
               </label>
 
               <div className="mb-3 flex items-center gap-2 text-sm font-bold text-text-heading">
-                How many lessons?
+                How many meetings?
                 <Stepper
                   value={occurrenceCount}
                   min={1}
@@ -630,7 +630,7 @@ export function BookLesson() {
               )}
 
               <p className="mt-3 text-xs font-medium text-success">
-                You only pay {creditsLabel(creditsPerLesson)} for each lesson we book. If a time is not free, we skip it and
+                You only pay {creditsLabel(creditsPerLesson)} for each meeting we book. If a time is not free, we skip it and
                 tell you.
               </p>
             </div>
@@ -654,7 +654,7 @@ export function BookLesson() {
             {[
               { label: 'Buddy', value: recurringBuddyMode === 'any' ? 'First available' : buddyLabel(selectedBuddy) },
               { label: 'Time', value: selectedStartTime ? formatDateTime(selectedStartTime) : '' },
-              { label: 'Lessons', value: bookingType === 'recurring' ? `Many · ${frequencyLabel(frequencyType, everyXDays)}` : 'One' },
+              { label: 'Meetings', value: bookingType === 'recurring' ? `Many · ${frequencyLabel(frequencyType, everyXDays)}` : 'One' },
               { label: 'Credits', value: `${creditsToUse} credit${creditsToUse === 1 ? '' : 's'}` },
             ].map((row) => (
               <div key={row.label} className="flex items-center justify-between border-t border-border bg-bg-surface px-4 py-3 first:border-t-0">
@@ -684,7 +684,7 @@ export function BookLesson() {
               {isSubmitting ? 'Confirming…' : 'Confirm & book'}
             </Button>
           ) : (
-            <EmailConfirmationNotice action="book this lesson" />
+            <EmailConfirmationNotice action="book this meeting" />
           )}
           <button type="button" onClick={() => setStep('options')} className="text-center text-sm font-bold text-text-secondary">
             Back
@@ -783,9 +783,9 @@ export function BookLesson() {
           {account.credits < creditsPerLesson && (
             <div className="rounded-md border-2 border-brand-secondary bg-brand-secondary/10 p-4 text-left">
               <p className="text-sm font-extrabold text-text-heading">
-                You have {creditsLabel(account.credits)} left — a lesson costs {creditsLabel(creditsPerLesson)}.
+                You have {creditsLabel(account.credits)} left — a meeting costs {creditsLabel(creditsPerLesson)}.
               </p>
-              <p className="mt-0.5 text-xs font-bold text-text-secondary">Top up now to book your next lesson.</p>
+              <p className="mt-0.5 text-xs font-bold text-text-secondary">Top up now to book your next meeting.</p>
               <Button tone="blue" size="sm" className="mt-3 w-full" onClick={() => navigate('/credits')}>
                 Buy credits
               </Button>

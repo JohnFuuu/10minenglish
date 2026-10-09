@@ -67,7 +67,7 @@ export function buildLessonCalendar(params: {
       `STATUS:${cancelled ? 'CANCELLED' : 'CONFIRMED'}`,
     );
     if (!cancelled) {
-      lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Your English lesson starts soon', 'TRIGGER:-PT15M', 'END:VALARM');
+      lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Your English meeting starts soon', 'TRIGGER:-PT15M', 'END:VALARM');
     }
     lines.push('END:VEVENT');
   }
@@ -95,7 +95,7 @@ export function calendarForLessons(
 ): EmailAttachment {
   return lessonCalendarAttachment({
     method,
-    lessons: lessons.map((l) => ({ ...l, title: `English lesson with ${otherPartyName}` })),
+    lessons: lessons.map((l) => ({ ...l, title: `English meeting with ${otherPartyName}` })),
   });
 }
 

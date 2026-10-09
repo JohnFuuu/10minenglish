@@ -86,13 +86,13 @@ const ADMINS_ICON = (active: boolean) => (
 const USER_TABS: NavTab[] = [
   { path: '/dashboard', label: 'HOME', icon: HOME_ICON },
   { path: '/buddies', label: 'BUDDIES', icon: BUDDIES_ICON },
-  { path: '/lessons', label: 'LESSONS', icon: LESSONS_ICON },
+  { path: '/lessons', label: 'MEETINGS', icon: LESSONS_ICON },
   { path: '/profile', label: 'PROFILE', icon: PROFILE_ICON },
 ];
 
 const BUDDY_TABS: NavTab[] = [
   { path: '/dashboard', label: 'HOME', icon: HOME_ICON },
-  { path: '/teaching', label: 'TEACHING', icon: LESSONS_ICON },
+  { path: '/teaching', label: 'EVENTS', icon: LESSONS_ICON },
   { path: '/availability', label: 'AVAILABILITY', icon: AVAILABILITY_ICON },
   { path: '/profile', label: 'PROFILE', icon: PROFILE_ICON },
 ];

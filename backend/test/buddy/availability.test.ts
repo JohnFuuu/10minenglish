@@ -103,8 +103,8 @@ describe('GET /api/buddies/:id/availability', () => {
   });
 });
 
-describe('changing availability keeps booked lessons', () => {
-  it('leaves an upcoming lesson booked when its time drops out of the new hours, even after the clean-up sweep', async () => {
+describe('changing availability keeps booked meetings', () => {
+  it('leaves an upcoming meeting booked when its time drops out of the new hours, even after the clean-up sweep', async () => {
     const { account, token } = await buddyToken({
       timezone: 'Pacific/Auckland',
       meetingLink: 'https://zoom.us/j/1',

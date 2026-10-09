@@ -57,7 +57,7 @@ function MonthGrid({
           return (
             <span
               key={day}
-              aria-label={`Lesson ${lesson.number}${lesson.available ? '' : ', busy'}`}
+              aria-label={`Meeting ${lesson.number}${lesson.available ? '' : ', busy'}`}
               className={`relative mx-auto flex h-8 w-8 items-center justify-center rounded-full text-sm font-extrabold text-text-inverse ${
                 lesson.available ? 'bg-brand-primary' : 'bg-error'
               }`}
@@ -86,7 +86,7 @@ export function LessonCalendarPreview({
   if (loading) {
     return (
       <p className="rounded-md border-2 border-b-[4px] border-border bg-bg-surface p-4 text-sm font-bold text-text-secondary">
-        Checking your lesson days…
+        Checking your meeting days…
       </p>
     );
   }
@@ -94,7 +94,7 @@ export function LessonCalendarPreview({
   if (lessons.length === 0) {
     return (
       <p className="rounded-md border-2 border-warning bg-warning/10 px-3 py-3 text-sm font-bold text-warning">
-        No lesson days fit: every day in this pattern is a Saturday or Sunday, and weekends are turned off. Go back and
+        No meeting days fit: every day in this pattern is a Saturday or Sunday, and weekends are turned off. Go back and
         turn on “Also on Saturday and Sunday”, or pick another day.
       </p>
     );
@@ -120,7 +120,7 @@ export function LessonCalendarPreview({
   return (
     <div className="rounded-md border-2 border-b-[4px] border-border bg-bg-surface p-4">
       <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">
-        {recurring ? `Your ${lessons.length} lessons` : 'Your lesson'}
+        {recurring ? `Your ${lessons.length} meetings` : 'Your meeting'}
       </p>
       <div className="flex flex-col gap-4">
         {shownMonths.map(({ year, month }) => (

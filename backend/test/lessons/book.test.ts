@@ -133,7 +133,7 @@ describe('POST /api/lessons', () => {
     expect(updated!.credits).toBe(3);
   });
 
-  it('books the lesson, deducts 1 credit, snapshots the meeting link, and emails a confirmation', async () => {
+  it('books the meeting, deducts 1 credit, snapshots the meeting link, and emails a confirmation', async () => {
     const buddy = await bookableBuddy();
     const { account, token } = await userToken();
     const anchor = anchorLocal();

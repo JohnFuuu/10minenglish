@@ -76,9 +76,9 @@ export function BuddyDetails({ details }: { details: AdminBuddyDetails }) {
           <span className="text-text-secondary">Not set yet — they aren't bookable</span>
         )}
       </Field>
-      <Field label="Lessons">
+      <Field label="Meetings">
         <p>{`${upcoming} upcoming · ${completed} completed · ${cancelled} cancelled`}</p>
-        {details.nextLessonAt && <p className="text-text-secondary">Next lesson: {formatDateTime(details.nextLessonAt)}</p>}
+        {details.nextLessonAt && <p className="text-text-secondary">Next meeting: {formatDateTime(details.nextLessonAt)}</p>}
       </Field>
       <Field label="Availability">
         {availability.length === 0 ? (

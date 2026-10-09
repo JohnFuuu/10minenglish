@@ -100,8 +100,8 @@ export function BuddyAvailabilityScreen() {
           availability for new bookings and moves). */}
       <p className="mb-4 flex items-start gap-2 rounded-md bg-brand-secondary/10 px-3 py-2 text-xs font-bold text-text-body">
         <Info size={16} className="mt-px shrink-0 text-brand-secondary" aria-hidden="true" />
-        Changing your hours only affects new bookings. Lessons already booked stay booked — to drop one, cancel it on
-        your Teaching tab.
+        Changing your hours only affects new bookings. Meetings already booked stay booked — to drop one, cancel it on
+        your Events tab.
       </p>
 
       {error && <p className="mb-4 text-sm font-bold text-error">{error}</p>}

@@ -235,9 +235,9 @@ export function buildConfirmationEmail(
   const buddies = [...new Set(lessons.map((l) => l.buddyName))];
   const oneBuddy = buddies.length === 1 ? buddies[0] : undefined;
   const sharedLink = new Set(lessons.map((l) => l.meetingLink)).size === 1 ? lessons[0]?.meetingLink : undefined;
-  const what = `${count} lesson${count === 1 ? '' : 's'}${oneBuddy ? ` with ${oneBuddy}` : ''}`;
+  const what = `${count} meeting${count === 1 ? '' : 's'}${oneBuddy ? ` with ${oneBuddy}` : ''}`;
   const greeting = `Hi ${name ?? 'there'},`;
-  const intro = count === 1 ? `Your lesson${oneBuddy ? ` with ${oneBuddy}` : ''} is booked. See you there!` : `Your ${what} are booked. See you there!`;
+  const intro = count === 1 ? `Your meeting${oneBuddy ? ` with ${oneBuddy}` : ''} is booked. See you there!` : `Your ${what} are booked. See you there!`;
   const zoneNote = lessons.some((l) => l.utc) ? 'Times are in UTC.' : undefined;
 
   const textLines = lessons.map(
@@ -247,9 +247,9 @@ export function buildConfirmationEmail(
     greeting,
     intro,
     textLines.join('\n'),
-    ...(sharedLink ? [`${count === 1 ? 'Join with this link' : 'Join every lesson with this link'}: ${sharedLink}`] : []),
+    ...(sharedLink ? [`${count === 1 ? 'Join with this link' : 'Join every meeting with this link'}: ${sharedLink}`] : []),
     ...(zoneNote ? [zoneNote] : []),
-    'Need to change something? You can move or cancel a lesson in the app (free up to 12 hours before).',
+    'Need to change something? You can move or cancel a meeting in the app (free up to 12 hours before).',
     '— The 10 Minute English team',
   ].join('\n\n');
 
@@ -266,30 +266,30 @@ export function buildConfirmationEmail(
 </div></td>
 <td style="vertical-align:middle;padding-left:10px;font-size:15px;color:${TEXT};">
 <div style="font-weight:bold;">${escapeHtml(l.date)} · ${escapeHtml(l.time)}${oneBuddy ? '' : ` · ${escapeHtml(l.buddyName)}`}</div>
-<div style="font-size:13px;color:${MUTED};">Lesson ${i + 1} of ${count}${sharedLink ? '' : ` · <a href="${escapeHtml(l.meetingLink)}" style="color:${EMAIL_COLORS.BRAND_BLUE};font-weight:bold;">Join</a>`}</div>
+<div style="font-size:13px;color:${MUTED};">Meeting ${i + 1} of ${count}${sharedLink ? '' : ` · <a href="${escapeHtml(l.meetingLink)}" style="color:${EMAIL_COLORS.BRAND_BLUE};font-weight:bold;">Join</a>`}</div>
 </td></tr></table></td></tr>`,
     )
     .join('');
   const html = brandedHtml(
-    'Your lessons are booked',
+    'Your meetings are booked',
     [
       paragraph(escapeHtml(greeting)),
       `<h1 style="margin:0 0 8px;font-size:22px;font-weight:900;color:${TEXT};">You’re booked! 🎉</h1>`,
       paragraph(
         count === 1
-          ? `Your lesson${oneBuddy ? ` with <strong>${escapeHtml(oneBuddy)}</strong>` : ''} is booked. See you there!`
+          ? `Your meeting${oneBuddy ? ` with <strong>${escapeHtml(oneBuddy)}</strong>` : ''} is booked. See you there!`
           : `Your <strong>${escapeHtml(what)}</strong> are booked. See you there!`,
       ),
       `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;">${rows}</table>`,
       ...(sharedLink
         ? [
-            ...(count > 1 ? [paragraph('Use the same link for every lesson:')] : []),
-            button('Join your lesson', sharedLink),
+            ...(count > 1 ? [paragraph('Use the same link for every meeting:')] : []),
+            button('Join your meeting', sharedLink),
           ]
         : []),
       ...(zoneNote ? [paragraph(`<span style="color:${MUTED};font-size:13px;">${zoneNote}</span>`)] : []),
       paragraph(
-        `<span style="color:${MUTED};font-size:14px;">Need to change something? You can move or cancel a lesson in the app — free up to 12 hours before.</span>`,
+        `<span style="color:${MUTED};font-size:14px;">Need to change something? You can move or cancel a meeting in the app — free up to 12 hours before.</span>`,
       ),
     ].join(''),
   );
@@ -321,27 +321,27 @@ export function buildBuddyCancellationNotification(params: {
   const balance = creditsLabel(params.creditsRemaining);
   const greeting = `Hi ${params.userName ?? 'there'},`;
   return {
-    message: `${params.buddyName} cancelled your lesson on ${when}.${because} The credits you paid are back in your account.`,
+    message: `${params.buddyName} cancelled your meeting on ${when}.${because} The credits you paid are back in your account.`,
     email: {
       to: params.userEmail,
-      subject: `${params.buddyName} cancelled your lesson — credits refunded`,
+      subject: `${params.buddyName} cancelled your meeting — credits refunded`,
       body: [
         greeting,
-        `${params.buddyName} cancelled your lesson on ${when}.${because}`,
+        `${params.buddyName} cancelled your meeting on ${when}.${because}`,
         `The credits you paid are back in your account. You have ${balance}.`,
-        `Book another lesson whenever you like: ${appUrl('/book')}`,
+        `Book another meeting whenever you like: ${appUrl('/book')}`,
         '— The 10 Minute English team',
       ].join('\n\n'),
       html: brandedHtml(
-        'Your lesson was cancelled',
+        'Your meeting was cancelled',
         [
           paragraph(escapeHtml(greeting)),
-          heading(`${params.buddyName} had to cancel your lesson`),
+          heading(`${params.buddyName} had to cancel your meeting`),
           lessonCard({ ...parts, time: parts.time + (parts.utc ? ' (UTC)' : ''), withName: params.buddyName, cancelled: true }),
           ...(params.reason ? [quote(`${params.buddyName}’s reason`, params.reason)] : []),
           note(`✓ The credits you paid are back. You have <strong>${escapeHtml(balance)}</strong>.`, 'good'),
           paragraph('Sorry about that — pick another time that suits you:'),
-          button('Book another lesson', appUrl('/book')),
+          button('Book another meeting', appUrl('/book')),
         ].join(''),
       ),
     },
@@ -358,11 +358,11 @@ export function buildLessonRescheduledNotification(params: {
   const from = formatLessonTimeFor(params.previousStartTime, params.timezone);
   const to = formatLessonTimeFor(params.startTime, params.timezone);
   return {
-    message: `${params.userName} moved your lesson from ${from} to ${to}.`,
+    message: `${params.userName} moved your meeting from ${from} to ${to}.`,
     email: {
       to: params.buddyEmail,
-      subject: 'A 10ME lesson was moved',
-      body: `${params.userName} moved your lesson from ${from} to ${to}. Your meeting link is unchanged.`,
+      subject: 'A 10ME meeting was moved',
+      body: `${params.userName} moved your meeting from ${from} to ${to}. Your meeting link is unchanged.`,
     },
   };
 }
@@ -449,30 +449,30 @@ export function buildUserCancellationEmail(params: {
   const greeting = `Hi ${params.name ?? 'there'},`;
   const refundLine = params.refunded
     ? `Your ${credits} ${params.creditsCost === 1 ? 'is' : 'are'} back in your account.`
-    : `You cancelled less than ${CANCELLATION_REFUND_CUTOFF_HOURS} hours before the lesson, so the ${credits} ${params.creditsCost === 1 ? 'was' : 'were'} not returned.`;
+    : `You cancelled less than ${CANCELLATION_REFUND_CUTOFF_HOURS} hours before the meeting, so the ${credits} ${params.creditsCost === 1 ? 'was' : 'were'} not returned.`;
   return {
     to: params.to,
-    subject: 'Your 10ME lesson is cancelled',
+    subject: 'Your 10ME meeting is cancelled',
     body: [
       greeting,
-      `Your lesson with ${params.buddyName} on ${when} is cancelled.`,
+      `Your meeting with ${params.buddyName} on ${when} is cancelled.`,
       ...(params.reason ? [`Your reason: “${params.reason}” (we told ${params.buddyName}).`] : []),
       refundLine,
-      `Book another lesson whenever you like: ${appUrl('/book')}`,
+      `Book another meeting whenever you like: ${appUrl('/book')}`,
       '— The 10 Minute English team',
     ].join('\n\n'),
     html: brandedHtml(
-      'Your lesson is cancelled',
+      'Your meeting is cancelled',
       [
         paragraph(escapeHtml(greeting)),
-        heading('Your lesson is cancelled'),
+        heading('Your meeting is cancelled'),
         lessonCard({ ...parts, time: parts.time + (parts.utc ? ' (UTC)' : ''), withName: params.buddyName, cancelled: true }),
         ...(params.reason ? [quote(`Your reason (we told ${params.buddyName})`, params.reason)] : []),
         note(
           params.refunded ? `✓ ${escapeHtml(refundLine)}` : escapeHtml(refundLine),
           params.refunded ? 'good' : 'caution',
         ),
-        button('Book another lesson', appUrl('/book')),
+        button('Book another meeting', appUrl('/book')),
       ].join(''),
     ),
   };
@@ -491,20 +491,20 @@ export function buildLessonCancelledByUserNotification(params: {
   const parts = lessonDateAndTime(params.startTime, params.timezone);
   const when = formatLessonTimeFor(params.startTime, params.timezone);
   const because = params.reason ? ` Reason: “${params.reason}”.` : '';
-  const message = `${params.userName} cancelled your lesson on ${when}.${because} That time is free again.`;
+  const message = `${params.userName} cancelled your meeting on ${when}.${because} That time is free again.`;
   const greeting = `Hi ${params.buddyName ?? 'there'},`;
   return {
     message,
     email: params.buddyEmail
       ? {
           to: params.buddyEmail,
-          subject: `${params.userName} cancelled a lesson`,
+          subject: `${params.userName} cancelled a meeting`,
           body: [greeting, message, "You don't need to do anything.", '— The 10 Minute English team'].join('\n\n'),
           html: brandedHtml(
-            'A lesson was cancelled',
+            'A meeting was cancelled',
             [
               paragraph(escapeHtml(greeting)),
-              heading(`${params.userName} cancelled a lesson`),
+              heading(`${params.userName} cancelled a meeting`),
               lessonCard({ ...parts, time: parts.time + (parts.utc ? ' (UTC)' : ''), withName: params.userName, cancelled: true }),
               ...(params.reason ? [quote(`${params.userName}’s reason`, params.reason)] : []),
               note('That time is free again — you don’t need to do anything.', 'good'),
@@ -532,10 +532,10 @@ export function buildBuddyBookingEmail(params: {
   });
   return {
     to: params.to,
-    subject: count === 1 ? `New lesson booked: ${params.memberName}` : `New lessons booked: ${count} with ${params.memberName}`,
+    subject: count === 1 ? `New meeting booked: ${params.memberName}` : `New meetings booked: ${count} with ${params.memberName}`,
     body: [
       `Hi ${params.buddyName ?? 'there'},`,
-      `${params.memberName} booked ${count === 1 ? 'a lesson' : `${count} lessons`} with you:`,
+      `${params.memberName} booked ${count === 1 ? 'a meeting' : `${count} meetings`} with you:`,
       lines.join('\n'),
       'Tap the attached calendar file to add ' + (count === 1 ? 'it' : 'them') + ' to your calendar. Your usual meeting link is in each event.',
       '— The 10 Minute English team',

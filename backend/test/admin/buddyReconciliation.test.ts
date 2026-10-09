@@ -36,7 +36,7 @@ async function world() {
 const credits = async (id: unknown) => (await Account.findById(id))!.credits;
 
 describe('reconcileBuddyState (sweep)', () => {
-  it('cancels and refunds upcoming Lessons of inactive and removed Buddies — and nothing else', async () => {
+  it('cancels and refunds upcoming Meetings of inactive and removed Buddies — and nothing else', async () => {
     const { buddy, user, lesson } = await world();
     const paused = await buddy('Paused', { active: false });
     const gone = await buddy('Gone', { active: false, removedAt: new Date() });
@@ -93,7 +93,7 @@ describe('reconcileBuddyState (sweep)', () => {
 describe('finishing an interrupted deactivate or remove', () => {
   // Simulates a crash after the flag was set but before the Lessons were
   // cancelled: the flag is set directly, the Lessons are left booked.
-  it('a retried deactivate cancels the leftover Lessons without auditing a second change', async () => {
+  it('a retried deactivate cancels the leftover Meetings without auditing a second change', async () => {
     const { buddy, user, lesson, asAdmin } = await world();
     const paused = await buddy('Paused', { active: false });
     await lesson(paused._id, 2 * DAY);
@@ -108,7 +108,7 @@ describe('finishing an interrupted deactivate or remove', () => {
     expect(await AuditEntry.countDocuments()).toBe(0);
   });
 
-  it('a retried remove cancels the leftover Lessons, succeeds, and audits only once', async () => {
+  it('a retried remove cancels the leftover Meetings, succeeds, and audits only once', async () => {
     const { buddy, user, lesson, asAdmin } = await world();
     const target = await buddy('Gone');
     await asAdmin('delete', `/api/admin/buddies/${target.id}`);
@@ -123,7 +123,7 @@ describe('finishing an interrupted deactivate or remove', () => {
     expect(await AuditEntry.countDocuments({ action: 'buddy.removed' })).toBe(1);
   });
 
-  it('a retry racing the sweep still cancels, refunds, and notifies each Lesson exactly once', async () => {
+  it('a retry racing the sweep still cancels, refunds, and notifies each Meeting exactly once', async () => {
     const { buddy, user, lesson, asAdmin } = await world();
     const paused = await buddy('Paused', { active: false });
     for (let i = 1; i <= 3; i++) await lesson(paused._id, i * DAY);

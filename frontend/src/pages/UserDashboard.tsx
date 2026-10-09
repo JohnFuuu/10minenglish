@@ -57,9 +57,9 @@ export function UserDashboard() {
   const [nextLesson, ...restUpcoming] = upcoming ?? [];
 
   const quickActions = [
-    { label: 'BOOK A LESSON', icon: Calendar, path: hasCredits ? '/book' : '/credits' },
+    { label: 'BOOK A MEETING', icon: Calendar, path: hasCredits ? '/book' : '/credits' },
     { label: 'BUDDIES', icon: Users, path: '/buddies' },
-    { label: 'MY LESSONS', icon: CalendarDays, path: '/lessons' },
+    { label: 'MY MEETINGS', icon: CalendarDays, path: '/lessons' },
     { label: 'BUY CREDITS', icon: Gem, path: '/credits' },
   ] as const;
 
@@ -113,7 +113,7 @@ export function UserDashboard() {
 
       {account && !account.emailConfirmed && (
         <div className="mx-5 mb-5">
-          <EmailConfirmationNotice action="book lessons and buy credits" />
+          <EmailConfirmationNotice action="book meetings and buy credits" />
         </div>
       )}
 
@@ -135,7 +135,7 @@ export function UserDashboard() {
 
       {nextLesson && (
         <div className="mb-5 px-5">
-          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Next lesson</p>
+          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Next meeting</p>
           <Card className="p-4">
             <div className="mb-3 flex items-center gap-3">
               <Avatar initials={initialsOf(nextLesson.buddyName)} size={56} />
@@ -219,7 +219,7 @@ export function UserDashboard() {
       {upcoming !== null && upcoming.length === 0 && (
         <div className="px-5 py-12 text-center">
           <CalendarX size={36} className="mx-auto mb-3 text-text-secondary" />
-          <p className="mb-1 text-sm font-bold uppercase tracking-widest text-text-heading">No lessons booked</p>
+          <p className="mb-1 text-sm font-bold uppercase tracking-widest text-text-heading">No meetings booked</p>
           <p className="mb-5 text-sm text-text-secondary">Find a Buddy and book your first session.</p>
           <Button onClick={() => navigate('/buddies')}>Browse buddies</Button>
         </div>

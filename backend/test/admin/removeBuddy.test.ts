@@ -50,7 +50,7 @@ describe('DELETE /api/admin/buddies/:id (archive)', () => {
     expect((await Account.findById(buddy._id))!.removedAt).toBeUndefined();
   });
 
-  it('archives the Buddy, cancelling and refunding upcoming Lessons, and audits it', async () => {
+  it('archives the Buddy, cancelling and refunding upcoming Meetings, and audits it', async () => {
     const { buddy, user, lesson, asAdmin } = await setup();
     const upcoming = await lesson(2 * DAY, 'upcoming');
     const past = await lesson(-2 * DAY, 'completed');
@@ -70,7 +70,7 @@ describe('DELETE /api/admin/buddies/:id (archive)', () => {
     expect(audit[0]).toMatchObject({ action: 'buddy.removed', target: { type: 'buddy', id: buddy.id, label: 'Maria' }, details: { cancelledLessons: 1 } });
   });
 
-  it('drops the Buddy from the Admin roster but keeps their name on Users’ past Lessons', async () => {
+  it('drops the Buddy from the Admin roster but keeps their name on Users’ past Meetings', async () => {
     const { buddy, user, lesson, app, asAdmin } = await setup();
     await lesson(-2 * DAY, 'completed');
 

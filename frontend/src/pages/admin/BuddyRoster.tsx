@@ -83,7 +83,7 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
       showToast(
         updated.active
           ? `${buddy.name ?? buddy.email} is bookable again.`
-          : `${buddy.name ?? buddy.email} deactivated — ${updated.cancelledLessons} upcoming lesson(s) cancelled and refunded.`,
+          : `${buddy.name ?? buddy.email} deactivated — ${updated.cancelledLessons} upcoming meeting(s) cancelled and refunded.`,
         'success',
       );
     } catch {
@@ -103,7 +103,7 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
       showToast(
         cancelledLessons === 0
           ? `${buddy.name ?? buddy.email} removed.`
-          : `${buddy.name ?? buddy.email} removed. ${cancelledLessons} upcoming lesson(s) cancelled and refunded.`,
+          : `${buddy.name ?? buddy.email} removed. ${cancelledLessons} upcoming meeting(s) cancelled and refunded.`,
         'success',
       );
     } catch {
@@ -137,12 +137,12 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
           className="mb-4 flex flex-col gap-1 rounded-md bg-brand-secondary/10 px-3 py-2 text-sm font-medium text-text-body"
         >
           <p>
-            <span className="font-bold">Deactivate</span> pauses a Buddy (e.g. on holiday): their upcoming lessons are
+            <span className="font-bold">Deactivate</span> pauses a Buddy (e.g. on holiday): their upcoming meetings are
             cancelled and refunded, but they can still sign in, and you can reactivate them any time.
           </p>
           <p>
             <span className="font-bold">Remove</span> is for a Buddy who has left for good: they also lose access and
-            leave this list, while past lessons keep their name.
+            leave this list, while past meetings keep their name.
           </p>
         </div>
       )}
@@ -166,9 +166,9 @@ export function BuddyRoster({ refreshKey }: { refreshKey: number }) {
                       : `Deactivate ${buddy.name ?? buddy.email}? `}
                     {buddy.upcomingLessons === 0
                       ? confirming.action === 'remove'
-                        ? 'they have no upcoming lessons.'
-                        : 'They have no upcoming lessons.'
-                      : `${confirming.action === 'remove' ? 'their' : 'Their'} ${buddy.upcomingLessons} upcoming lesson${buddy.upcomingLessons === 1 ? '' : 's'} will be cancelled and each User refunded.`}
+                        ? 'they have no upcoming meetings.'
+                        : 'They have no upcoming meetings.'
+                      : `${confirming.action === 'remove' ? 'their' : 'Their'} ${buddy.upcomingLessons} upcoming meeting${buddy.upcomingLessons === 1 ? '' : 's'} will be cancelled and each User refunded.`}
                   </p>
                   <div className="flex gap-2">
                     <Button

@@ -67,7 +67,7 @@ function firstNonMondayInstant(startHoursAhead: number): string {
 }
 
 describe('PATCH /api/lessons/:id', () => {
-  it('moves an upcoming Lesson to a new time', async () => {
+  it('moves an upcoming Meeting to a new time', async () => {
     const { user, buddy, token } = await createPair();
     const lesson = await createLesson(user.id, buddy.id, 48);
     const newStart = hoursFromNow(72);
@@ -133,7 +133,7 @@ describe('PATCH /api/lessons/:id', () => {
     expect(res.status).toBe(200);
   });
 
-  it('rejects a time that clashes with another Lesson of that Buddy', async () => {
+  it('rejects a time that clashes with another Meeting of that Buddy', async () => {
     const { user, buddy, token } = await createPair();
     const lesson = await createLesson(user.id, buddy.id, 48);
     const other = await createLesson(user.id, buddy.id, 72);
@@ -186,7 +186,7 @@ describe('PATCH /api/lessons/:id', () => {
     );
   });
 
-  it('rejects rescheduling a cancelled Lesson', async () => {
+  it('rejects rescheduling a cancelled Meeting', async () => {
     const { user, buddy, token } = await createPair();
     const lesson = await createLesson(user.id, buddy.id, 48);
     await Lesson.updateOne({ _id: lesson.id }, { status: 'cancelled' });
@@ -200,7 +200,7 @@ describe('PATCH /api/lessons/:id', () => {
     expect(res.status).toBe(409);
   });
 
-  it("rejects rescheduling another User's Lesson", async () => {
+  it("rejects rescheduling another User's Meeting", async () => {
     const { user, buddy } = await createPair();
     const lesson = await createLesson(user.id, buddy.id, 48);
     const other = await Account.create({ role: 'user', email: 'other@example.com' });

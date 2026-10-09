@@ -30,7 +30,7 @@ export function ConfirmEmail() {
     confirmEmail(token)
       .then(async (result) => {
         setSession(result.token, toAccount(await fetchMe(result.token)));
-        showToast('Email confirmed! You can now book lessons and buy credits.', 'success');
+        showToast('Email confirmed! You can now book meetings and buy credits.', 'success');
         navigate('/dashboard', { replace: true });
       })
       .catch(() => setFailed(true));

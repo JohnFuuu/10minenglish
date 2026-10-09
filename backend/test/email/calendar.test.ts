@@ -7,14 +7,14 @@ function unfold(ics: string): string {
   return ics.replace(/\r\n /g, '');
 }
 
-describe('lesson calendar file (.ics)', () => {
-  it('describes each lesson as an event in exact UTC time, with the link and a reminder', () => {
+describe('meeting calendar file (.ics)', () => {
+  it('describes each meeting as an event in exact UTC time, with the link and a reminder', () => {
     const ics = unfold(
       buildLessonCalendar({
         method: 'PUBLISH',
         lessons: [
-          { id: 'lesson1', startTime: start, durationMinutes: 10, title: 'English lesson with Kenji', meetingLink: 'https://zoom.us/j/1' },
-          { id: 'lesson2', startTime: new Date('2099-11-07T00:30:00Z'), durationMinutes: 10, title: 'English lesson with Kenji', meetingLink: 'https://zoom.us/j/1' },
+          { id: 'lesson1', startTime: start, durationMinutes: 10, title: 'English meeting with Kenji', meetingLink: 'https://zoom.us/j/1' },
+          { id: 'lesson2', startTime: new Date('2099-11-07T00:30:00Z'), durationMinutes: 10, title: 'English meeting with Kenji', meetingLink: 'https://zoom.us/j/1' },
         ],
       }),
     );
@@ -26,7 +26,7 @@ describe('lesson calendar file (.ics)', () => {
     expect(ics).toContain('UID:lesson1@10minenglish');
     expect(ics).toContain('DTSTART:20991031T003000Z');
     expect(ics).toContain('DTEND:20991031T004000Z');
-    expect(ics).toContain('SUMMARY:English lesson with Kenji');
+    expect(ics).toContain('SUMMARY:English meeting with Kenji');
     expect(ics).toContain('URL:https://zoom.us/j/1');
     expect(ics).toContain('LOCATION:https://zoom.us/j/1');
     expect(ics).toContain('TRIGGER:-PT15M');
@@ -37,7 +37,7 @@ describe('lesson calendar file (.ics)', () => {
     const ics = unfold(
       buildLessonCalendar({
         method: 'CANCEL',
-        lessons: [{ id: 'lesson1', startTime: start, durationMinutes: 10, title: 'English lesson with Kenji', meetingLink: 'https://zoom.us/j/1' }],
+        lessons: [{ id: 'lesson1', startTime: start, durationMinutes: 10, title: 'English meeting with Kenji', meetingLink: 'https://zoom.us/j/1' }],
       }),
     );
 
@@ -50,10 +50,10 @@ describe('lesson calendar file (.ics)', () => {
   it('escapes special characters and folds long lines to 75 characters', () => {
     const ics = buildLessonCalendar({
       method: 'PUBLISH',
-      lessons: [{ id: 'x', startTime: start, durationMinutes: 10, title: 'Lesson; with, Kenji\\Tom', meetingLink: `https://meet.test/${'a'.repeat(120)}` }],
+      lessons: [{ id: 'x', startTime: start, durationMinutes: 10, title: 'Meeting; with, Kenji\\Tom', meetingLink: `https://meet.test/${'a'.repeat(120)}` }],
     });
 
-    expect(unfold(ics)).toContain('SUMMARY:Lesson\\; with\\, Kenji\\\\Tom');
+    expect(unfold(ics)).toContain('SUMMARY:Meeting\\; with\\, Kenji\\\\Tom');
     for (const line of ics.split('\r\n')) expect(line.length).toBeLessThanOrEqual(75);
   });
 

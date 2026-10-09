@@ -41,7 +41,7 @@ describe('GET /api/lessons', () => {
     expect(res.status).toBe(403);
   });
 
-  it('returns empty upcoming and previous lists when the user has no lessons', async () => {
+  it('returns empty upcoming and previous lists when the user has no meetings', async () => {
     const { token } = await userToken();
     const { app } = createTestApp();
 
@@ -51,7 +51,7 @@ describe('GET /api/lessons', () => {
     expect(res.body).toEqual({ upcoming: [], previous: [] });
   });
 
-  it('splits lessons into upcoming vs previous and includes the buddy name', async () => {
+  it('splits meetings into upcoming vs previous and includes the buddy name', async () => {
     const { account, token } = await userToken();
     const b = await buddy();
     const now = DateTime.now();
@@ -89,7 +89,7 @@ describe('GET /api/lessons', () => {
     expect(previousIds.sort()).toEqual([pastNeverCompleted.id, cancelledButFuture.id].sort());
   });
 
-  it('marks a lesson joinable only from 10 minutes before start through its end', async () => {
+  it('marks a meeting joinable only from 10 minutes before start through its end', async () => {
     const { account, token } = await userToken();
     const b = await buddy();
     const now = DateTime.now();
@@ -117,7 +117,7 @@ describe('GET /api/lessons', () => {
     expect(byId.get(tooEarly.id)).toBe(false);
   });
 
-  it('marks a lesson not joinable once well past its end time', async () => {
+  it('marks a meeting not joinable once well past its end time', async () => {
     const { account, token } = await userToken();
     const b = await buddy();
     const now = DateTime.now();
@@ -140,7 +140,7 @@ describe('GET /api/lessons', () => {
     expect(previousEntry.joinable).toBe(false);
   });
 
-  it('returns previous lessons most-recent-first', async () => {
+  it('returns previous meetings most-recent-first', async () => {
     const { account, token } = await userToken();
     const b = await buddy();
     const now = DateTime.now();

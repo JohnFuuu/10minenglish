@@ -58,7 +58,7 @@ describe('sending a support ticket', () => {
     expect(res.status).toBe(201);
   });
 
-  it('can point at one of the sender’s own lessons, but not someone else’s', async () => {
+  it('can point at one of the sender’s own meetings, but not someone else’s', async () => {
     const { member, buddy, memberToken, otherToken } = await people();
     const lesson = await Lesson.create({ userId: member._id, buddyId: buddy._id, startTime: new Date(Date.now() + 864e5), meetingLink: 'https://zoom.us/j/1' });
     const { app } = createTestApp();

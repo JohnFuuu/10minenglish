@@ -11,7 +11,7 @@ import { buildLessonReminderNotification } from '../../src/services/lessonRemind
 const start = new Date('2099-10-31T00:30:00Z');
 const ISO = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 
-describe('lesson times in emails and notifications', () => {
+describe('meeting times in emails and notifications', () => {
   it('formats a time in the reader’s timezone, or says UTC when there is none', () => {
     expect(formatLessonTimeFor(start, 'Pacific/Auckland')).toBe('Sat 31 Oct 2099, 1:30 pm');
     expect(formatLessonTimeFor(start, 'Asia/Tokyo')).toBe('Sat 31 Oct 2099, 9:30 am');
@@ -22,7 +22,7 @@ describe('lesson times in emails and notifications', () => {
   it('booking confirmation', () => {
     const email = buildConfirmationEmail('u@example.com', [{ startTime: start, buddyName: 'Kenji', meetingLink: 'https://zoom.test/1' }], 'Pacific/Auckland');
     expect(email.body).toContain('1. Sat 31 Oct 2099 · 1:30 pm');
-    expect(email.subject).toBe('You’re booked: 1 lesson with Kenji');
+    expect(email.subject).toBe('You’re booked: 1 meeting with Kenji');
     expect(email.body).not.toMatch(ISO);
   });
 

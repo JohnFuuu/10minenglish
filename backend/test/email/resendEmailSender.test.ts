@@ -57,10 +57,10 @@ describe('Resend email sender', () => {
     const { calls, fetchFn } = fakeFetch({ status: 200, body: { id: 'email_1' } });
     const sender = createResendEmailSender({ apiKey: 're_test', from: 'hello@10me.test', fetchFn });
 
-    await sender.send({ ...message, attachments: [{ filename: 'lesson.ics', contentType: 'text/calendar', content: 'BEGIN:VCALENDAR' }] });
+    await sender.send({ ...message, attachments: [{ filename: 'meeting.ics', contentType: 'text/calendar', content: 'BEGIN:VCALENDAR' }] });
 
     expect(JSON.parse(String(calls[0].init.body)).attachments).toEqual([
-      { filename: 'lesson.ics', content: Buffer.from('BEGIN:VCALENDAR').toString('base64'), content_type: 'text/calendar' },
+      { filename: 'meeting.ics', content: Buffer.from('BEGIN:VCALENDAR').toString('base64'), content_type: 'text/calendar' },
     ]);
   });
 
@@ -99,7 +99,7 @@ describe('Gmail email sender', () => {
     const { sent, transport } = fakeTransport();
     const sender = createGmailEmailSender({ user: 'tenme@gmail.com', appPassword: 'x', transport });
 
-    await sender.send({ ...message, attachments: [{ filename: 'lesson.ics', contentType: 'text/calendar; method=PUBLISH', content: 'BEGIN:VCALENDAR' }] });
+    await sender.send({ ...message, attachments: [{ filename: 'meeting.ics', contentType: 'text/calendar; method=PUBLISH', content: 'BEGIN:VCALENDAR' }] });
 
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({
@@ -107,7 +107,7 @@ describe('Gmail email sender', () => {
       to: 'sarah@example.com',
       subject: 'Confirm your 10ME email',
       text: 'Confirm: https://x/confirm',
-      attachments: [{ filename: 'lesson.ics', contentType: 'text/calendar; method=PUBLISH', content: 'BEGIN:VCALENDAR' }],
+      attachments: [{ filename: 'meeting.ics', contentType: 'text/calendar; method=PUBLISH', content: 'BEGIN:VCALENDAR' }],
     });
     expect(String(sent[0].html)).toContain('10 Minute English');
   });

@@ -36,9 +36,9 @@ export function LessonPriceSetting() {
       const res = await adminUpdateLessonPrice(token, next);
       setPrice(res.creditsPerLesson);
       setMode('view');
-      showToast(`A lesson now costs ${creditsLabel(res.creditsPerLesson)}.`, 'success');
+      showToast(`A meeting now costs ${creditsLabel(res.creditsPerLesson)}.`, 'success');
     } catch {
-      showToast('Could not change the lesson price.', 'error');
+      showToast('Could not change the meeting price.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -48,18 +48,18 @@ export function LessonPriceSetting() {
     <section className={`mb-6 ${MODULE_FRAME}`}>
       <div className="mb-1 flex items-center gap-2">
         <Ticket size={20} className="text-brand-primary" aria-hidden="true" />
-        <SectionHeading className="mb-0">Lesson price</SectionHeading>
+        <SectionHeading className="mb-0">Meeting price</SectionHeading>
       </div>
       <p className="mb-4 text-sm font-medium text-text-secondary">
         What members <span className="font-bold text-text-body">spend</span>: credits taken from their balance for each
-        lesson they book. New bookings only; booked lessons keep their price.
+        meeting they book. New bookings only; booked meetings keep their price.
       </p>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-border bg-bg-surface p-3">
-        <p className="font-bold text-text-heading">1 lesson costs</p>
+        <p className="font-bold text-text-heading">1 meeting costs</p>
         {mode === 'edit' ? (
           <div className="flex items-center gap-2">
             <Input
-              aria-label="Credits per lesson"
+              aria-label="Credits per meeting"
               type="number"
               inputMode="numeric"
               min={1}
@@ -79,7 +79,7 @@ export function LessonPriceSetting() {
         ) : mode === 'confirm' ? (
           <div className="flex w-full flex-col gap-2 rounded-md bg-warning/10 px-3 py-2">
             <p className="text-sm font-bold text-text-body">
-              Change the lesson price from {creditsLabel(price ?? 1)} to {creditsLabel(next)}? New bookings will cost{' '}
+              Change the meeting price from {creditsLabel(price ?? 1)} to {creditsLabel(next)}? New bookings will cost{' '}
               {creditsLabel(next)} straight away.
             </p>
             <div className="flex gap-2">

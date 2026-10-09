@@ -43,7 +43,7 @@ describe('POST /api/lessons/:id/buddy-cancel', () => {
     expect(res.status).toBe(403);
   });
 
-  it('404s for an unknown lesson', async () => {
+  it('404s for an unknown meeting', async () => {
     const { token } = await buddyToken();
     const { app } = createTestApp();
 
@@ -54,7 +54,7 @@ describe('POST /api/lessons/:id/buddy-cancel', () => {
     expect(res.status).toBe(404);
   });
 
-  it('403s when cancelling another Buddy\'s lesson', async () => {
+  it('403s when cancelling another Buddy\'s meeting', async () => {
     const otherBuddy = await Account.create({ role: 'buddy', email: 'other-buddy@example.com', meetingLink: 'https://zoom.us/j/9' });
     const u = await user();
     const { token } = await buddyToken();
@@ -71,7 +71,7 @@ describe('POST /api/lessons/:id/buddy-cancel', () => {
     expect(res.status).toBe(403);
   });
 
-  it('409s when the lesson is already cancelled', async () => {
+  it('409s when the meeting is already cancelled', async () => {
     const { account: buddy, token } = await buddyToken();
     const u = await user();
     const lesson = await Lesson.create({
@@ -88,7 +88,7 @@ describe('POST /api/lessons/:id/buddy-cancel', () => {
     expect(res.status).toBe(409);
   });
 
-  it('refunds the credit even when the lesson starts in under 12 hours, and notifies the User in-app and by email', async () => {
+  it('refunds the credit even when the meeting starts in under 12 hours, and notifies the User in-app and by email', async () => {
     const { account: buddy, token } = await buddyToken();
     const u = await user({ credits: 2 });
     const lesson = await Lesson.create({
@@ -118,7 +118,7 @@ describe('POST /api/lessons/:id/buddy-cancel', () => {
     expect(emailSender.sent[0].subject).toMatch(/cancelled/i);
   });
 
-  it('leaves an already User-cancelled lesson alone: 409s, no double refund, no notification', async () => {
+  it('leaves an already User-cancelled meeting alone: 409s, no double refund, no notification', async () => {
     const { account: buddy, token: buddyTok } = await buddyToken();
     const u = await user({ credits: 2 });
     const userTok = signAccountToken({ accountId: u.id, role: u.role });

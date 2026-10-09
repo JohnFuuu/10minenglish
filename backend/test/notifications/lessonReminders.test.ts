@@ -87,7 +87,7 @@ describe('pre-lesson reminders', () => {
     ]);
   });
 
-  it('does not remind for a cancelled Lesson', async () => {
+  it('does not remind for a cancelled Meeting', async () => {
     const { user, buddy, userToken } = await createPair();
     await createLesson(user.id, buddy.id, minutesFromNow(REMINDER_LEAD_MINUTES - 10), 'cancelled');
 
@@ -99,7 +99,7 @@ describe('pre-lesson reminders', () => {
     expect((await inboxOf(app, userToken)).notifications).toEqual([]);
   });
 
-  it('does not remind for a Lesson still outside the lead window', async () => {
+  it('does not remind for a Meeting still outside the lead window', async () => {
     const { user, buddy } = await createPair();
     await createLesson(user.id, buddy.id, minutesFromNow(REMINDER_LEAD_MINUTES + 30));
 
@@ -110,7 +110,7 @@ describe('pre-lesson reminders', () => {
     expect(emailSender.sent).toHaveLength(0);
   });
 
-  it('does not remind for a Lesson that already started', async () => {
+  it('does not remind for a Meeting that already started', async () => {
     const { user, buddy } = await createPair();
     await createLesson(user.id, buddy.id, minutesFromNow(-5));
 
@@ -133,7 +133,7 @@ describe('pre-lesson reminders', () => {
     expect((await inboxOf(app, userToken)).notifications).toHaveLength(1);
   });
 
-  it('reminds each due Lesson when several are in the window', async () => {
+  it('reminds each due Meeting when several are in the window', async () => {
     const { user, buddy } = await createPair();
     await createLesson(user.id, buddy.id, minutesFromNow(REMINDER_LEAD_MINUTES - 30));
     await createLesson(user.id, buddy.id, minutesFromNow(REMINDER_LEAD_MINUTES - 5));
@@ -145,7 +145,7 @@ describe('pre-lesson reminders', () => {
     expect(emailSender.sent).toHaveLength(4);
   });
 
-  it('reminds a Lesson once it enters the window on a later sweep', async () => {
+  it('reminds a Meeting once it enters the window on a later sweep', async () => {
     const { user, buddy } = await createPair();
     const startTime = minutesFromNow(REMINDER_LEAD_MINUTES + 30);
     await createLesson(user.id, buddy.id, startTime);

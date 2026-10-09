@@ -48,7 +48,7 @@ async function setPrice(app: Parameters<typeof request>[0], adminToken: string, 
   return request(app).patch('/api/admin/lesson-price').set('Authorization', `Bearer ${adminToken}`).send({ creditsPerLesson });
 }
 
-describe('lesson price (credits per lesson)', () => {
+describe('meeting price (credits per meeting)', () => {
   it('starts at 1 credit, and an Admin can change it, audited under pricing', async () => {
     const { app, userToken, adminToken } = await setup(0);
 
@@ -75,7 +75,7 @@ describe('lesson price (credits per lesson)', () => {
     }
   });
 
-  it('charges the current price for a booking and records it on the Lesson', async () => {
+  it('charges the current price for a booking and records it on the Meeting', async () => {
     const { app, user, buddy, userToken, adminToken } = await setup(5);
     await setPrice(app, adminToken, 3);
 
@@ -104,7 +104,7 @@ describe('lesson price (credits per lesson)', () => {
     expect((await Account.findById(user.id))!.credits).toBe(2);
   });
 
-  it('needs credits for every lesson in a recurring series at the current price', async () => {
+  it('needs credits for every meeting in a recurring series at the current price', async () => {
     const { app, user, buddy, userToken, adminToken } = await setup(5);
     await setPrice(app, adminToken, 2);
     const series = (occurrenceCount: number) =>
@@ -122,7 +122,7 @@ describe('lesson price (credits per lesson)', () => {
     expect((await Account.findById(user.id))!.credits).toBe(1);
   });
 
-  it('refunds what the Lesson cost when booked, even after the price changes', async () => {
+  it('refunds what the Meeting cost when booked, even after the price changes', async () => {
     const { app, user, buddy, userToken, adminToken } = await setup(10);
     await setPrice(app, adminToken, 3);
     const booked = await request(app)
@@ -137,7 +137,7 @@ describe('lesson price (credits per lesson)', () => {
     expect((await Account.findById(user.id))!.credits).toBe(10);
   });
 
-  it('refunds what the Lesson cost when the Buddy cancels', async () => {
+  it('refunds what the Meeting cost when the Buddy cancels', async () => {
     const { app, user, buddy, userToken, buddyToken, adminToken } = await setup(10);
     await setPrice(app, adminToken, 4);
     const booked = await request(app)
@@ -150,7 +150,7 @@ describe('lesson price (credits per lesson)', () => {
     expect((await Account.findById(user.id))!.credits).toBe(10);
   });
 
-  it('refunds 1 credit for a Lesson booked before prices existed (no cost recorded)', async () => {
+  it('refunds 1 credit for a Meeting booked before prices existed (no cost recorded)', async () => {
     const { app, user, buddy, userToken } = await setup(0);
     const { insertedId } = await Lesson.collection.insertOne({
       userId: user._id,

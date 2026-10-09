@@ -19,7 +19,7 @@ const ADMIN_PAGE_SIZE = 20;
 
 const TOPIC_LABELS: Record<string, string> = {
   payment: 'Payment & credits',
-  lesson: 'A lesson',
+  lesson: 'A meeting',
   buddy: 'My Buddy',
   account: 'My account',
   app: 'App problem',
@@ -125,7 +125,7 @@ export function createSupportRouter({ emailSender }: { emailSender: EmailSender 
         ? await Lesson.findOne({ _id: lessonId, $or: [{ userId: accountId }, { buddyId: accountId }] })
         : null;
       if (!found) {
-        res.status(400).json({ error: 'That lesson isn’t one of yours' });
+        res.status(400).json({ error: 'That meeting isn’t one of yours' });
         return;
       }
       lesson = found._id as Types.ObjectId;

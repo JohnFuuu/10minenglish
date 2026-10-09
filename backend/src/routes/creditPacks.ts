@@ -80,7 +80,7 @@ creditPacksRouter.patch('/api/admin/lesson-price', requireAuth, requireRole('adm
     await recordAdminAction(
       req.account!.accountId,
       'lesson_price.changed',
-      { type: 'lessonPrice', label: 'Lesson price' },
+      { type: 'lessonPrice', label: 'Meeting price' },
       { from: previous.creditsPerLesson, to: creditsPerLesson },
     );
   }

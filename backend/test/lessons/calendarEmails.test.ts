@@ -49,7 +49,7 @@ function calendarIn(email: EmailMessage | undefined): string {
 
 const to = (sent: EmailMessage[], address: string) => sent.filter((m) => m.to === address);
 
-describe('calendar files on lesson emails', () => {
+describe('calendar files on meeting emails', () => {
   it('a single booking: the member’s confirmation and a new Buddy email both carry the event', async () => {
     const { app, emailSender, buddy, memberToken } = await setup();
 
@@ -59,16 +59,16 @@ describe('calendar files on lesson emails', () => {
     const memberIcs = calendarIn(to(emailSender.sent, 'sarah@example.com')[0]);
     expect(memberIcs).toContain('METHOD:PUBLISH');
     expect(memberIcs).toContain(`UID:${lessonId}@10minenglish`);
-    expect(memberIcs).toContain('SUMMARY:English lesson with Kenji');
+    expect(memberIcs).toContain('SUMMARY:English meeting with Kenji');
 
     const [toBuddy] = to(emailSender.sent, 'kenji@example.com');
-    expect(toBuddy.subject).toBe('New lesson booked: Sarah');
+    expect(toBuddy.subject).toBe('New meeting booked: Sarah');
     expect(toBuddy.body).toContain('Sarah booked');
     expect(calendarIn(toBuddy)).toContain(`UID:${lessonId}@10minenglish`);
-    expect(calendarIn(toBuddy)).toContain('SUMMARY:English lesson with Sarah');
+    expect(calendarIn(toBuddy)).toContain('SUMMARY:English meeting with Sarah');
   });
 
-  it('a series: one calendar file with every lesson, for the member and the Buddy', async () => {
+  it('a series: one calendar file with every meeting, for the member and the Buddy', async () => {
     const { app, emailSender, buddy, memberToken } = await setup();
 
     await request(app)
@@ -79,7 +79,7 @@ describe('calendar files on lesson emails', () => {
     expect(calendarIn(to(emailSender.sent, 'sarah@example.com')[0]).match(/BEGIN:VEVENT/g)).toHaveLength(3);
     const buddyEmails = to(emailSender.sent, 'kenji@example.com');
     expect(buddyEmails).toHaveLength(1);
-    expect(buddyEmails[0].subject).toBe('New lessons booked: 3 with Sarah');
+    expect(buddyEmails[0].subject).toBe('New meetings booked: 3 with Sarah');
     expect(calendarIn(buddyEmails[0]).match(/BEGIN:VEVENT/g)).toHaveLength(3);
   });
 
