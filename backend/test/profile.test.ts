@@ -362,7 +362,7 @@ describe('PATCH /api/profile/password', () => {
     expect(withOld.status).toBe(401);
   });
 
-  it('rejects a Google-only account that has no password to verify', async () => {
+  it('lets a Google- or Facebook-only member set a first password, with no current password', async () => {
     const account = await Account.create({
       role: 'user',
       email: 'google-sarah@example.com',
@@ -370,12 +370,51 @@ describe('PATCH /api/profile/password', () => {
       emailConfirmed: true,
     });
     const token = signAccountToken({ accountId: account.id, role: account.role });
-
     const { app } = createTestApp();
+
     const res = await request(app)
       .patch('/api/profile/password')
       .set('Authorization', `Bearer ${token}`)
-      .send({ currentPassword: 'anything', newPassword: 'a brand new password' });
+      .send({ newPassword: 'my first password' });
+
+    expect(res.status).toBe(200);
+    const login = await request(app).post('/auth/login').send({ email: 'google-sarah@example.com', password: 'my first password' });
+    expect(login.status).toBe(200);
+    const profile = await request(app).get('/api/profile').set('Authorization', `Bearer ${token}`);
+    expect(profile.body.hasPassword).toBe(true);
+  });
+
+  it('needs a confirmed email before setting a first password, since that is the login', async () => {
+    const account = await Account.create({ role: 'user', facebookId: 'fb-1', pendingEmail: 'new@example.com' });
+    const token = signAccountToken({ accountId: account.id, role: account.role });
+    const { app } = createTestApp();
+
+    const res = await request(app)
+      .patch('/api/profile/password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ newPassword: 'my first password' });
+
+    expect(res.status).toBe(400);
+    expect((await Account.findById(account.id))!.passwordHash).toBeUndefined();
+  });
+
+  it('still needs the current password once one exists', async () => {
+    const { token } = await createUser();
+    const { app } = createTestApp();
+
+    const res = await request(app).patch('/api/profile/password').set('Authorization', `Bearer ${token}`).send({ newPassword: 'sneaky new password' });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('refuses a new password shorter than 8 characters', async () => {
+    const { token } = await createUser();
+    const { app } = createTestApp();
+
+    const res = await request(app)
+      .patch('/api/profile/password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ currentPassword: PASSWORD, newPassword: 'short' });
 
     expect(res.status).toBe(400);
   });

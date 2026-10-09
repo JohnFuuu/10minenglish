@@ -42,6 +42,8 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+const MIN_PASSWORD_LENGTH = 8;
+
 export function createMeRouter(deps: MeRouterDependencies): Router {
   const { emailSender } = deps;
   const router = Router();
@@ -179,10 +181,13 @@ export function createMeRouter(deps: MeRouterDependencies): Router {
     res.status(200).json(profileResponse(account));
   });
 
+  // Change a password, or set a first one for a member who signed up with
+  // Google or Facebook (they're signed in, so no current password exists to
+  // check). A first password needs a confirmed email — that's the login.
   router.patch('/api/profile/password', requireAuth, requireRole('user'), async (req, res) => {
     const { currentPassword, newPassword } = req.body ?? {};
-    if (!currentPassword || !newPassword) {
-      res.status(400).json({ error: 'Missing currentPassword or newPassword' });
+    if (typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LENGTH) {
+      res.status(400).json({ error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters` });
       return;
     }
 
@@ -192,13 +197,13 @@ export function createMeRouter(deps: MeRouterDependencies): Router {
       return;
     }
 
-    if (!account.passwordHash) {
-      res.status(400).json({ error: 'This account signs in with Google and has no password' });
-      return;
-    }
-
-    if (!(await verifyPassword(currentPassword, account.passwordHash))) {
-      res.status(400).json({ error: 'Current password is incorrect' });
+    if (account.passwordHash) {
+      if (typeof currentPassword !== 'string' || !(await verifyPassword(currentPassword, account.passwordHash))) {
+        res.status(400).json({ error: 'Current password is incorrect' });
+        return;
+      }
+    } else if (!account.email || !account.emailConfirmed) {
+      res.status(400).json({ error: 'Confirm your email first — it’s what you’ll log in with' });
       return;
     }
 

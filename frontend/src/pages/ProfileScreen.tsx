@@ -42,7 +42,7 @@ function toForm(profile: UserProfile): ProfileForm {
 }
 
 export function ProfileScreen() {
-  const { token, refreshAccount, logout } = useAuth();
+  const { token, account, refreshAccount, logout } = useAuth();
   const { showToast } = useToast();
 
   const [form, setForm] = useState<ProfileForm | null>(() => {
@@ -149,7 +149,13 @@ export function ProfileScreen() {
     try {
       await changePassword(token, passwordForm.currentPassword, passwordForm.newPassword);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      showToast('Password updated.', 'success');
+      if (profile && !profile.hasPassword) {
+        // A first password: from now on they can also log in with email + password.
+        setProfile({ ...profile, hasPassword: true });
+        showToast('Password set. You can now also log in with your email.', 'success');
+      } else {
+        showToast('Password updated.', 'success');
+      }
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Could not change your password.', 'error');
     } finally {
@@ -258,28 +264,46 @@ export function ProfileScreen() {
             </Button>
           </form>
 
-          {profile.hasPassword && (
+          {/* Members who signed up with Google or Facebook have no password
+              yet; they can set one here (no current password to check) once
+              their email is confirmed, since that's what they'd log in with. */}
+          {!profile.hasPassword && !(profile.email && account?.emailConfirmed) ? (
+            <div className="mt-10">
+              <h2 className="mb-2 text-lg font-bold text-text-body">Set a password</h2>
+              <p className="text-sm text-text-secondary">
+                You sign in with Google or Facebook. Confirm your email first, then you can set a password here to
+                log in with your email too.
+              </p>
+            </div>
+          ) : (
             <form onSubmit={handleChangePassword} className="mt-10">
-              <h2 className="mb-4 text-lg font-bold text-text-body">Change password</h2>
+              <h2 className="mb-1 text-lg font-bold text-text-body">{profile.hasPassword ? 'Change password' : 'Set a password'}</h2>
+              <p className="mb-4 text-sm text-text-secondary">
+                {profile.hasPassword
+                  ? 'At least 8 characters.'
+                  : 'You sign in with Google or Facebook. Add a password (at least 8 characters) to also log in with your email.'}
+              </p>
               <Card className="mb-4">
                 <div className="flex flex-col gap-4">
-                  <Input
-                    id="current-password"
-                    label="Current password"
-                    type={showCurrentPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    value={passwordForm.currentPassword}
-                    onChange={(e) =>
-                      setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))
-                    }
-                    required
-                    right={
-                      <PasswordVisibilityToggle
-                        visible={showCurrentPassword}
-                        onToggle={() => setShowCurrentPassword((v) => !v)}
-                      />
-                    }
-                  />
+                  {profile.hasPassword && (
+                    <Input
+                      id="current-password"
+                      label="Current password"
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      value={passwordForm.currentPassword}
+                      onChange={(e) =>
+                        setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))
+                      }
+                      required
+                      right={
+                        <PasswordVisibilityToggle
+                          visible={showCurrentPassword}
+                          onToggle={() => setShowCurrentPassword((v) => !v)}
+                        />
+                      }
+                    />
+                  )}
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Input
@@ -323,13 +347,13 @@ export function ProfileScreen() {
                 className="w-full"
                 disabled={
                   isSavingPassword ||
-                  !passwordForm.currentPassword ||
-                  !passwordForm.newPassword ||
+                  (profile.hasPassword && !passwordForm.currentPassword) ||
+                  passwordForm.newPassword.length < 8 ||
                   !passwordForm.confirmPassword ||
                   passwordsMismatch
                 }
               >
-                {isSavingPassword ? 'Updating…' : 'Update password'}
+                {isSavingPassword ? 'Saving…' : profile.hasPassword ? 'Update password' : 'Set password'}
               </Button>
             </form>
           )}
