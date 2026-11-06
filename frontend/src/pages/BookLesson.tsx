@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CalendarCheck, Info, PartyPopper, Repeat } from 'lucide-react';
-import { Avatar, Button, Input } from '../components';
+import { CalendarCheck, Clock, Mail, PartyPopper, Repeat, Users } from 'lucide-react';
+import { Avatar, BackButton, Button, CreditCoin, Input } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { EmailConfirmationNotice } from '../auth/EmailConfirmationNotice';
 import { LessonCalendarPreview } from './LessonCalendarPreview';
@@ -17,18 +17,38 @@ import {
   fetchBuddySlots,
   type BookableBuddy,
   type Lesson,
+  type PlannedDateStatus,
   type RecurringFrequency,
 } from '../lib/api';
 import { formatDateTime } from '../lib/formatDateTime';
+import { clockChangeAmount, clockChangesBetween } from '../lib/clockChanges';
 
 type Step = 'entry' | 'buddy-pick' | 'buddy-day' | 'buddy-time' | 'time-pick' | 'time-buddy' | 'options' | 'confirm' | 'success';
-type FrequencyType = 'daily' | 'weekly' | 'everyXDays';
+type FrequencyType = 'daily' | 'weekly';
 
-// Plain words for the repeat choice, e.g. "Every week" / "Every 3 days".
-function frequencyLabel(frequency: FrequencyType, everyXDays: number): string {
-  if (frequency === 'daily') return 'Every day';
-  if (frequency === 'weekly') return 'Every week';
-  return `Every ${everyXDays} day${everyXDays === 1 ? '' : 's'}`;
+// luxon/ISO weekday numbers, as the server expects (1 = Mon … 7 = Sun).
+const WEEKDAYS = [
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+  { value: 7, label: 'Sun' },
+] as const;
+const ALL_WEEKDAYS: number[] = WEEKDAYS.map((d) => d.value);
+const MAX_EVERY_WEEKS = 4;
+
+// Plain words for the repeat choice, e.g. "Every day" / "Every Tue, Wed, Sun" /
+// "Every week on Tue" / "Every 3 weeks on Fri" (the first meeting's weekday).
+function frequencyLabel(frequency: FrequencyType, weekdays: number[], everyWeeks: number, firstMeeting: Date): string {
+  if (frequency === 'daily') {
+    if (weekdays.length === 7) return 'Every day';
+    if (weekdays.length === 0) return 'First date only';
+    return `Every ${WEEKDAYS.filter((d) => weekdays.includes(d.value)).map((d) => d.label).join(', ')}`;
+  }
+  const day = firstMeeting.toLocaleDateString('en-NZ', { weekday: 'short' });
+  return everyWeeks === 1 ? `Every week on ${day}` : `Every ${everyWeeks} weeks on ${day}`;
 }
 
 interface SingleResult {
@@ -135,6 +155,35 @@ const STEPPER_BUTTON_CLASS =
 // Plain number inputs let the DOM keep stray leading zeros / decimals React
 // won't re-render away (e.g. typing "02"). A stepper sidesteps that
 // entirely — the display is always just the current integer.
+// A daylight-saving change between now and a meeting is easy to miss when
+// booking weeks ahead, so the confirm screen says so plainly.
+function ClockChangeNotice({ meetingTimes }: { meetingTimes: Date[] }) {
+  if (meetingTimes.length === 0) return null;
+  const last = new Date(Math.max(...meetingTimes.map((d) => d.getTime())));
+  const changes = clockChangesBetween(new Date(), last);
+  if (changes.length === 0) return null;
+  const clockTime = meetingTimes[0].toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+  return (
+    <div className="rounded-md border-2 border-brand-secondary bg-brand-secondary/10 p-4 text-left">
+      <p className="flex items-center gap-1.5 text-sm font-extrabold text-text-heading">
+        <Clock size={16} aria-hidden="true" className="shrink-0" /> Daylight saving
+      </p>
+      <ul className="mt-1 flex flex-col gap-0.5 text-sm font-bold text-text-heading">
+        {changes.map((c) => (
+          <li key={c.at.toISOString()}>
+            Clocks go {c.minutes > 0 ? 'forward' : 'back'} {clockChangeAmount(c.minutes)} on{' '}
+            {c.at.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}.
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1.5 text-xs font-medium text-text-secondary">
+        Your meetings stay at {clockTime} your time, as shown here. Your phone changes its clock by itself.
+      </p>
+    </div>
+  );
+}
+
 function Stepper({
   value,
   onChange,
@@ -198,10 +247,16 @@ export function BookLesson() {
 
   const [bookingType, setBookingType] = useState<'single' | 'recurring'>('single');
   const [frequencyType, setFrequencyType] = useState<FrequencyType>('weekly');
-  const [everyXDays, setEveryXDays] = useState(2);
-  const [includeWeekends, setIncludeWeekends] = useState(true);
+  // Daily: which weekdays count (all ticked to start). Weekly: every 1–4 weeks.
+  const [weekdays, setWeekdays] = useState<number[]>(ALL_WEEKDAYS);
+  const [everyWeeks, setEveryWeeks] = useState(1);
   const [occurrenceCount, setOccurrenceCount] = useState(4);
-  const [recurringBuddyMode, setRecurringBuddyMode] = useState<'fixed' | 'any'>('fixed');
+  // A series with a chosen Buddy: let someone else take the days they're
+  // busy (amber on the calendar). Switched on the confirm screen.
+  const [includeAlternatives, setIncludeAlternatives] = useState(true);
+  // "Anyone available" picked in Book by Time: a single meeting goes to the
+  // first free Buddy, a series to whoever is free each time.
+  const [pickedAnyone, setPickedAnyone] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -210,21 +265,19 @@ export function BookLesson() {
   // rows buries the actual outcome (the booked sessions) on a screen meant
   // to feel like a confirmation, not a report.
   const [showSkipped, setShowSkipped] = useState(false);
-  // The "you can edit later" / "email sent" notes are secondary info —
-  // tucked behind a hint icon so the success screen stays a quick, clean
-  // confirmation rather than always showing two more lines of text.
-  const [showHints, setShowHints] = useState(false);
 
   // The confirm screen's calendar for a recurring booking: the server's
   // planned dates and which are free (busy ones are skipped, not replaced).
-  const [preview, setPreview] = useState<{ date: Date; available: boolean }[] | null>(null);
+  const [preview, setPreview] = useState<{ date: Date; status: PlannedDateStatus; buddyName?: string }[] | null>(null);
   useEffect(() => {
     if (step !== 'confirm' || bookingType !== 'recurring' || !token || !selectedStartTime) return;
     let superseded = false;
     setPreview(null);
     previewRecurringLessons(token, recurringPayload())
       .then((res) => {
-        if (!superseded) setPreview(res.occurrences.map((o) => ({ date: new Date(o.startTime), available: o.available })));
+        if (!superseded) {
+          setPreview(res.occurrences.map((o) => ({ date: new Date(o.startTime), status: o.status, buddyName: o.buddyName })));
+        }
       })
       .catch(() => {
         if (!superseded) showToast('Could not check your meeting days. Please try again.', 'error');
@@ -236,6 +289,10 @@ export function BookLesson() {
   }, [step]);
 
   const creditsPerLesson = useLessonPrice();
+  // A series can't ask for more meetings than the User can pay for; the
+  // starting choice (4) drops to what they can afford.
+  const maxMeetings = Math.max(1, Math.floor((account?.credits ?? 0) / Math.max(1, creditsPerLesson)));
+  const meetingCount = Math.min(occurrenceCount, maxMeetings);
 
   // Only for arriving without enough credits for one lesson: a booking that
   // spends the last of them must still land on the "Booked!" screen (result
@@ -264,8 +321,12 @@ export function BookLesson() {
   if (!token || !account || (account.credits < creditsPerLesson && !result)) return null;
 
   // The lesson price for each free planned date (busy ones aren't booked or charged).
+  // Which planned dates this booking will take: free ones, plus amber ones
+  // ("alternative found") while alternatives are switched on.
+  const willBook = (status: PlannedDateStatus) => status === 'free' || (status === 'alternative' && includeAlternatives);
   const lessonsToBook =
-    bookingType === 'single' ? 1 : preview ? preview.filter((o) => o.available).length : occurrenceCount;
+    bookingType === 'single' ? 1 : preview ? preview.filter((o) => willBook(o.status)).length : meetingCount;
+  const hasAlternatives = !pickedAnyone && (preview ?? []).some((o) => o.status === 'alternative');
   const creditsToUse = lessonsToBook * creditsPerLesson;
 
   async function startByBuddy() {
@@ -288,6 +349,7 @@ export function BookLesson() {
 
   async function pickBuddy(buddy: BookableBuddy) {
     setSelectedBuddy(buddy);
+    setPickedAnyone(false);
     setSelectedDate(toLocalDateString(nextDays(1)[0]));
     setIsLoading(true);
     try {
@@ -350,22 +412,31 @@ export function BookLesson() {
 
   function pickTimeBuddy(buddy: BookableBuddy) {
     setSelectedBuddy(buddy);
+    setPickedAnyone(false);
+    setOptionsOrigin('time-buddy');
+    setStep('options');
+  }
+
+  function pickTimeAnyone() {
+    // Everyone listed is free at this time; the first one takes a single meeting.
+    setSelectedBuddy(timeBuddies[0]);
+    setPickedAnyone(true);
     setOptionsOrigin('time-buddy');
     setStep('options');
   }
 
   function frequencyPayload(): RecurringFrequency {
-    if (frequencyType === 'everyXDays') return { type: 'everyXDays', days: Math.max(1, everyXDays) };
-    return { type: frequencyType };
+    if (frequencyType === 'daily') return { type: 'daily', weekdays };
+    return { type: 'weekly', everyWeeks };
   }
 
   function recurringPayload() {
     return {
-      buddyId: recurringBuddyMode === 'fixed' ? selectedBuddy!.id : undefined,
+      buddyId: pickedAnyone ? undefined : selectedBuddy!.id,
+      allowAlternatives: includeAlternatives,
       startTime: selectedStartTime!,
       frequency: frequencyPayload(),
-      includeWeekends,
-      occurrenceCount,
+      occurrenceCount: meetingCount,
       timezone: VIEWER_TIMEZONE,
     };
   }
@@ -395,13 +466,9 @@ export function BookLesson() {
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-text-body">Book a Meeting</h1>
         {step !== 'success' && (
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard')}
-            className="text-xs font-bold uppercase tracking-wide text-text-secondary"
-          >
+          <Button variant="secondary" size="sm" onClick={() => navigate('/dashboard')}>
             Cancel
-          </button>
+          </Button>
         )}
       </div>
 
@@ -527,6 +594,21 @@ export function BookLesson() {
             <p className="mb-4 text-sm text-text-secondary">No teachers free at this time — choose a different time.</p>
           )}
           <div className="flex flex-col gap-2">
+            {timeBuddies.length > 0 && (
+              <button
+                type="button"
+                onClick={pickTimeAnyone}
+                className="flex items-center gap-3 rounded-md border-2 border-b-[4px] border-brand-primary-border bg-accent-lime-light p-3 text-left"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-primary text-text-inverse">
+                  <Users size={20} aria-hidden="true" />
+                </span>
+                <span>
+                  <span className="block font-bold text-text-heading">Anyone available</span>
+                  <span className="block text-xs font-medium text-text-secondary">We'll match you with a free Buddy</span>
+                </span>
+              </button>
+            )}
             {timeBuddies.map((buddy) => (
               <button
                 key={buddy.id}
@@ -579,7 +661,7 @@ export function BookLesson() {
             <div className="rounded-md border-2 border-accent-lime bg-accent-lime-light p-4">
               <p className="mb-2 text-xs font-bold uppercase tracking-widest text-success">How often?</p>
               <div className="mb-3 flex flex-wrap gap-2">
-                {(['daily', 'weekly', 'everyXDays'] as const).map((f) => (
+                {(['daily', 'weekly'] as const).map((f) => (
                   <button
                     key={f}
                     type="button"
@@ -590,43 +672,57 @@ export function BookLesson() {
                         : 'rounded-md border-2 border-b-[3px] border-accent-lime bg-bg-surface px-3 py-2 text-xs font-bold uppercase text-success'
                     }
                   >
-                    {f === 'daily' ? 'Every day' : f === 'weekly' ? 'Every week' : 'Other'}
+                    {f === 'daily' ? 'Daily' : 'Weekly'}
                   </button>
                 ))}
               </div>
 
-              {frequencyType === 'everyXDays' && (
-                <div className="mb-3 flex items-center gap-2 text-sm font-bold text-text-heading">
-                  Every
-                  <Stepper value={everyXDays} min={1} onChange={setEveryXDays} />
-                  days
+              {frequencyType === 'daily' && (
+                <div className="mb-3">
+                  <div className="grid grid-cols-4 gap-x-2 gap-y-1.5 sm:grid-cols-7">
+                    {WEEKDAYS.map((d) => (
+                      <label key={d.value} className="flex items-center gap-1.5 text-sm font-bold text-text-heading">
+                        <input
+                          type="checkbox"
+                          checked={weekdays.includes(d.value)}
+                          onChange={(e) =>
+                            setWeekdays((prev) =>
+                              e.target.checked ? [...prev, d.value].sort((a, b) => a - b) : prev.filter((v) => v !== d.value),
+                            )
+                          }
+                        />
+                        {d.label}
+                      </label>
+                    ))}
+                  </div>
+                  {selectedStartTime && (
+                    <p className="mt-1.5 text-xs font-medium text-success">
+                      Your first meeting ({formatDateTime(selectedStartTime)}) is always included.
+                    </p>
+                  )}
                 </div>
               )}
 
-              <label className="mb-3 flex items-center gap-2 text-sm font-bold text-text-heading">
-                <input type="checkbox" checked={includeWeekends} onChange={(e) => setIncludeWeekends(e.target.checked)} />
-                Also on Saturday and Sunday
-              </label>
+              {frequencyType === 'weekly' && (
+                <div className="mb-3 flex items-center gap-2 text-sm font-bold text-text-heading">
+                  Every
+                  <Stepper value={everyWeeks} min={1} max={MAX_EVERY_WEEKS} onChange={setEveryWeeks} />
+                  {everyWeeks === 1 ? 'week' : 'weeks'}
+                </div>
+              )}
 
               <div className="mb-3 flex items-center gap-2 text-sm font-bold text-text-heading">
                 How many meetings?
                 <Stepper
-                  value={occurrenceCount}
+                  value={meetingCount}
                   min={1}
-                  max={Math.max(1, Math.floor(account.credits / creditsPerLesson))}
+                  max={maxMeetings}
                   onChange={setOccurrenceCount}
                 />
               </div>
 
-              {selectedBuddy && (
-                <label className="flex items-center gap-2 text-sm font-bold text-text-heading">
-                  <input
-                    type="checkbox"
-                    checked={recurringBuddyMode === 'fixed'}
-                    onChange={(e) => setRecurringBuddyMode(e.target.checked ? 'fixed' : 'any')}
-                  />
-                  Always with {buddyLabel(selectedBuddy)}
-                </label>
+              {pickedAnyone && (
+                <p className="text-sm font-bold text-text-heading">With anyone available — we pick a free Buddy for each meeting.</p>
               )}
 
               <p className="mt-3 text-xs font-medium text-success">
@@ -637,13 +733,7 @@ export function BookLesson() {
           )}
 
           <Button onClick={() => setStep('confirm')}>Continue</Button>
-          <button
-            type="button"
-            onClick={() => setStep(optionsOrigin)}
-            className="text-center text-sm font-bold text-text-secondary"
-          >
-            Back
-          </button>
+          <BackButton onClick={() => setStep(optionsOrigin)} className="self-center" />
         </div>
       )}
 
@@ -652,9 +742,24 @@ export function BookLesson() {
           <h2 className="text-xs font-bold uppercase tracking-widest text-text-secondary">Confirm booking</h2>
           <div className="overflow-hidden rounded-md border-2 border-b-[4px] border-border">
             {[
-              { label: 'Buddy', value: recurringBuddyMode === 'any' ? 'First available' : buddyLabel(selectedBuddy) },
-              { label: 'Time', value: selectedStartTime ? formatDateTime(selectedStartTime) : '' },
-              { label: 'Meetings', value: bookingType === 'recurring' ? `Many · ${frequencyLabel(frequencyType, everyXDays)}` : 'One' },
+              {
+                label: 'Buddy',
+                value: pickedAnyone
+                  ? bookingType === 'recurring'
+                    ? 'Anyone'
+                    : `Anyone · ${buddyLabel(selectedBuddy)}`
+                  : bookingType === 'recurring' && hasAlternatives && includeAlternatives
+                    ? `${buddyLabel(selectedBuddy)} (with alternatives)`
+                    : buddyLabel(selectedBuddy),
+              },
+              { label: 'Initial Meeting', value: selectedStartTime ? formatDateTime(selectedStartTime) : '' },
+              {
+                label: 'Meetings',
+                value:
+                  bookingType === 'recurring' && selectedStartTime
+                    ? `${lessonsToBook} – ${frequencyLabel(frequencyType, weekdays, everyWeeks, new Date(selectedStartTime))}`
+                    : '1',
+              },
               { label: 'Credits', value: `${creditsToUse} credit${creditsToUse === 1 ? '' : 's'}` },
             ].map((row) => (
               <div key={row.label} className="flex items-center justify-between border-t border-border bg-bg-surface px-4 py-3 first:border-t-0">
@@ -668,14 +773,47 @@ export function BookLesson() {
             <LessonCalendarPreview
               recurring={bookingType === 'recurring'}
               loading={bookingType === 'recurring' && preview === null}
-              lessons={bookingType === 'single' ? [{ date: new Date(selectedStartTime), available: true }] : (preview ?? [])}
+              lessons={
+                bookingType === 'single'
+                  ? [{ date: new Date(selectedStartTime), status: 'free' }]
+                  : (preview ?? []).map((o) => ({
+                      ...o,
+                      // Alternatives switched off: those days are just busy.
+                      status: o.status === 'alternative' && !includeAlternatives ? 'busy' : o.status,
+                    }))
+              }
+            />
+          )}
+
+          {bookingType === 'recurring' && hasAlternatives && (
+            <label className="flex items-center gap-3 rounded-md border-2 border-warning bg-warning/10 p-4">
+              <input
+                type="checkbox"
+                role="switch"
+                className="h-5 w-5 shrink-0 accent-warning"
+                checked={includeAlternatives}
+                onChange={(e) => setIncludeAlternatives(e.target.checked)}
+              />
+              <span className="text-sm font-extrabold text-text-heading">
+                Use another Buddy when {buddyLabel(selectedBuddy)} is busy
+              </span>
+            </label>
+          )}
+
+          {selectedStartTime && (bookingType === 'single' || preview) && (
+            <ClockChangeNotice
+              meetingTimes={
+                bookingType === 'single'
+                  ? [new Date(selectedStartTime)]
+                  : (preview ?? []).filter((o) => willBook(o.status)).map((o) => o.date)
+              }
             />
           )}
 
           <div className="rounded-md border-2 border-accent-lime bg-accent-lime-light p-4">
             <p className="text-xs font-bold uppercase tracking-widest text-success">Balance after booking</p>
-            <p className="mt-0.5 text-base font-bold text-text-heading">
-              {account.credits - creditsToUse} credits remaining
+            <p className="mt-0.5 flex items-center gap-1 text-base font-bold text-text-heading">
+              <CreditCoin /> {account.credits - creditsToUse} credits remaining
             </p>
           </div>
 
@@ -686,9 +824,7 @@ export function BookLesson() {
           ) : (
             <EmailConfirmationNotice action="book this meeting" />
           )}
-          <button type="button" onClick={() => setStep('options')} className="text-center text-sm font-bold text-text-secondary">
-            Back
-          </button>
+          <BackButton onClick={() => setStep('options')} className="self-center" />
         </div>
       )}
 
@@ -760,30 +896,22 @@ export function BookLesson() {
             </div>
           )}
 
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowHints((v) => !v)}
-              className="mx-auto flex items-center gap-1 text-xs font-bold text-text-secondary"
-            >
-              <Info size={14} />
-              Good to know
-            </button>
-            {showHints && (
-              <div className="mt-2 flex flex-col gap-1.5 rounded-md border-2 border-brand-secondary bg-brand-secondary/10 p-3 text-left">
-                {result.kind === 'recurring' && (
-                  <p className="text-xs font-medium text-text-body">
-                    You can edit or cancel individual sessions later from your Dashboard.
-                  </p>
-                )}
-                <p className="text-xs font-medium text-text-body">Confirmation email sent with your meeting link.</p>
-              </div>
-            )}
+          {/* Always shown: where the meeting link is matters more than keeping the screen bare. */}
+          <div className="flex items-center gap-3 rounded-md border-2 border-brand-secondary bg-brand-secondary/10 p-3 text-left">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-secondary text-text-inverse">
+              <Mail size={20} aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-sm font-bold text-text-heading">Confirmation email sent with your meeting link.</p>
+              {result.kind === 'recurring' && (
+                <p className="text-xs font-medium text-text-secondary">You can change or cancel each meeting later from My Meetings.</p>
+              )}
+            </div>
           </div>
           {account.credits < creditsPerLesson && (
             <div className="rounded-md border-2 border-brand-secondary bg-brand-secondary/10 p-4 text-left">
               <p className="text-sm font-extrabold text-text-heading">
-                You have {creditsLabel(account.credits)} left — a meeting costs {creditsLabel(creditsPerLesson)}.
+                You have <CreditCoin className="-mt-0.5" /> {creditsLabel(account.credits)} left — a meeting costs {creditsLabel(creditsPerLesson)}.
               </p>
               <p className="mt-0.5 text-xs font-bold text-text-secondary">Top up now to book your next meeting.</p>
               <Button tone="blue" size="sm" className="mt-3 w-full" onClick={() => navigate('/credits')}>

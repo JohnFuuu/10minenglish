@@ -10,6 +10,7 @@ import {
   type CreditPackSize,
 } from '../models/CreditPack.js';
 import { Payment, type PaymentDocument } from '../models/Payment.js';
+import { AuditEntry } from '../models/AuditEntry.js';
 import type { StripeClient } from '../services/stripeClient.js';
 import type { PoliClient } from '../services/poliClient.js';
 import { isLikelyNewZealand } from '../services/location.js';
@@ -161,8 +162,20 @@ export function createPaymentsRouter(deps: PaymentsRouterDependencies): Router {
   });
 
   router.get('/api/payments/history', requireAuth, requireRole('user'), async (req, res) => {
-    const payments = await Payment.find({ accountId: req.account!.accountId }).sort({ createdAt: -1 });
+    const accountId = req.account!.accountId;
+    const [payments, awardEntries] = await Promise.all([
+      Payment.find({ accountId }).sort({ createdAt: -1 }),
+      // Credits the 10ME team gave this member. The audit log is the record
+      // of those; the Admin's name stays out of what the member sees.
+      AuditEntry.find({ action: 'member.credits_awarded', 'target.type': 'member', 'target.id': accountId }).sort({ createdAt: -1, _id: -1 }),
+    ]);
     res.status(200).json({
+      awards: awardEntries.map((e) => ({
+        id: e.id,
+        amount: Number(e.details.amount),
+        reason: String(e.details.reason ?? ''),
+        createdAt: e.createdAt,
+      })),
       payments: payments.map((p) => ({
         id: p.id,
         provider: p.provider,

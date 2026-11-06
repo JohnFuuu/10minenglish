@@ -101,3 +101,37 @@ describe('GET /api/payments/history', () => {
     expect(statuses).toEqual(['failed', 'pending']);
   });
 });
+
+describe('GET /api/payments/history — credits awarded by the 10ME team', () => {
+  it('lists this member\'s awards (amount, reason, when), newest first, without naming the Admin', async () => {
+    const { account, token } = await userToken();
+    const { account: other } = await userToken({ email: 'other@example.com' });
+    const admin = await Account.create({ role: 'admin', email: 'admin@10me.test', name: 'Ada Admin' });
+    const adminToken = signAccountToken({ accountId: admin.id, role: 'admin' });
+    const { app } = createTestApp();
+
+    for (const [who, amount, reason] of [[account, 3, 'Welcome gift'], [other, 9, 'Not yours'], [account, 5, 'Sorry about the missed meeting']] as const) {
+      const res = await request(app).post(`/api/admin/members/${who.id}/credits`).set('Authorization', `Bearer ${adminToken}`).send({ amount, reason });
+      expect(res.status).toBe(200);
+    }
+
+    const res = await request(app).get('/api/payments/history').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.awards.map((a: { amount: number; reason: string }) => [a.amount, a.reason])).toEqual([
+      [5, 'Sorry about the missed meeting'],
+      [3, 'Welcome gift'],
+    ]);
+    expect(typeof res.body.awards[0].createdAt).toBe('string');
+    expect(JSON.stringify(res.body)).not.toContain('Ada');
+  });
+
+  it('returns an empty awards list when there are none', async () => {
+    const { token } = await userToken();
+    const { app } = createTestApp();
+
+    const res = await request(app).get('/api/payments/history').set('Authorization', `Bearer ${token}`);
+
+    expect(res.body.awards).toEqual([]);
+  });
+});

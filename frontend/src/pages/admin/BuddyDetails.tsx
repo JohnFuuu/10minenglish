@@ -45,6 +45,16 @@ function formatDateTime(iso: string): string {
 
 // Label above a full-width value: at phone width a side-by-side layout
 // leaves values too narrow (emails and links wrap mid-word).
+// A phone number an Admin can tap to call, or a plain "Not given".
+export function PhoneValue({ phoneNumber }: { phoneNumber?: string }) {
+  if (!phoneNumber) return <span className="text-text-secondary">Not given</span>;
+  return (
+    <a href={`tel:${phoneNumber.replace(/[^\d+]/g, '')}`} className="font-bold text-brand-secondary underline">
+      {phoneNumber}
+    </a>
+  );
+}
+
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
@@ -64,6 +74,9 @@ export function BuddyDetails({ details }: { details: AdminBuddyDetails }) {
     // than as more roster rows.
     <div data-testid="buddy-details" className="mt-3 flex flex-col gap-2.5 rounded-md bg-border/40 p-3">
       <Field label="Email">{details.email}</Field>
+      <Field label="Phone">
+        <PhoneValue phoneNumber={details.phoneNumber} />
+      </Field>
       <Field label="Status">
         {details.active ? 'Active' : 'Inactive'} · joined {formatDate(details.joinedAt)}
       </Field>

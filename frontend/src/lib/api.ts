@@ -56,6 +56,7 @@ export function login(email: string, password: string) {
 
 export interface OnboardingAnswers {
   referralSource: string;
+  referralSourceOther?: string;
   selfRatedLevel: number;
   lessonsPerWeekGoal: string;
 }
@@ -150,6 +151,7 @@ export interface BuddyProfile {
   picture?: string;
   bio?: string;
   location?: string;
+  phoneNumber?: string;
   timezone?: string;
   meetingLink?: string;
   availabilityBlocks: AvailabilityBlock[];
@@ -166,6 +168,8 @@ export interface BuddyProfileUpdate {
   picture?: string;
   bio?: string;
   location?: string;
+  /** Optional; blank clears it. */
+  phoneNumber?: string;
   timezone?: string;
   meetingLink?: string;
 }
@@ -264,8 +268,16 @@ export interface PaymentHistoryEntry {
   createdAt: string;
 }
 
+// Free credits the 10ME team gave the member (Admin credit awards).
+export interface CreditAwardEntry {
+  id: string;
+  amount: number;
+  reason: string;
+  createdAt: string;
+}
+
 export function fetchPaymentHistory(token: string) {
-  return request<{ payments: PaymentHistoryEntry[] }>('/api/payments/history', {
+  return request<{ payments: PaymentHistoryEntry[]; awards: CreditAwardEntry[] }>('/api/payments/history', {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
@@ -332,21 +344,29 @@ export function bookLesson(token: string, buddyId: string, startTime: string) {
   });
 }
 
-export type RecurringFrequency = { type: 'daily' } | { type: 'weekly' } | { type: 'everyXDays'; days: number };
+// daily: the ticked weekdays (1 = Mon … 7 = Sun); weekly: every 1–4 weeks.
+export type RecurringFrequency = { type: 'daily'; weekdays: number[] } | { type: 'weekly'; everyWeeks: number };
 
 export interface RecurringBookingPayload {
   buddyId?: string;
   startTime: string;
   frequency: RecurringFrequency;
-  includeWeekends: boolean;
   occurrenceCount: number;
   timezone: string;
+  /** With a buddyId: let another free Buddy take the dates that Buddy is busy. */
+  allowAlternatives?: boolean;
 }
+
+// free = the chosen Buddy (or anyone, if none chosen) is free; alternative =
+// the chosen Buddy is busy but `buddyName` is free; busy = nobody is.
+export type PlannedDateStatus = 'free' | 'alternative' | 'busy';
 
 // The planned dates for a recurring booking and whether each is free now.
 // Books nothing; busy dates are skipped (not replaced) when booking.
 export function previewRecurringLessons(token: string, payload: RecurringBookingPayload) {
-  return request<{ occurrences: { startTime: string; available: boolean }[] }>('/api/lessons/recurring/preview', {
+  return request<{
+    occurrences: { startTime: string; available: boolean; status: PlannedDateStatus; buddyName?: string }[];
+  }>('/api/lessons/recurring/preview', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
@@ -413,6 +433,21 @@ export function markNotificationRead(token: string, notificationId: string) {
       headers: { Authorization: `Bearer ${token}` },
     },
   );
+}
+
+// "Delete" in the inbox — the server archives rather than erases.
+export function archiveNotification(token: string, notificationId: string) {
+  return request<{ unreadCount: number }>(`/api/notifications/${notificationId}/archive`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function archiveReadNotifications(token: string) {
+  return request<{ archivedCount: number; unreadCount: number }>('/api/notifications/archive-read', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 export interface LessonWithUser extends Lesson {
@@ -574,6 +609,7 @@ export interface AdminMember {
   id: string;
   name?: string;
   email?: string;
+  phoneNumber?: string;
   joinedAt: string;
   credits: number;
   tags: AdminMemberTag[];
@@ -648,8 +684,9 @@ export function awardMemberCredits(token: string, memberId: string, amount: numb
 export interface AuditLogEntry {
   id: string;
   action: string;
-  admin: { id: string; name: string };
-  target: { type: string; id?: string; label: string };
+  /** superAdmin: whether they were a super admin at the time (false on older entries). */
+  admin: { id: string; name: string; superAdmin?: boolean };
+  target: { type: string; id?: string; label: string; superAdmin?: boolean };
   details: Record<string, unknown>;
   createdAt: string;
 }
@@ -659,6 +696,17 @@ export function fetchAuditLog(token: string, filters: { category?: string; befor
   if (filters.category) params.set('category', filters.category);
   if (filters.before) params.set('before', filters.before);
   return request<{ entries: AuditLogEntry[]; nextCursor: string | null }>(`/api/admin/audit-log?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// Member actions (tags, credit awards) for the members a search/tag filter shows.
+export function fetchMemberAuditLog(token: string, filters: { q?: string; tagId?: string; before?: string }) {
+  const params = new URLSearchParams();
+  if (filters.q) params.set('q', filters.q);
+  if (filters.tagId) params.set('tagId', filters.tagId);
+  if (filters.before) params.set('before', filters.before);
+  return request<{ entries: AuditLogEntry[]; nextCursor: string | null }>(`/api/admin/members/audit-log?${params.toString()}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
@@ -707,6 +755,7 @@ export interface AdminBuddyDetails {
   picture?: string;
   timezone?: string;
   location?: string;
+  phoneNumber?: string;
   bio?: string;
   meetingLink?: string;
   availabilityBlocks: { dayOfWeek: number; startTime: string; endTime: string }[];

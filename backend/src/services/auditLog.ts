@@ -1,5 +1,6 @@
 import { Account } from '../models/Account.js';
 import { AuditEntry, type AuditAction, type AuditTargetType } from '../models/AuditEntry.js';
+import { isSuperAdmin } from './superAdmins.js';
 
 export interface AuditTarget {
   type: AuditTargetType;
@@ -23,10 +24,13 @@ export async function recordAdminAction(
 ): Promise<void> {
   try {
     const admin = await Account.findById(adminId, { name: 1, email: 1 });
+    // Super admin status comes from a server setting that can change, so
+    // it's captured as it is now, for the actor and for an Admin target.
+    const targetAdmin = target.type === 'admin' && target.id ? await Account.findById(target.id, { email: 1 }) : null;
     await AuditEntry.create({
       action,
-      admin: { id: adminId, name: admin ? accountLabel(admin) : 'Removed admin' },
-      target,
+      admin: { id: adminId, name: admin ? accountLabel(admin) : 'Removed admin', superAdmin: isSuperAdmin(admin?.email) },
+      target: targetAdmin ? { ...target, superAdmin: isSuperAdmin(targetAdmin.email) } : target,
       details,
     });
   } catch (err) {

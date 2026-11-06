@@ -42,14 +42,16 @@ export interface AuditEntryDocument extends mongoose.Document {
   action: AuditAction;
   // Snapshotted at write time, so the entry still reads correctly after a
   // rename, a deletion, or an Admin account being removed.
-  admin: { id: mongoose.Types.ObjectId; name: string };
-  target: { type: AuditTargetType; id?: string; label: string };
+  // superAdmin: whether they were a super admin at the time (absent on
+  // entries written before this was recorded — shown as plain "Admin").
+  admin: { id: mongoose.Types.ObjectId; name: string; superAdmin?: boolean };
+  target: { type: AuditTargetType; id?: string; label: string; superAdmin?: boolean };
   details: Record<string, unknown>;
   createdAt: Date;
 }
 
 const adminSnapshotSchema = new Schema(
-  { id: { type: Schema.Types.ObjectId, required: true }, name: { type: String, required: true } },
+  { id: { type: Schema.Types.ObjectId, required: true }, name: { type: String, required: true }, superAdmin: { type: Boolean } },
   { _id: false },
 );
 
@@ -58,6 +60,7 @@ const targetSnapshotSchema = new Schema(
     type: { type: String, required: true, enum: ['tag', 'member', 'buddy', 'creditPack', 'lessonPrice', 'admin', 'supportTicket'] },
     id: { type: String },
     label: { type: String, required: true },
+    superAdmin: { type: Boolean },
   },
   { _id: false },
 );
@@ -73,5 +76,8 @@ const auditEntrySchema = new Schema<AuditEntryDocument>(
   // Keep `details: {}` rather than dropping the empty object.
   { minimize: false },
 );
+
+// A member's wallet history looks up their credit awards.
+auditEntrySchema.index({ action: 1, 'target.id': 1, createdAt: -1 });
 
 export const AuditEntry = mongoose.model<AuditEntryDocument>('AuditEntry', auditEntrySchema);

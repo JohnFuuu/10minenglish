@@ -6,12 +6,17 @@ import { AUDIT_CATEGORIES, AuditEntry, type AuditEntryDocument } from '../models
 const PAGE_SIZE = 50;
 const EMPTY_PAGE = { entries: [], nextCursor: null };
 
-function entryResponse(entry: AuditEntryDocument) {
+export function entryResponse(entry: AuditEntryDocument) {
   return {
     id: String(entry._id),
     action: entry.action,
-    admin: { id: String(entry.admin.id), name: entry.admin.name },
-    target: { type: entry.target.type, id: entry.target.id, label: entry.target.label },
+    admin: { id: String(entry.admin.id), name: entry.admin.name, superAdmin: entry.admin.superAdmin === true },
+    target: {
+      type: entry.target.type,
+      id: entry.target.id,
+      label: entry.target.label,
+      ...(entry.target.type === 'admin' ? { superAdmin: entry.target.superAdmin === true } : {}),
+    },
     details: entry.details ?? {},
     createdAt: entry.createdAt.toISOString(),
   };

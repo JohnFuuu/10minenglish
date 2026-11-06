@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { submitOnboarding } from '../lib/api';
+import { Input } from '../components';
 
 interface Option {
   label: string;
@@ -102,6 +103,8 @@ export function Onboarding() {
   const [selections, setSelections] = useState<(string | null)[]>(
     Array(steps.length).fill(null),
   );
+  // Optional free text shown once "Other" is picked on the referral step.
+  const [referralOther, setReferralOther] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -136,6 +139,7 @@ export function Onboarding() {
       const levelOption = steps[1].options.find((o) => o.label === selections[1]);
       await submitOnboarding(token!, {
         referralSource: selections[0]!,
+        ...(selections[0] === 'Other' && referralOther.trim() ? { referralSourceOther: referralOther.trim() } : {}),
         selfRatedLevel: levelOption?.bars ?? 1,
         lessonsPerWeekGoal: selections[2]!,
       });
@@ -220,6 +224,16 @@ export function Onboarding() {
             </button>
           );
         })}
+        {stepIndex === 0 && selected === 'Other' && (
+          <Input
+            label="Tell us where (optional)"
+            value={referralOther}
+            onChange={(e) => setReferralOther(e.target.value)}
+            maxLength={200}
+            placeholder="e.g. a poster, my school, a podcast"
+            autoFocus
+          />
+        )}
       </div>
 
       {error && <p className="px-5 pb-2 text-center text-sm font-bold text-error">{error}</p>}

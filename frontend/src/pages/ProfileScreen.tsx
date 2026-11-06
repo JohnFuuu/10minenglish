@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { AutocompleteInput, Avatar, BottomNav, Button, Card, Input, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
+import { AutocompleteInput, Avatar, BottomNav, Button, Card, Input, LogoutButton, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import { PasswordVisibilityToggle } from '../auth/PasswordVisibilityToggle';
@@ -29,6 +29,7 @@ interface ProfileForm {
   picture: string;
   location: string;
   nationality: string;
+  phoneNumber: string;
 }
 
 function toForm(profile: UserProfile): ProfileForm {
@@ -38,6 +39,7 @@ function toForm(profile: UserProfile): ProfileForm {
     picture: profile.picture ?? '',
     location: profile.location ?? '',
     nationality: profile.nationality ?? '',
+    phoneNumber: profile.phoneNumber ?? '',
   };
 }
 
@@ -125,6 +127,8 @@ export function ProfileScreen() {
         picture: form.picture,
         location: form.location,
         nationality: form.nationality,
+        // Optional — sending it blank removes it.
+        phoneNumber: form.phoneNumber,
       });
       setProfile(updated);
       setForm(toForm(updated));
@@ -174,9 +178,7 @@ export function ProfileScreen() {
         title="Profile"
         className="mb-8"
         right={
-          <Button variant="secondary" size="sm" onClick={logout}>
-            Log out
-          </Button>
+          <LogoutButton onClick={logout} />
         }
       />
 
@@ -260,6 +262,16 @@ export function ProfileScreen() {
                   onChange={updateField('location')}
                   options={COUNTRY_NAMES}
                   getFlagCode={flagCodeForCountry}
+                />
+
+                <Input
+                  id="profile-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  label="Phone (optional)"
+                  placeholder="e.g. +64 21 123 4567"
+                  value={form.phoneNumber}
+                  onChange={(e) => updateField('phoneNumber')(e.target.value)}
                 />
               </div>
             </Card>

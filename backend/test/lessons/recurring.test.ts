@@ -229,6 +229,42 @@ describe('POST /api/lessons/recurring', () => {
   });
 });
 
+describe('POST /api/lessons/recurring — new frequency options', () => {
+  it('books a daily series on the ticked weekdays only', async () => {
+    const buddy = await everyDayBuddy();
+    const anchor = nextFriday();
+    const { token } = await userToken();
+    const { app } = createTestApp();
+
+    const res = await request(app)
+      .post('/api/lessons/recurring')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        buddyId: buddy.id,
+        startTime: anchor.toJSDate().toISOString(),
+        frequency: { type: 'daily', weekdays: [2, 4] }, // Tue, Thu
+        occurrenceCount: 3,
+        timezone: BUDDY_TZ,
+      });
+
+    expect(res.status).toBe(201);
+    // Friday (the original date), then Tuesday and Thursday.
+    const expected = [anchor, anchor.plus({ days: 4 }), anchor.plus({ days: 6 })].map((d) => d.toJSDate().toISOString());
+    expect(res.body.booked.map((l: { startTime: string }) => l.startTime).sort()).toEqual(expected.sort());
+  });
+
+  it('rejects an out-of-range week count or weekday', async () => {
+    const { token } = await userToken();
+    const { app } = createTestApp();
+    const base = { startTime: nextFriday().toJSDate().toISOString(), occurrenceCount: 2, timezone: BUDDY_TZ };
+
+    for (const frequency of [{ type: 'weekly', everyWeeks: 5 }, { type: 'weekly', everyWeeks: 0 }, { type: 'daily', weekdays: [0] }, { type: 'daily', weekdays: [8] }, { type: 'daily', weekdays: 'mon' }]) {
+      const res = await request(app).post('/api/lessons/recurring/preview').set('Authorization', `Bearer ${token}`).send({ ...base, frequency });
+      expect(res.status, JSON.stringify(frequency)).toBe(400);
+    }
+  });
+});
+
 describe('POST /api/lessons/recurring/preview', () => {
   it('lists the planned dates and whether each one is free, booking nothing', async () => {
     const buddy = await everyDayBuddy();
@@ -256,9 +292,9 @@ describe('POST /api/lessons/recurring/preview', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.occurrences).toEqual([
-      { startTime: anchor.toJSDate().toISOString(), available: true },
-      { startTime: anchor.plus({ weeks: 1 }).toJSDate().toISOString(), available: false },
-      { startTime: anchor.plus({ weeks: 2 }).toJSDate().toISOString(), available: true },
+      { startTime: anchor.toJSDate().toISOString(), available: true, status: 'free' },
+      { startTime: anchor.plus({ weeks: 1 }).toJSDate().toISOString(), available: false, status: 'busy' },
+      { startTime: anchor.plus({ weeks: 2 }).toJSDate().toISOString(), available: true, status: 'free' },
     ]);
     expect(await Lesson.countDocuments()).toBe(1);
   });
@@ -277,7 +313,7 @@ describe('POST /api/lessons/recurring/preview', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ startTime: anchor.toJSDate().toISOString(), frequency: { type: 'daily' }, includeWeekends: true, occurrenceCount: 1 });
 
-    expect(res.body.occurrences).toEqual([{ startTime: anchor.toJSDate().toISOString(), available: true }]);
+    expect(res.body.occurrences).toEqual([{ startTime: anchor.toJSDate().toISOString(), available: true, status: 'free' }]);
   });
 
   it('returns no dates for a weekend-only pattern with weekends off', async () => {
@@ -299,5 +335,67 @@ describe('POST /api/lessons/recurring/preview', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.occurrences).toEqual([]);
+  });
+});
+
+describe('alternatives when the chosen Buddy is busy', () => {
+  async function setup() {
+    const anchor = nextFriday();
+    const chosen = await everyDayBuddy({ email: 'chosen@example.com', name: 'Chosen' });
+    await everyDayBuddy({ email: 'alt@example.com', name: 'Alt' });
+    const otherUser = await Account.create({ role: 'user', email: 'other@example.com' });
+    // The chosen Buddy is taken in week 2.
+    await Lesson.create({ userId: otherUser.id, buddyId: chosen.id, startTime: anchor.plus({ weeks: 1 }).toJSDate(), meetingLink: chosen.meetingLink });
+    const { token } = await userToken();
+    const body = { buddyId: chosen.id, startTime: anchor.toJSDate().toISOString(), frequency: { type: 'weekly', everyWeeks: 1 }, occurrenceCount: 3, timezone: BUDDY_TZ };
+    return { anchor, chosen, token, body };
+  }
+
+  it('preview marks a date as "alternative" (with who) when someone else is free, and only counts it when alternatives are allowed', async () => {
+    const { anchor, token, body } = await setup();
+    const { app } = createTestApp();
+
+    const allowed = await request(app).post('/api/lessons/recurring/preview').set('Authorization', `Bearer ${token}`).send({ ...body, allowAlternatives: true });
+    expect(allowed.body.occurrences[1]).toEqual({ startTime: anchor.plus({ weeks: 1 }).toJSDate().toISOString(), available: true, status: 'alternative', buddyName: 'Alt' });
+    expect(allowed.body.occurrences.map((o: { status: string }) => o.status)).toEqual(['free', 'alternative', 'free']);
+
+    const notAllowed = await request(app).post('/api/lessons/recurring/preview').set('Authorization', `Bearer ${token}`).send(body);
+    expect(notAllowed.body.occurrences[1]).toMatchObject({ available: false, status: 'alternative', buddyName: 'Alt' });
+  });
+
+  it('preview says busy when nobody at all is free', async () => {
+    const { anchor, token, body } = await setup();
+    const alt = await Account.findOne({ email: 'alt@example.com' });
+    const otherUser = await Account.findOne({ email: 'other@example.com' });
+    await Lesson.create({ userId: otherUser!.id, buddyId: alt!.id, startTime: anchor.plus({ weeks: 1 }).toJSDate(), meetingLink: alt!.meetingLink });
+    const { app } = createTestApp();
+
+    const res = await request(app).post('/api/lessons/recurring/preview').set('Authorization', `Bearer ${token}`).send({ ...body, allowAlternatives: true });
+    expect(res.body.occurrences[1]).toEqual({ startTime: anchor.plus({ weeks: 1 }).toJSDate().toISOString(), available: false, status: 'busy' });
+  });
+
+  it('books the alternative Buddy on the busy date when alternatives are allowed', async () => {
+    const { anchor, chosen, token, body } = await setup();
+    const { app } = createTestApp();
+
+    const res = await request(app).post('/api/lessons/recurring').set('Authorization', `Bearer ${token}`).send({ ...body, allowAlternatives: true });
+
+    expect(res.status).toBe(201);
+    expect(res.body.booked).toHaveLength(3);
+    const week2 = await Lesson.findOne({ userId: { $ne: undefined }, startTime: anchor.plus({ weeks: 1 }).toJSDate(), buddyId: { $ne: chosen._id } });
+    expect(week2).not.toBeNull();
+    const withChosen = await Lesson.countDocuments({ buddyId: chosen._id, startTime: { $in: [anchor.toJSDate(), anchor.plus({ weeks: 2 }).toJSDate()] } });
+    expect(withChosen).toBe(2);
+  });
+
+  it('skips the busy date when alternatives are not allowed', async () => {
+    const { token, body } = await setup();
+    const { app } = createTestApp();
+
+    const res = await request(app).post('/api/lessons/recurring').set('Authorization', `Bearer ${token}`).send(body);
+
+    expect(res.status).toBe(201);
+    expect(res.body.booked).toHaveLength(2);
+    expect(res.body.skipped).toHaveLength(1);
   });
 });

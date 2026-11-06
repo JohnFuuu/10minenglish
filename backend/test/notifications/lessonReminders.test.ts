@@ -157,3 +157,54 @@ describe('pre-lesson reminders', () => {
     expect((await sendDueLessonReminders({ emailSender, now: later })).remindersSent).toBe(1);
   });
 });
+
+// The time in a reminder must be right for each reader, in their own time
+// zone — a learner in Auckland and a Buddy in Tokyo see the same meeting at
+// different clock times. These pin the exact words.
+describe('reminder times, per recipient time zone', () => {
+  async function remindAt(startIso: string, nowIso: string, tz: { user?: string; buddy?: string }) {
+    const user = await Account.create({ role: 'user', email: 'sarah@example.com', name: 'Sarah', timezone: tz.user });
+    const buddy = await Account.create({ role: 'buddy', email: 'maria@example.com', name: 'Maria', meetingLink: MEETING_LINK, timezone: tz.buddy });
+    await createLesson(user.id, buddy.id, new Date(startIso));
+    const { emailSender } = createTestApp();
+    await sendDueLessonReminders({ emailSender, now: new Date(nowIso) });
+    const to = (address: string) => emailSender.sent.find((m) => m.to === address)!;
+    return { userEmail: to('sarah@example.com'), buddyEmail: to('maria@example.com') };
+  }
+
+  it('says when it starts, in 1 hour, at each reader\'s own clock time', async () => {
+    // 00:00 UTC on 18 Oct 2026 = 1:00 pm NZDT (Auckland) = 9:00 am JST (Tokyo).
+    const { userEmail, buddyEmail } = await remindAt('2026-10-18T00:00:00Z', '2026-10-17T23:00:00Z', { user: 'Pacific/Auckland', buddy: 'Asia/Tokyo' });
+
+    expect(userEmail.subject).toBe('Your 10ME meeting starts in 1 hour');
+    expect(userEmail.body).toContain('Your meeting with Maria starts in 1 hour, at 1:00 pm on Sun 18 Oct 2026.');
+    expect(buddyEmail.body).toContain('Your meeting with Sarah starts in 1 hour, at 9:00 am on Sun 18 Oct 2026.');
+  });
+
+  it('keeps the right local time on both sides of the NZ daylight-saving change (27 Sep 2026)', async () => {
+    // Sat 26 Sep 1:00 pm NZST (+12) = 01:00 UTC; Sun 27 Sep 1:00 pm NZDT (+13) = 00:00 UTC.
+    const before = await remindAt('2026-09-26T01:00:00Z', '2026-09-26T00:00:00Z', { user: 'Pacific/Auckland', buddy: 'Asia/Tokyo' });
+    expect(before.userEmail.body).toContain('at 1:00 pm on Sat 26 Sept 2026.');
+    expect(before.buddyEmail.body).toContain('at 10:00 am on Sat 26 Sept 2026.');
+
+    await Lesson.deleteMany({});
+    await Account.deleteMany({});
+    const after = await remindAt('2026-09-27T00:00:00Z', '2026-09-26T23:00:00Z', { user: 'Pacific/Auckland', buddy: 'Asia/Tokyo' });
+    expect(after.userEmail.body).toContain('at 1:00 pm on Sun 27 Sept 2026.');
+    // Tokyo has no daylight saving, so the NZ change shows up as an hour earlier there.
+    expect(after.buddyEmail.body).toContain('at 9:00 am on Sun 27 Sept 2026.');
+  });
+
+  it('says the real time left for a meeting booked less than an hour ahead', async () => {
+    const { userEmail } = await remindAt('2026-10-18T00:00:00Z', '2026-10-17T23:40:00Z', { user: 'Pacific/Auckland' });
+
+    expect(userEmail.subject).toBe('Your 10ME meeting starts in 20 minutes');
+    expect(userEmail.body).toContain('starts in 20 minutes, at 1:00 pm on Sun 18 Oct 2026.');
+  });
+
+  it('labels the time as UTC when the reader has no time zone on file, rather than guessing', async () => {
+    const { userEmail } = await remindAt('2026-10-18T00:00:00Z', '2026-10-17T23:00:00Z', {});
+
+    expect(userEmail.body).toContain('at 12:00 am (UTC) on Sun 18 Oct 2026.');
+  });
+});

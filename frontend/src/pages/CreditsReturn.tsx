@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PartyPopper } from 'lucide-react';
-import { Button } from '../components';
+import { Button, CreditCoin } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { confirmPoliPayment, confirmStripePayment } from '../lib/api';
 
@@ -60,7 +60,7 @@ export function CreditsReturn() {
         <>
           <PartyPopper size={56} className="text-brand-primary" />
           <h1 className="font-display text-2xl font-black text-brand-primary">Credits added!</h1>
-          <p className="text-sm font-bold text-text-heading">New balance: {credits} credits</p>
+          <p className="text-sm font-bold text-text-heading">New balance: <CreditCoin className="-mt-0.5" /> {credits} credits</p>
         </>
       )}
       {status === 'failed' && (

@@ -153,6 +153,7 @@ export function createAdminRouter(deps: AdminRouterDependencies): Router {
       picture: buddy.picture,
       timezone: buddy.timezone,
       location: buddy.location,
+      phoneNumber: buddy.phoneNumber,
       bio: buddy.bio,
       meetingLink: buddy.meetingLink,
       availabilityBlocks: buddy.availabilityBlocks.map((b) => ({ dayOfWeek: b.dayOfWeek, startTime: b.startTime, endTime: b.endTime })),

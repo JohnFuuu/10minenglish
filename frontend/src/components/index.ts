@@ -10,3 +10,5 @@ export * from './Badge';
 export * from './Avatar';
 export * from './BottomNav';
 export * from './Select';
+export * from './CreditCoin';
+export * from './IconButtons';

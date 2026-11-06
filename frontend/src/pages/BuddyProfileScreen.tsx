@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { AutocompleteInput, Avatar, BottomNav, Button, Input, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
+import { AutocompleteInput, Avatar, BottomNav, Button, Input, LogoutButton, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
 import { COUNTRY_NAMES, flagCodeForCountry } from '../lib/countries';
@@ -21,6 +21,7 @@ interface BuddyProfileForm {
   location: string;
   timezone: string;
   meetingLink: string;
+  phoneNumber: string;
 }
 
 function toForm(profile: BuddyProfile): BuddyProfileForm {
@@ -31,6 +32,7 @@ function toForm(profile: BuddyProfile): BuddyProfileForm {
     location: profile.location ?? '',
     timezone: profile.timezone ?? '',
     meetingLink: profile.meetingLink ?? '',
+    phoneNumber: profile.phoneNumber ?? '',
   };
 }
 
@@ -104,9 +106,7 @@ export function BuddyProfileScreen() {
         title="Profile"
         className="pb-2 pt-8"
         right={
-          <Button variant="secondary" size="sm" onClick={logout}>
-            Log out
-          </Button>
+          <LogoutButton onClick={logout} />
         }
       />
 
@@ -184,6 +184,14 @@ export function BuddyProfileScreen() {
           placeholder="Meeting link (Zoom, Google Meet, etc.)"
           value={form.meetingLink}
           onChange={(e) => updateField('meetingLink')(e.target.value)}
+        />
+        <Input
+          type="tel"
+          autoComplete="tel"
+          label="Phone (optional)"
+          placeholder="e.g. +64 21 123 4567"
+          value={form.phoneNumber}
+          onChange={(e) => updateField('phoneNumber')(e.target.value)}
         />
         <Button type="submit" disabled={isSaving}>
           {isSaving ? 'Saving…' : 'Save profile'}

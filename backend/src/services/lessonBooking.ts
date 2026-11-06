@@ -367,25 +367,24 @@ export function buildLessonRescheduledNotification(params: {
   };
 }
 
-export type RecurringFrequency = { type: 'daily' } | { type: 'weekly' } | { type: 'everyXDays'; days: number };
+// How a recurring booking repeats.
+// - daily: every day whose weekday is ticked (luxon numbering, 1 = Mon … 7 = Sun).
+// - weekly: every `everyWeeks` weeks (1–4) on the first date's weekday.
+// - everyXDays, and daily/weekly without those fields, are what the previous
+//   app version sends; they still honour `includeWeekends`.
+export type RecurringFrequency =
+  | { type: 'daily'; weekdays?: number[] }
+  | { type: 'weekly'; everyWeeks?: number }
+  | { type: 'everyXDays'; days: number };
 
-function stepDays(frequency: RecurringFrequency): number {
-  switch (frequency.type) {
-    case 'daily':
-      return 1;
-    case 'weekly':
-      return 7;
-    case 'everyXDays':
-      return frequency.days;
-  }
-}
+export const MAX_EVERY_WEEKS = 4;
 
-// The dates a recurring booking will try: the first `count` steps of the
-// pattern in the viewer's own calendar (same clock time), leaving out Sat/Sun
-// unless weekends are included. A busy date is skipped at booking time, never
-// replaced by a later one (see docs/adr/0001). Bounded, so a pattern that only
-// ever lands on a weekend (weekly from a Sunday, weekends off) yields no
-// dates instead of searching forever.
+// The dates a recurring booking will try: the first `count` dates of the
+// pattern in the viewer's own calendar (same clock time). The first date is
+// always one of them. A busy date is skipped at booking time, never replaced
+// by a later one (see docs/adr/0001). The walk is bounded, so a pattern with
+// few or no matching days (no weekdays ticked; old weekly-from-a-Sunday with
+// weekends off) returns what it found instead of searching forever.
 export function planRecurringOccurrences(
   anchor: Date,
   frequency: RecurringFrequency,
@@ -393,10 +392,27 @@ export function planRecurringOccurrences(
   count: number,
   timezone: string = 'utc',
 ): Date[] {
-  const step = stepDays(frequency);
+  const start = DateTime.fromJSDate(anchor, { zone: 'utc' }).setZone(timezone);
+
+  if (frequency.type === 'daily' && frequency.weekdays) {
+    const ticked = new Set(frequency.weekdays);
+    const dates = [start.toJSDate()];
+    // Even one ticked weekday lands once every 7 days.
+    for (let offset = 1; dates.length < count && offset <= count * 7; offset += 1) {
+      const day = start.plus({ days: offset });
+      if (ticked.has(day.weekday)) dates.push(day.toJSDate());
+    }
+    return dates;
+  }
+
+  if (frequency.type === 'weekly' && frequency.everyWeeks !== undefined) {
+    return Array.from({ length: count }, (_, i) => start.plus({ weeks: i * frequency.everyWeeks! }).toJSDate());
+  }
+
+  // Previous app version: a fixed day step, Sat/Sun left out unless included.
+  const step = frequency.type === 'daily' ? 1 : frequency.type === 'weekly' ? 7 : frequency.days;
   const dates: Date[] = [];
-  let current = DateTime.fromJSDate(anchor, { zone: 'utc' }).setZone(timezone);
-  // Weekdays-only still lands at least 2 of every 7 steps, so count * 7 is ample.
+  let current = start;
   for (let steps = 0; dates.length < count && steps < count * 7; steps += 1) {
     const isWeekend = current.weekday === 6 || current.weekday === 7; // luxon: 6=Sat, 7=Sun
     if (includeWeekends || !isWeekend) dates.push(current.toJSDate());

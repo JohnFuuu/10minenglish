@@ -61,9 +61,10 @@ describe('meeting times in emails and notifications', () => {
       startTime: start,
       meetingLink: 'https://zoom.test/1',
       timezone: 'Pacific/Auckland',
+      now: new Date(start.getTime() - 60 * 60_000),
     });
     for (const text of [message, email.body]) {
-      expect(text).toContain('Sat 31 Oct 2099, 1:30 pm');
+      expect(text).toContain('starts in 1 hour, at 1:30 pm on Sat 31 Oct 2099');
       expect(text).not.toMatch(ISO);
     }
   });

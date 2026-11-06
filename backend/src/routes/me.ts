@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { Account, type AccountDocument } from '../models/Account.js';
 import { isLikelyNewZealand } from '../services/location.js';
+import { INVALID_PHONE_MESSAGE, readPhoneNumber } from '../services/phoneNumber.js';
 import type { EmailSender } from '../services/email.js';
 import { EMAIL_CONFIRMATION_TTL_MS, sendConfirmationEmail } from '../services/emailConfirmation.js';
 import { generateToken } from '../services/tokens.js';
@@ -13,7 +14,8 @@ export interface MeRouterDependencies {
 }
 
 // Fields signup requires; a profile edit may change them but never blank them.
-const REQUIRED_TEXT_FIELDS = ['name', 'phoneNumber', 'location', 'nationality'] as const;
+// (Phone number is optional — see services/phoneNumber.ts.)
+const REQUIRED_TEXT_FIELDS = ['name', 'location', 'nationality'] as const;
 
 type RequiredTextField = (typeof REQUIRED_TEXT_FIELDS)[number];
 
@@ -96,7 +98,6 @@ export function createMeRouter(deps: MeRouterDependencies): Router {
 
     const textFields: Record<RequiredTextField, unknown> = {
       name,
-      phoneNumber,
       location,
       nationality,
     };
@@ -106,6 +107,12 @@ export function createMeRouter(deps: MeRouterDependencies): Router {
         res.status(400).json({ error: `${field} cannot be empty` });
         return;
       }
+    }
+
+    const phone = readPhoneNumber(phoneNumber);
+    if (phone.kind === 'invalid') {
+      res.status(400).json({ error: INVALID_PHONE_MESSAGE });
+      return;
     }
 
     if (learningGoals !== undefined && (!Array.isArray(learningGoals) || learningGoals.length === 0)) {
@@ -161,7 +168,8 @@ export function createMeRouter(deps: MeRouterDependencies): Router {
 
     if (name !== undefined) account.name = name;
     if (picture !== undefined) account.picture = picture;
-    if (phoneNumber !== undefined) account.phoneNumber = phoneNumber;
+    if (phone.kind === 'set') account.phoneNumber = phone.value;
+    if (phone.kind === 'clear') account.phoneNumber = undefined;
     if (location !== undefined) account.location = location;
     if (nationality !== undefined) account.nationality = nationality;
     if (parsedDateOfBirth !== undefined) account.dateOfBirth = parsedDateOfBirth;

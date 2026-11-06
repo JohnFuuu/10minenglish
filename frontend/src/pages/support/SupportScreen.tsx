@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CalendarDays, CreditCard, LifeBuoy, MoreHorizontal, Smartphone, UserRound, Users } from 'lucide-react';
-import { Button, PageHeader, Select } from '../../components';
+import { CalendarDays, CreditCard, CircleQuestionMark, MoreHorizontal, Smartphone, UserRound, Users } from 'lucide-react';
+import { BackButton, Button, PageHeader, Select } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import {
@@ -116,16 +116,14 @@ function NewTicketForm({ onSent, onCancel }: { onSent: (ticket: SupportTicket) =
   );
 }
 
-// Members and Buddies: ask for help, and follow their questions.
-export function SupportScreen() {
+// Members and Buddies: ask for help, and follow their questions. Shown on
+// the /support page and in the dashboard's Help pop-up (the ? button).
+export function HelpPanel({ initialOpenId = null }: { initialOpenId?: string | null }) {
   const { token } = useAuth();
   const { showToast } = useToast();
-  const navigate = useNavigate();
-  const [params] = useSearchParams();
   const [tickets, setTickets] = useState<SupportTicket[] | null>(null);
   const [isAsking, setIsAsking] = useState(false);
-  // ?ticket=<id> (from a reply notification) opens that one.
-  const [openId, setOpenId] = useState<string | null>(params.get('ticket'));
+  const [openId, setOpenId] = useState<string | null>(initialOpenId);
 
   useEffect(() => {
     if (!token) return;
@@ -139,70 +137,75 @@ export function SupportScreen() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl pb-10">
-      <PageHeader
-        title="Help"
-        right={
-          <Button variant="secondary" size="sm" onClick={() => navigate('/dashboard')}>
-            Back
-          </Button>
-        }
-      />
-      <div className="flex flex-col gap-4 px-5 pt-2">
-        <p className="text-sm font-medium text-text-secondary">
-          Having a problem? Send us a question. We reply here and by email.
-        </p>
+    <div className="flex flex-col gap-4">
+      <p className="text-sm font-medium text-text-secondary">
+        Having a problem? Send us a question. We reply here and by email.
+      </p>
 
-        {isAsking ? (
-          <NewTicketForm
-            onCancel={() => setIsAsking(false)}
-            onSent={(ticket) => {
-              replace(ticket);
-              setIsAsking(false);
-              setOpenId(ticket.id);
-            }}
-          />
-        ) : (
-          <Button onClick={() => setIsAsking(true)}>+ Ask a question</Button>
-        )}
+      {isAsking ? (
+        <NewTicketForm
+          onCancel={() => setIsAsking(false)}
+          onSent={(ticket) => {
+            replace(ticket);
+            setIsAsking(false);
+            setOpenId(ticket.id);
+          }}
+        />
+      ) : (
+        <Button onClick={() => setIsAsking(true)}>+ Ask a question</Button>
+      )}
 
-        <h2 className="mt-2 text-xs font-bold uppercase tracking-widest text-text-secondary">Your questions</h2>
-        {tickets === null && <p className="text-sm text-text-secondary">Loading…</p>}
-        {tickets?.length === 0 && (
-          <div className="py-8 text-center">
-            <LifeBuoy size={36} className="mx-auto mb-2 text-text-secondary" aria-hidden="true" />
-            <p className="text-sm font-bold text-text-secondary">No questions yet.</p>
+      <h2 className="mt-2 text-xs font-bold uppercase tracking-widest text-text-secondary">Your questions</h2>
+      {tickets === null && <p className="text-sm text-text-secondary">Loading…</p>}
+      {tickets?.length === 0 && (
+        <div className="py-8 text-center">
+          <CircleQuestionMark size={36} className="mx-auto mb-2 text-text-secondary" aria-hidden="true" />
+          <p className="text-sm font-bold text-text-secondary">No questions yet.</p>
+        </div>
+      )}
+      {tickets?.map((t) => {
+        const last = t.messages[t.messages.length - 1];
+        const open = openId === t.id;
+        return (
+          <div key={t.id} className="rounded-md border-2 border-b-4 border-border-strong bg-bg-surface">
+            <button
+              type="button"
+              aria-expanded={open}
+              onClick={() => setOpenId(open ? null : t.id)}
+              className="flex w-full flex-col gap-1 p-3 text-left"
+            >
+              <span className="flex w-full items-center justify-between gap-2">
+                <span className="font-bold text-text-heading">{TOPIC_LABELS[t.topic]}</span>
+                <StatusBadge status={t.status} />
+              </span>
+              <span className="line-clamp-2 text-sm text-text-body">
+                {last.from === 'admin' && <span className="font-bold text-brand-secondary">Team: </span>}
+                {last.body}
+              </span>
+              <span className="text-xs text-text-secondary">{formatDateTime(t.lastActivityAt)}</span>
+            </button>
+            {open && (
+              <div className="border-t-2 border-border p-3">
+                <SupportThread ticket={t} viewer="sender" onUpdated={replace} />
+              </div>
+            )}
           </div>
-        )}
-        {tickets?.map((t) => {
-          const last = t.messages[t.messages.length - 1];
-          const open = openId === t.id;
-          return (
-            <div key={t.id} className="rounded-md border-2 border-b-4 border-border-strong bg-bg-surface">
-              <button
-                type="button"
-                aria-expanded={open}
-                onClick={() => setOpenId(open ? null : t.id)}
-                className="flex w-full flex-col gap-1 p-3 text-left"
-              >
-                <span className="flex w-full items-center justify-between gap-2">
-                  <span className="font-bold text-text-heading">{TOPIC_LABELS[t.topic]}</span>
-                  <StatusBadge status={t.status} />
-                </span>
-                <span className="line-clamp-2 text-sm text-text-body">
-                  {last.from === 'admin' && <span className="font-bold text-brand-secondary">Team: </span>}
-                  {last.body}
-                </span>
-                <span className="text-xs text-text-secondary">{formatDateTime(t.lastActivityAt)}</span>
-              </button>
-              {open && (
-                <div className="border-t-2 border-border p-3">
-                  <SupportThread ticket={t} viewer="sender" onUpdated={replace} />
-                </div>
-              )}
-            </div>
-          );
-        })}
+        );
+      })}
+    </div>
+  );
+}
+
+export function SupportScreen() {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+
+  return (
+    <main className="mx-auto max-w-3xl pb-10">
+      <PageHeader title="Help" right={<BackButton onClick={() => navigate('/dashboard')} />} />
+      <div className="px-5 pt-2">
+        {/* ?ticket=<id> (from a reply notification or email) opens that one. */}
+        <HelpPanel initialOpenId={params.get('ticket')} />
       </div>
     </main>
   );
