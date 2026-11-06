@@ -18,6 +18,7 @@ import {
   findAvailableBuddy,
   generateCandidateSlots,
   planRecurringOccurrences,
+  MAX_EVERY_WEEKS,
   isLessonJoinable,
   isLessonUpcoming,
   isSlotBookable,
@@ -118,7 +119,18 @@ function serializeLessonForTeachingList(lesson: LessonDocument, userName: string
 function isValidFrequency(frequency: unknown): frequency is RecurringFrequency {
   if (!frequency || typeof frequency !== 'object') return false;
   const f = frequency as Record<string, unknown>;
-  if (f.type === 'daily' || f.type === 'weekly') return true;
+  if (f.type === 'daily') {
+    return (
+      f.weekdays === undefined ||
+      (Array.isArray(f.weekdays) && f.weekdays.every((d) => Number.isInteger(d) && d >= 1 && d <= 7))
+    );
+  }
+  if (f.type === 'weekly') {
+    return (
+      f.everyWeeks === undefined ||
+      (Number.isInteger(f.everyWeeks) && (f.everyWeeks as number) >= 1 && (f.everyWeeks as number) <= MAX_EVERY_WEEKS)
+    );
+  }
   if (f.type === 'everyXDays') return typeof f.days === 'number' && f.days >= 1;
   return false;
 }
@@ -230,9 +242,9 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
   // body, or an error message for a malformed one.
   async function readRecurringRequest(body: unknown): Promise<
     | { error: string; status: number }
-    | { planned: Date[]; fixedBuddy?: AccountDocument; occurrenceCount: number }
+    | { planned: Date[]; fixedBuddy?: AccountDocument; allowAlternatives: boolean; occurrenceCount: number }
   > {
-    const { buddyId, startTime, frequency, includeWeekends, occurrenceCount, timezone } = (body ?? {}) as Record<string, unknown>;
+    const { buddyId, startTime, frequency, includeWeekends, occurrenceCount, timezone, allowAlternatives } = (body ?? {}) as Record<string, unknown>;
     if (typeof startTime !== 'string' || !isValidFrequency(frequency) || typeof occurrenceCount !== 'number' || occurrenceCount < 1) {
       return { status: 400, error: 'Missing or invalid startTime, frequency, or occurrenceCount' };
     }
@@ -248,13 +260,27 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     }
     const viewerTimezone = typeof timezone === 'string' && timezone ? timezone : 'utc';
     const planned = planRecurringOccurrences(anchor, frequency, includeWeekends === true, occurrenceCount, viewerTimezone);
-    return { planned, fixedBuddy, occurrenceCount };
+    // With a chosen Buddy: may another free Buddy take the dates they're busy?
+    return { planned, fixedBuddy, allowAlternatives: allowAlternatives === true, occurrenceCount };
   }
 
-  // The chosen Buddy if free then, or else the first free Buddy; null if none.
-  async function buddyFor(candidate: Date, fixedBuddy?: AccountDocument): Promise<AccountDocument | null> {
-    if (!fixedBuddy) return findAvailableBuddy(candidate);
-    return (await isSlotBookable(fixedBuddy, candidate)) ? fixedBuddy : null;
+  // Who'd take a date: 'free' = the chosen Buddy (or, with none chosen, any
+  // Buddy); 'alternative' = the chosen Buddy is busy but someone else is free;
+  // 'busy' = nobody is.
+  async function dateStatus(
+    candidate: Date,
+    fixedBuddy?: AccountDocument,
+  ): Promise<{ status: 'free' | 'alternative' | 'busy'; buddy: AccountDocument | null }> {
+    if (fixedBuddy && (await isSlotBookable(fixedBuddy, candidate))) return { status: 'free', buddy: fixedBuddy };
+    const other = await findAvailableBuddy(candidate);
+    if (!other) return { status: 'busy', buddy: null };
+    return { status: fixedBuddy ? 'alternative' : 'free', buddy: other };
+  }
+
+  // The Buddy a date would be booked with, honouring allowAlternatives; null if none.
+  async function buddyFor(candidate: Date, fixedBuddy: AccountDocument | undefined, allowAlternatives: boolean) {
+    if (fixedBuddy && !allowAlternatives) return (await isSlotBookable(fixedBuddy, candidate)) ? fixedBuddy : null;
+    return (await dateStatus(candidate, fixedBuddy)).buddy;
   }
 
   // What the confirm screen's calendar draws: each planned date, and whether
@@ -265,9 +291,18 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       res.status(request.status).json({ error: request.error });
       return;
     }
+    // `status` is reported even when alternatives aren't allowed, so the app
+    // can switch them on and off without asking again; `available` is whether
+    // this exact request would book the date.
     const occurrences = [];
     for (const candidate of request.planned) {
-      occurrences.push({ startTime: candidate.toISOString(), available: (await buddyFor(candidate, request.fixedBuddy)) !== null });
+      const { status, buddy } = await dateStatus(candidate, request.fixedBuddy);
+      occurrences.push({
+        startTime: candidate.toISOString(),
+        available: status === 'free' || (status === 'alternative' && request.allowAlternatives),
+        status,
+        ...(status === 'alternative' ? { buddyName: buddy!.name ?? 'Another Buddy' } : {}),
+      });
     }
     res.status(200).json({ occurrences });
   });
@@ -278,7 +313,7 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
       res.status(request.status).json({ error: request.error });
       return;
     }
-    const { planned, fixedBuddy, occurrenceCount } = request;
+    const { planned, fixedBuddy, allowAlternatives, occurrenceCount } = request;
 
     const creditsCost = await currentCreditsPerLesson();
     const user = await Account.findById(req.account!.accountId);
@@ -295,11 +330,11 @@ export function createLessonsRouter(deps: LessonsRouterDependencies): Router {
     const booked: { lesson: LessonDocument; buddy: AccountDocument }[] = [];
     const skipped: { startTime: string; reason: string }[] = [];
     for (const candidate of planned) {
-      const targetBuddy = await buddyFor(candidate, fixedBuddy);
+      const targetBuddy = await buddyFor(candidate, fixedBuddy, allowAlternatives);
       if (!targetBuddy) {
         skipped.push({
           startTime: candidate.toISOString(),
-          reason: fixedBuddy ? 'Buddy unavailable at this time' : 'No Buddy available at this time',
+          reason: fixedBuddy && !allowAlternatives ? 'Buddy unavailable at this time' : 'No Buddy available at this time',
         });
         continue;
       }

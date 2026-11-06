@@ -64,6 +64,8 @@ export interface AccountDocument extends mongoose.Document {
   tokensValidAfter?: Date;
   onboardingCompleted: boolean;
   referralSource?: string;
+  // Optional free text a User adds after picking "Other" as their referral source.
+  referralSourceOther?: string;
   selfRatedLevel?: number;
   motivation?: string;
   lessonsPerWeekGoal?: string;
@@ -134,6 +136,7 @@ const accountSchema = new Schema<AccountDocument>({
   tokensValidAfter: { type: Date },
   onboardingCompleted: { type: Boolean, required: true, default: false },
   referralSource: { type: String },
+  referralSourceOther: { type: String },
   selfRatedLevel: { type: Number, min: 1, max: 7 },
   motivation: { type: String },
   lessonsPerWeekGoal: { type: String },

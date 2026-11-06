@@ -10,6 +10,9 @@ export interface NotificationDocument extends mongoose.Document {
   // amount and reason). Absent for types that are just a sentence.
   details?: Record<string, unknown>;
   read: boolean;
+  // Set when the recipient deletes it from their inbox. Kept (not removed)
+  // so support can still see what was sent; the inbox just hides it.
+  archivedAt?: Date;
   createdAt: Date;
 }
 
@@ -19,6 +22,7 @@ const notificationSchema = new Schema<NotificationDocument>({
   message: { type: String, required: true },
   details: { type: Schema.Types.Mixed },
   read: { type: Boolean, required: true, default: false },
+  archivedAt: { type: Date },
   createdAt: { type: Date, required: true, default: Date.now },
 });
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../components';
+import { BackButton, Button, CreditBalanceCard, CreditCoin } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { EmailConfirmationNotice } from '../auth/EmailConfirmationNotice';
 import { useToast } from '../toast/ToastContext';
@@ -58,20 +58,12 @@ export function CreditsScreen() {
     <main className="mx-auto max-w-lg px-5 py-12">
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-text-body">Buy Credits</h1>
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard')}
-          className="text-xs font-bold uppercase tracking-wide text-text-secondary"
-        >
-          Back
-        </button>
+        <BackButton onClick={() => navigate('/dashboard')} />
       </div>
 
-      <div className="mb-6 rounded-md border-2 border-b-[5px] border-brand-primary-border bg-brand-primary p-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-accent-lime-light">Current balance</p>
-        <p className="font-display text-4xl font-black text-text-inverse">{account?.credits ?? 0}</p>
+      <CreditBalanceCard value={account?.credits ?? 0} className="mb-6">
         <p className="text-xs font-bold text-accent-lime-light">{creditsLabel(creditsPerLesson)} = 1 meeting</p>
-      </div>
+      </CreditBalanceCard>
 
       <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Choose a pack</p>
       <div className="mb-6 flex flex-col gap-2.5">
@@ -99,8 +91,8 @@ export function CreditsScreen() {
                   {pack.size}
                 </span>
                 <div className="text-left">
-                  <p className="text-sm font-bold uppercase tracking-widest text-text-heading">
-                    {pack.size} credit{pack.size > 1 ? 's' : ''}
+                  <p className="flex items-center gap-1 text-sm font-bold uppercase tracking-widest text-text-heading">
+                    <CreditCoin /> {pack.size} credit{pack.size > 1 ? 's' : ''}
                   </p>
                   <p className="text-xs text-text-secondary">
                     ${(pack.priceCents / pack.size / 100).toFixed(2)} per credit

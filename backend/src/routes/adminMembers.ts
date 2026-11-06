@@ -1,8 +1,10 @@
 import { Router } from 'express';
-import type { HydratedDocument, Types } from 'mongoose';
+import { Types, type HydratedDocument } from 'mongoose';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { Account, type AccountDocument } from '../models/Account.js';
 import { Tag, tagNameKey, type TagDocument } from '../models/Tag.js';
+import { AUDIT_ACTIONS, AuditEntry } from '../models/AuditEntry.js';
+import { entryResponse } from './adminAudit.js';
 import { accountLabel, recordAdminAction } from '../services/auditLog.js';
 import type { EmailSender } from '../services/email.js';
 import { createNotification } from '../services/notifications.js';
@@ -48,6 +50,28 @@ function readPage(value: unknown): number {
   return typeof value === 'string' && /^[1-9]\d*$/.test(value) ? Number(value) : 1;
 }
 
+const AUDIT_PAGE_SIZE = 50;
+const MEMBER_AUDIT_ACTIONS = AUDIT_ACTIONS.filter((a) => a.startsWith('member.'));
+
+// The member list's search (name or email) and tag filter, as a query.
+// `filter` is null for a tag id that can't match anything; `narrowed` says
+// whether search or tag actually limit the list.
+function memberFilter(q: unknown, tagId: unknown): { filter: Record<string, unknown> | null; narrowed: boolean } {
+  const filter: Record<string, unknown> = { role: 'user' };
+  let narrowed = false;
+  if (typeof q === 'string' && q.trim() !== '') {
+    const pattern = new RegExp(escapeRegex(q.trim()), 'i');
+    filter.$or = [{ name: pattern }, { email: pattern }];
+    narrowed = true;
+  }
+  if (tagId !== undefined && tagId !== '') {
+    if (!isObjectIdString(tagId)) return { filter: null, narrowed: true };
+    filter['memberTags.tagId'] = tagId;
+    narrowed = true;
+  }
+  return { filter, narrowed };
+}
+
 function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -74,6 +98,7 @@ async function memberResponses(members: HydratedDocument<AccountDocument>[]) {
     id: member.id as string,
     name: member.name,
     email: member.email,
+    phoneNumber: member.phoneNumber,
     joinedAt: member._id.getTimestamp().toISOString(),
     credits: member.credits,
     tags: member.memberTags
@@ -204,21 +229,50 @@ export function createAdminMembersRouter({ emailSender }: { emailSender: EmailSe
     res.status(200).json({ removedFromMembers: result.modifiedCount });
   });
 
-  router.get('/api/admin/members', ...adminOnly, async (req, res) => {
-    const { q, tagId } = req.query;
-    const page = readPage(req.query.page);
-    const filter: Record<string, unknown> = { role: 'user' };
-
-    if (typeof q === 'string' && q.trim() !== '') {
-      const pattern = new RegExp(escapeRegex(q.trim()), 'i');
-      filter.$or = [{ name: pattern }, { email: pattern }];
+  // The Members tab's audit section: member actions (tags, credit awards)
+  // for exactly the members the list's search box and tag filter show.
+  router.get('/api/admin/members/audit-log', ...adminOnly, async (req, res) => {
+    const { filter, narrowed } = memberFilter(req.query.q, req.query.tagId);
+    const limit = Math.min(Math.max(Number.parseInt(String(req.query.limit ?? ''), 10) || AUDIT_PAGE_SIZE, 1), AUDIT_PAGE_SIZE);
+    const empty = { entries: [], nextCursor: null };
+    if (!filter) {
+      res.status(200).json(empty);
+      return;
     }
-    if (tagId !== undefined && tagId !== '') {
-      if (!isObjectIdString(tagId)) {
-        res.status(200).json({ members: [], total: 0, page, pageSize: MEMBER_PAGE_SIZE });
+
+    const auditFilter: Record<string, unknown> = { action: { $in: MEMBER_AUDIT_ACTIONS }, 'target.type': 'member' };
+    if (narrowed) {
+      const ids = (await Account.find(filter).select('_id')).map((m) => String(m._id));
+      if (ids.length === 0) {
+        res.status(200).json(empty);
         return;
       }
-      filter['memberTags.tagId'] = tagId;
+      auditFilter['target.id'] = { $in: ids };
+    }
+    const { before } = req.query;
+    if (before !== undefined && before !== '') {
+      if (!isObjectIdString(before)) {
+        res.status(200).json(empty);
+        return;
+      }
+      auditFilter._id = { $lt: new Types.ObjectId(before) };
+    }
+
+    // One extra row tells us whether another page follows.
+    const found = await AuditEntry.find(auditFilter).sort({ _id: -1 }).limit(limit + 1);
+    const pageOf = found.slice(0, limit);
+    res.status(200).json({
+      entries: pageOf.map(entryResponse),
+      nextCursor: found.length > limit ? String(pageOf[pageOf.length - 1]._id) : null,
+    });
+  });
+
+  router.get('/api/admin/members', ...adminOnly, async (req, res) => {
+    const page = readPage(req.query.page);
+    const { filter } = memberFilter(req.query.q, req.query.tagId);
+    if (!filter) {
+      res.status(200).json({ members: [], total: 0, page, pageSize: MEMBER_PAGE_SIZE });
+      return;
     }
 
     const [members, total] = await Promise.all([

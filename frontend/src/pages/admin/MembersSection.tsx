@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
-import { Button, Select } from '../../components';
+import { Button, CreditCoin, Select } from '../../components';
 import { AwardCreditsForm } from './AwardCreditsForm';
+import { MemberAuditSection } from './MemberAuditSection';
+import { Field, PhoneValue } from './BuddyDetails';
 import { MODULE_FRAME, SectionHeading } from './SectionHeading';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
@@ -44,6 +46,8 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
   const listTop = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Bumped after a tag or credit change here, so the audit below shows it.
+  const [auditKey, setAuditKey] = useState(0);
   // Which member's tag is waiting on "Remove / Keep" — removing a label like
   // "low-income" is sensitive enough to deserve a second step.
   const [confirmingRemoval, setConfirmingRemoval] = useState<{ memberId: string; tagId: string } | null>(null);
@@ -114,6 +118,7 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
       const updated = await action();
       setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
       onTagsChanged(); // member counts on the tag list
+      setAuditKey((k) => k + 1);
     } catch {
       showToast('Could not update that member’s tags.', 'error');
     } finally {
@@ -122,6 +127,7 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
   }
 
   return (
+    <>
     <section className={`mb-10 ${MODULE_FRAME}`}>
       <SectionHeading>Member list</SectionHeading>
       <p className="mb-4 text-sm font-medium text-text-secondary">Find a member to see or change their tags.</p>
@@ -159,7 +165,7 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
             >
               <span className="font-bold text-text-heading">{member.name ?? 'No name'}</span>
               <span className="text-xs text-text-secondary">
-                {member.email ?? 'No email'} · joined {formatDate(member.joinedAt)} · {member.credits} credit
+                {member.email ?? 'No email'} · joined {formatDate(member.joinedAt)} · <CreditCoin className="-mt-0.5" /> {member.credits} credit
                 {member.credits === 1 ? '' : 's'}
               </span>
               {member.tags.length > 0 && (
@@ -173,6 +179,12 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
 
             {selected?.id === member.id && (
               <div className="flex flex-col gap-2 border-t-2 border-border p-3">
+                <div className="mb-1 grid gap-2.5 rounded-md bg-border/40 p-3 sm:grid-cols-2">
+                  <Field label="Email">{member.email ?? <span className="text-text-secondary">Not given</span>}</Field>
+                  <Field label="Phone">
+                    <PhoneValue phoneNumber={member.phoneNumber} />
+                  </Field>
+                </div>
                 <p className="text-xs font-bold uppercase tracking-wide text-text-secondary">Tags</p>
                 {member.tags.length === 0 && <p className="text-sm text-text-secondary">No tags yet.</p>}
                 {member.tags.map((t) =>
@@ -235,7 +247,10 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
                 <AwardCreditsForm
                   key={member.id}
                   member={member}
-                  onAwarded={(updated) => setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))}
+                  onAwarded={(updated) => {
+                    setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+                    setAuditKey((k) => k + 1);
+                  }}
                 />
               </div>
             )}
@@ -264,5 +279,8 @@ export function MembersSection({ tags, onTagsChanged, refreshKey = 0, toolbarAct
         </nav>
       )}
     </section>
+
+    <MemberAuditSection q={debouncedQuery} tagId={tagFilter} tags={tags} refreshKey={refreshKey + auditKey} />
+    </>
   );
 }

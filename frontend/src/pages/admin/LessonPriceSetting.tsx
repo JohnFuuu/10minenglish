@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Input } from '../../components';
+import { BackButton, Button, Input } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import { adminUpdateLessonPrice, fetchLessonPrice } from '../../lib/api';
@@ -86,9 +86,7 @@ export function LessonPriceSetting() {
               <Button size="sm" disabled={isSaving} onClick={save}>
                 Change price
               </Button>
-              <Button size="sm" variant="secondary" disabled={isSaving} onClick={() => setMode('edit')}>
-                Back
-              </Button>
+              <BackButton disabled={isSaving} onClick={() => setMode('edit')} />
             </div>
           </div>
         ) : (

@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Calendar, LifeBuoy, CalendarDays, CalendarX, ChevronDown, ChevronUp, Gem, Receipt, Users } from 'lucide-react';
+import { Calendar, CalendarDays, CalendarX, ChevronDown, ChevronUp, Gift, Receipt, Users } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
+import { DashboardHeaderActions } from './DashboardHeaderActions';
 import { EmailConfirmationNotice } from '../auth/EmailConfirmationNotice';
-import { Avatar, BottomNav, Button, Card, Modal, NAV_CLEARANCE_CLASS } from '../components';
+import { Avatar, BottomNav, Button, Card, CreditAmount, CreditBalanceCard, CreditCoin, CreditCoinOutline, Modal, NAV_CLEARANCE_CLASS } from '../components';
 import {
   fetchPaymentHistory,
   fetchUserLessons,
   type LessonWithBuddy,
+  type CreditAwardEntry,
   type PaymentHistoryEntry,
 } from '../lib/api';
 import { formatDateTime } from '../lib/formatDateTime';
 import { initialsOf } from '../lib/initials';
-import { useUnreadCount } from '../lib/useUnreadCount';
 
 const PAYMENT_STATUS_STYLE: Record<PaymentHistoryEntry['status'], string> = {
   succeeded: 'bg-success-bg text-success',
@@ -25,6 +26,10 @@ function formatPrice(cents: number): string {
 }
 
 const COLLAPSED_HISTORY_COUNT = 5;
+
+type WalletEntry = ({ kind: 'payment' } & PaymentHistoryEntry) | ({ kind: 'award' } & CreditAwardEntry);
+
+const creditCount = (n: number) => `${n} credit${n === 1 ? '' : 's'}`;
 const DASHBOARD_UPCOMING_LIMIT = 5;
 
 function greeting(): string {
@@ -37,10 +42,10 @@ function greeting(): string {
 export function UserDashboard() {
   const { account, token } = useAuth();
   const navigate = useNavigate();
-  const unreadCount = useUnreadCount(token);
   const [upcoming, setUpcoming] = useState<LessonWithBuddy[] | null>(null);
   const [isWalletOpen, setIsWalletOpen] = useState(false);
-  const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryEntry[] | null>(null);
+  // Top-ups and team awards together, newest first.
+  const [paymentHistory, setPaymentHistory] = useState<WalletEntry[] | null>(null);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
 
   useEffect(() => {
@@ -50,7 +55,14 @@ export function UserDashboard() {
 
   useEffect(() => {
     if (!isWalletOpen || !token) return;
-    fetchPaymentHistory(token).then((res) => setPaymentHistory(res.payments));
+    fetchPaymentHistory(token).then((res) =>
+      setPaymentHistory(
+        [
+          ...res.payments.map((p): WalletEntry => ({ kind: 'payment', ...p })),
+          ...(res.awards ?? []).map((a): WalletEntry => ({ kind: 'award', ...a })),
+        ].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      ),
+    );
   }, [isWalletOpen, token]);
 
   const hasCredits = (account?.credits ?? 0) > 0;
@@ -60,7 +72,7 @@ export function UserDashboard() {
     { label: 'BOOK A MEETING', icon: Calendar, path: hasCredits ? '/book' : '/credits' },
     { label: 'BUDDIES', icon: Users, path: '/buddies' },
     { label: 'MY MEETINGS', icon: CalendarDays, path: '/lessons' },
-    { label: 'BUY CREDITS', icon: Gem, path: '/credits' },
+    { label: 'BUY CREDITS', icon: CreditCoinOutline, path: '/credits' },
   ] as const;
 
   return (
@@ -79,35 +91,16 @@ export function UserDashboard() {
             }}
             className="flex items-center gap-1 rounded-md border-2 border-b-[3px] border-accent-lime px-3 py-1.5 text-sm font-bold text-brand-primary"
           >
-            <Gem size={14} /> {account?.credits ?? 0}
+            <CreditAmount value={account?.credits ?? 0} />
           </button>
-          <button
-            type="button"
-            aria-label="Help"
-            onClick={() => navigate('/support')}
-            className="flex h-9 w-9 items-center justify-center rounded-md border-2 border-b-[3px] border-border"
-          >
-            <LifeBuoy size={18} color="#3c3c3c" strokeWidth={2.5} />
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/notifications')}
-            className="relative flex h-9 w-9 items-center justify-center rounded-md border-2 border-b-[3px] border-border"
-          >
-            <Bell size={18} color="#3c3c3c" strokeWidth={2.5} />
-            {unreadCount > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[9px] font-bold text-text-inverse">
-                {unreadCount}
-              </span>
-            )}
-          </button>
+          <DashboardHeaderActions />
         </div>
       </div>
 
       <div className="px-5 pb-4 pt-5">
         <p className="text-xs font-bold uppercase tracking-widest text-text-secondary">{greeting()},</p>
         <h1 className="font-display text-3xl font-black text-text-heading">
-          {account?.name?.split(' ')[0] ?? 'there'}!
+          {account?.name?.split(' ')[0] ?? 'there'}
         </h1>
       </div>
 
@@ -117,21 +110,7 @@ export function UserDashboard() {
         </div>
       )}
 
-      <div className="mx-5 mb-5 rounded-md border-2 border-b-[5px] border-brand-primary-border bg-brand-primary p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-accent-lime-light">Your credits</p>
-            <p className="font-display text-4xl font-black text-text-inverse">{account?.credits ?? 0}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate('/credits')}
-            className="rounded-md border-2 border-b-4 border-accent-lime-light bg-bg-surface px-5 py-3 text-sm font-bold text-brand-primary"
-          >
-            TOP UP
-          </button>
-        </div>
-      </div>
+      <CreditBalanceCard value={account?.credits ?? 0} className="mx-5 mb-5" />
 
       {nextLesson && (
         <div className="mb-5 px-5">
@@ -227,32 +206,53 @@ export function UserDashboard() {
 
       {isWalletOpen && (
         <Modal title="Your wallet" onClose={() => setIsWalletOpen(false)}>
-          <div className="mb-5 rounded-md border-2 border-b-[3px] border-brand-primary-border bg-brand-primary p-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-accent-lime-light">Current balance</p>
-            <p className="font-display text-3xl font-black text-text-inverse">{account?.credits ?? 0}</p>
-          </div>
+          <CreditBalanceCard value={account?.credits ?? 0} className="mb-5" />
 
-          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Top-up history</p>
+          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-text-secondary">Credit history</p>
 
           {paymentHistory === null && <p className="text-sm text-text-secondary">Loading…</p>}
 
           {paymentHistory !== null && paymentHistory.length === 0 && (
             <div className="py-8 text-center">
               <Receipt size={32} className="mx-auto mb-2 text-text-secondary" />
-              <p className="text-sm text-text-secondary">No top-ups yet.</p>
+              <p className="text-sm text-text-secondary">No credits added yet.</p>
             </div>
           )}
 
           {paymentHistory !== null && paymentHistory.length > 0 && (
             <div className="flex flex-col gap-2">
               {(isHistoryExpanded ? paymentHistory : paymentHistory.slice(0, COLLAPSED_HISTORY_COUNT)).map(
-                (payment) => (
+                (payment) =>
+                  payment.kind === 'award' ? (
+                    <div
+                      key={payment.id}
+                      className="flex items-center justify-between gap-3 rounded-md border-2 border-accent-lime bg-accent-lime-light/40 p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-1 font-bold text-text-heading">
+                          <CreditCoin /> {creditCount(payment.amount)}
+                        </p>
+                        {payment.reason && (
+                          <p className="truncate text-xs italic text-text-body" title={payment.reason}>
+                            “{payment.reason}”
+                          </p>
+                        )}
+                        <p className="text-xs text-text-secondary">{formatDateTime(payment.createdAt)}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <span className="text-sm font-bold text-success">Free</span>
+                        <span className="flex items-center gap-1 rounded-md bg-accent-lime-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-success">
+                          <Gift size={11} aria-hidden="true" /> From 10ME
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
                   <div
                     key={payment.id}
                     className="flex items-center justify-between rounded-md border-2 border-border bg-bg-page p-3"
                   >
                     <div className="min-w-0">
-                      <p className="font-bold text-text-heading">{payment.packSize} credits</p>
+                      <p className="flex items-center gap-1 font-bold text-text-heading"><CreditCoin /> {creditCount(payment.packSize)}</p>
                       <p className="text-xs text-text-secondary">{formatDateTime(payment.createdAt)}</p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
@@ -266,7 +266,7 @@ export function UserDashboard() {
                       </span>
                     </div>
                   </div>
-                ),
+                  ),
               )}
 
               {paymentHistory.length > COLLAPSED_HISTORY_COUNT && (

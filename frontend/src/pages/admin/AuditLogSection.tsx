@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Button, Select } from '../../components';
+import { Button, CreditCoin, Select } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import { fetchAuditLog, type AuditLogEntry } from '../../lib/api';
@@ -19,70 +19,118 @@ const CATEGORY_OPTIONS = [
 const dollars = (cents: unknown) => `$${(Number(cents) / 100).toFixed(2)}`;
 const plural = (n: unknown, word: string) => `${Number(n)} ${word}${Number(n) === 1 ? '' : 's'}`;
 
-// One entry as a plain sentence, e.g. "Ada added low-income to Sarah".
-function describe(entry: AuditLogEntry): ReactNode {
-  const who = entry.admin.name;
-  const target = <strong className="text-text-heading">{entry.target.label}</strong>;
-  const tag = <strong className="text-text-heading">{String(entry.details.tag ?? '')}</strong>;
+// One entry in the house format:
+//   Actor-role (Name) verb Target-type (Name) with (details)
+// e.g. "Admin (James) removed Tag (Test Users) from Member (James Stone)".
+// Roles: SuperAdmin / Admin, as they were when the entry was recorded.
+
+// "Admin (James)" — the role plain, the name in bold.
+function Party({ role, name }: { role: string; name: string }) {
+  return (
+    <>
+      {role} (<strong className="text-text-heading">{name}</strong>)
+    </>
+  );
+}
+
+// " with (…)" — the extra facts, kept visually quieter than the main sentence.
+function With({ children }: { children: ReactNode }) {
+  return <span className="text-text-secondary"> with ({children})</span>;
+}
+
+export function describeAuditEntry(entry: AuditLogEntry): ReactNode {
+  const d = entry.details;
+  const actor = <Party role={entry.admin.superAdmin ? 'SuperAdmin' : 'Admin'} name={entry.admin.name} />;
+  const label = entry.target.label;
+  const member = <Party role="Member" name={label} />;
+  const buddy = <Party role="Buddy" name={label} />;
+  const tag = <Party role="Tag" name={label} />;
+  const memberTag = <Party role="Tag" name={String(d.tag ?? '')} />;
+  const adminTarget = <Party role={entry.target.superAdmin ? 'SuperAdmin' : 'Admin'} name={label} />;
+  const cancelled = (n: unknown) => <With>{plural(n, 'upcoming meeting')} cancelled and refunded</With>;
+
   switch (entry.action) {
     case 'tag.created':
-      return <>{who} created tag {target}</>;
+      return <>{actor} created {tag}</>;
     case 'tag.renamed':
       return (
         <>
-          {who} renamed tag <strong className="text-text-heading">{String(entry.details.from)}</strong> to{' '}
-          <strong className="text-text-heading">{String(entry.details.to)}</strong>
+          {actor} modified {tag}
+          <With>
+            name “{String(d.from)}” → “{String(d.to)}”
+          </With>
         </>
       );
     case 'tag.deleted':
-      return <>{who} deleted tag {target} (removed from {plural(entry.details.removedFromMembers, 'member')})</>;
+      return (
+        <>
+          {actor} removed {tag}
+          <With>taken off {plural(d.removedFromMembers, 'member')}</With>
+        </>
+      );
     case 'member.tag_added':
-      return <>{who} added {tag} to {target}</>;
+      return <>{actor} added {memberTag} to {member}</>;
     case 'member.tag_removed':
-      return <>{who} removed {tag} from {target}</>;
+      return <>{actor} removed {memberTag} from {member}</>;
     case 'member.credits_awarded':
       return (
         <>
-          {who} awarded {plural(entry.details.amount, 'credit')} to {target} — “{String(entry.details.reason)}” (balance now{' '}
-          {Number(entry.details.balanceAfter)})
+          {actor} added <Party role="Credits" name={String(Number(d.amount))} /> for {member}
+          <With>
+            reason “{String(d.reason)}”; balance now <CreditCoin className="-mt-0.5" /> {Number(d.balanceAfter)}
+          </With>
         </>
       );
     case 'buddy.created':
-      return <>{who} created Buddy account {target}</>;
+      return <>{actor} created {buddy}</>;
     case 'buddy.activated':
-      return <>{who} activated {target}</>;
+      return <>{actor} activated {buddy}</>;
     case 'buddy.deactivated':
-      return <>{who} deactivated {target} ({plural(entry.details.cancelledLessons, 'upcoming meeting')} cancelled and refunded)</>;
+      return <>{actor} deactivated {buddy}{cancelled(d.cancelledLessons)}</>;
     case 'buddy.removed':
-      return <>{who} removed Buddy {target} ({plural(entry.details.cancelledLessons, 'upcoming meeting')} cancelled and refunded)</>;
+      return <>{actor} removed {buddy}{cancelled(d.cancelledLessons)}</>;
     case 'price.changed':
-      return <>{who} changed {target} from {dollars(entry.details.fromCents)} to {dollars(entry.details.toCents)}</>;
+      return (
+        <>
+          {actor} modified <Party role="Top-Up" name={`${Number(d.packSize ?? entry.target.id)} Credits`} />
+          <With>
+            price {dollars(d.fromCents)} → {dollars(d.toCents)}
+          </With>
+        </>
+      );
     case 'lesson_price.changed':
       return (
         <>
-          {who} changed the meeting price from {plural(entry.details.from, 'credit')} to {plural(entry.details.to, 'credit')}
+          {actor} modified <Party role="Meeting" name="Cost" />
+          <With>
+            {plural(d.from, 'credit')} → {plural(d.to, 'credit')}
+          </With>
         </>
       );
     case 'support.replied':
-      return <>{who} replied to support ticket {target}</>;
+      return <>{actor} replied to <Party role="Support Ticket" name={label} /></>;
     case 'support.closed':
-      return <>{who} closed support ticket {target}</>;
+      return <>{actor} closed <Party role="Support Ticket" name={label} /></>;
     case 'support.reopened':
-      return <>{who} reopened support ticket {target}</>;
+      return <>{actor} reopened <Party role="Support Ticket" name={label} /></>;
     case 'admin.created':
-      return <>{who} created Admin account {target}</>;
+      return <>{actor} created {adminTarget}</>;
     case 'admin.deactivated':
-      return <>{who} deactivated Admin {target}</>;
+      return <>{actor} deactivated {adminTarget}</>;
     case 'admin.activated':
-      return <>{who} activated Admin {target}</>;
+      return <>{actor} activated {adminTarget}</>;
     case 'admin.removed':
-      return <>{who} removed Admin {target}</>;
+      return <>{actor} removed {adminTarget}</>;
     default:
-      return <>{who} · {entry.action} · {target}</>;
+      return (
+        <>
+          {actor} · {entry.action} · {label}
+        </>
+      );
   }
 }
 
-function formatWhen(iso: string): string {
+export function formatWhen(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
@@ -149,7 +197,7 @@ export function AuditLogSection({ refreshKey = 0 }: { refreshKey?: number }) {
         <ul className="divide-y-2 divide-border overflow-hidden rounded-md border-2 border-b-4 border-border-strong bg-bg-surface">
           {entries.map((entry) => (
             <li key={entry.id} className="px-4 py-2.5">
-              <p className="text-sm text-text-body">{describe(entry)}</p>
+              <p className="text-sm text-text-body">{describeAuditEntry(entry)}</p>
               <p className="mt-0.5 text-xs text-text-secondary">{formatWhen(entry.createdAt)}</p>
             </li>
           ))}

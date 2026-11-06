@@ -115,3 +115,85 @@ describe('POST /api/notifications/:id/read', () => {
     expect(res.body.unreadCount).toBe(0);
   });
 });
+
+describe('POST /api/notifications/:id/archive', () => {
+  it('404s for an unknown notification', async () => {
+    const { token } = await userToken();
+    const { app } = createTestApp();
+
+    const res = await request(app)
+      .post('/api/notifications/507f1f77bcf86cd799439011/archive')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('403s when archiving another account\'s notification', async () => {
+    const other = await Account.create({ role: 'user', email: 'other@example.com' });
+    const { token } = await userToken();
+    const notification = await Notification.create({ accountId: other._id, type: 'lesson_reminder', message: 'not mine' });
+    const { app } = createTestApp();
+
+    const res = await request(app)
+      .post(`/api/notifications/${notification.id}/archive`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect((await Notification.findById(notification.id))!.archivedAt).toBeUndefined();
+  });
+
+  it('hides the notification from the inbox and the unread count, but keeps the record', async () => {
+    const { account, token } = await userToken();
+    const archived = await Notification.create({ accountId: account._id, type: 'lesson_reminder', message: 'archive me' });
+    const kept = await Notification.create({ accountId: account._id, type: 'lesson_reminder', message: 'keep me' });
+    const { app } = createTestApp();
+
+    const res = await request(app)
+      .post(`/api/notifications/${archived.id}/archive`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.unreadCount).toBe(1);
+
+    const inbox = await request(app).get('/api/notifications').set('Authorization', `Bearer ${token}`);
+    expect(inbox.body.notifications.map((n: { id: string }) => n.id)).toEqual([kept.id]);
+    expect(inbox.body.unreadCount).toBe(1);
+    expect((await Notification.findById(archived.id))!.archivedAt).toBeInstanceOf(Date);
+  });
+});
+
+describe('POST /api/notifications/archive-read', () => {
+  it('archives every read notification of the caller and leaves unread and other accounts\' ones alone', async () => {
+    const { account, token } = await userToken();
+    const other = await Account.create({ role: 'user', email: 'other@example.com' });
+    await Notification.create({ accountId: account._id, type: 'lesson_reminder', message: 'read 1', read: true });
+    await Notification.create({ accountId: account._id, type: 'lesson_reminder', message: 'read 2', read: true });
+    const unread = await Notification.create({ accountId: account._id, type: 'lesson_reminder', message: 'unread' });
+    const othersRead = await Notification.create({ accountId: other._id, type: 'lesson_reminder', message: 'theirs', read: true });
+    const { app } = createTestApp();
+
+    const res = await request(app).post('/api/notifications/archive-read').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ archivedCount: 2, unreadCount: 1 });
+
+    const inbox = await request(app).get('/api/notifications').set('Authorization', `Bearer ${token}`);
+    expect(inbox.body.notifications.map((n: { id: string }) => n.id)).toEqual([unread.id]);
+    expect((await Notification.findById(othersRead.id))!.archivedAt).toBeUndefined();
+  });
+});
+
+describe('POST /api/notifications/:id/read after archiving', () => {
+  it('leaves archived notifications out of the returned unread count', async () => {
+    const { account, token } = await userToken();
+    await Notification.create({ accountId: account._id, type: 'lesson_reminder', message: 'archived unread', archivedAt: new Date() });
+    const notification = await Notification.create({ accountId: account._id, type: 'lesson_reminder', message: 'mine' });
+    const { app } = createTestApp();
+
+    const res = await request(app)
+      .post(`/api/notifications/${notification.id}/read`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.body.unreadCount).toBe(0);
+  });
+});

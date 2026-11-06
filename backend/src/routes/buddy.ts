@@ -5,6 +5,7 @@ import { Account, type AccountDocument, type AvailabilityBlock } from '../models
 import { Lesson } from '../models/Lesson.js';
 import { convertAvailabilityToTimezone } from '../services/availability.js';
 import { BOOKABLE_BUDDY_QUERY } from '../services/lessonBooking.js';
+import { INVALID_PHONE_MESSAGE, readPhoneNumber } from '../services/phoneNumber.js';
 
 export const buddyRouter = Router();
 
@@ -49,6 +50,7 @@ buddyRouter.get('/api/buddy/profile', requireAuth, requireRole('buddy'), async (
     picture: account.picture,
     bio: account.bio,
     location: account.location,
+    phoneNumber: account.phoneNumber,
     timezone: account.timezone,
     meetingLink: account.meetingLink,
     availabilityBlocks: account.availabilityBlocks,
@@ -56,10 +58,15 @@ buddyRouter.get('/api/buddy/profile', requireAuth, requireRole('buddy'), async (
 });
 
 buddyRouter.patch('/api/buddy/profile', requireAuth, requireRole('buddy'), async (req, res) => {
-  const { name, picture, bio, location, timezone, meetingLink } = req.body ?? {};
+  const { name, picture, bio, location, timezone, meetingLink, phoneNumber } = req.body ?? {};
 
   if (timezone !== undefined && !isValidTimezone(timezone)) {
     res.status(400).json({ error: 'Unrecognized timezone' });
+    return;
+  }
+  const phone = readPhoneNumber(phoneNumber);
+  if (phone.kind === 'invalid') {
+    res.status(400).json({ error: INVALID_PHONE_MESSAGE });
     return;
   }
 
@@ -75,6 +82,8 @@ buddyRouter.patch('/api/buddy/profile', requireAuth, requireRole('buddy'), async
   if (location !== undefined) account.location = location;
   if (timezone !== undefined) account.timezone = timezone;
   if (meetingLink !== undefined) account.meetingLink = meetingLink;
+  if (phone.kind === 'set') account.phoneNumber = phone.value;
+  if (phone.kind === 'clear') account.phoneNumber = undefined;
   await account.save();
 
   res.status(200).json({
@@ -84,6 +93,7 @@ buddyRouter.patch('/api/buddy/profile', requireAuth, requireRole('buddy'), async
     picture: account.picture,
     bio: account.bio,
     location: account.location,
+    phoneNumber: account.phoneNumber,
     timezone: account.timezone,
     meetingLink: account.meetingLink,
     availabilityBlocks: account.availabilityBlocks,

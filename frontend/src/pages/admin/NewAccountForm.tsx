@@ -76,9 +76,9 @@ export function NewAccountForm({ heading, description, submitLabel, create, onCr
         <Button type="submit" disabled={isSubmitting}>
           {submitLabel}
         </Button>
-        <button type="button" onClick={onCancel} className="text-sm font-bold text-text-secondary">
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </form>
     </section>
   );

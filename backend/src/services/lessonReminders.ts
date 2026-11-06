@@ -1,11 +1,20 @@
 import { Account } from '../models/Account.js';
 import { Lesson, type LessonDocument } from '../models/Lesson.js';
 import type { EmailMessage, EmailSender } from './email.js';
-import { formatLessonTimeFor } from './lessonBooking.js';
+import { lessonDateAndTime } from './lessonBooking.js';
 import { createNotification } from './notifications.js';
 
 // How far ahead of a Lesson its reminder goes out.
 export const REMINDER_LEAD_MINUTES = 60;
+
+// "in 1 hour" / "in 20 minutes" — how long until the meeting when the
+// reminder goes out. Said outright so the email's arrival time (an hour
+// early) can't be mistaken for the meeting time.
+function startsIn(startTime: Date, now: Date): string {
+  const minutes = Math.max(1, Math.round((startTime.getTime() - now.getTime()) / 60_000));
+  if (minutes >= REMINDER_LEAD_MINUTES - 5) return 'in 1 hour';
+  return `in ${minutes} minute${minutes === 1 ? '' : 's'}`;
+}
 
 export function buildLessonReminderNotification(params: {
   recipientEmail: string;
@@ -13,14 +22,18 @@ export function buildLessonReminderNotification(params: {
   startTime: Date;
   meetingLink: string;
   timezone?: string;
+  now?: Date;
 }): { message: string; email: EmailMessage } {
-  const startTimeText = formatLessonTimeFor(params.startTime, params.timezone);
+  // The reader's own clock time, e.g. "1:00 pm on Sun 18 Oct 2026"; marked
+  // "(UTC)" when we don't know their time zone.
+  const { date, time, utc } = lessonDateAndTime(params.startTime, params.timezone);
+  const when = `${startsIn(params.startTime, params.now ?? new Date())}, at ${time}${utc ? ' (UTC)' : ''} on ${date}`;
   return {
-    message: `Reminder: your meeting with ${params.otherPartyName} starts at ${startTimeText}.`,
+    message: `Reminder: your meeting with ${params.otherPartyName} starts ${when}.`,
     email: {
       to: params.recipientEmail,
-      subject: 'Your 10ME meeting is coming up',
-      body: `Your meeting with ${params.otherPartyName} starts at ${startTimeText}. Join here: ${params.meetingLink}`,
+      subject: `Your 10ME meeting starts ${startsIn(params.startTime, params.now ?? new Date())}`,
+      body: `Your meeting with ${params.otherPartyName} starts ${when}. Join here: ${params.meetingLink}`,
     },
   };
 }
@@ -28,6 +41,7 @@ export function buildLessonReminderNotification(params: {
 async function remindBothParties(
   emailSender: EmailSender,
   lesson: LessonDocument,
+  now: Date,
 ): Promise<void> {
   const [user, buddy] = await Promise.all([
     Account.findById(lesson.userId),
@@ -50,6 +64,7 @@ async function remindBothParties(
       startTime: lesson.startTime,
       meetingLink: lesson.meetingLink,
       timezone: account.timezone,
+      now,
     });
     await createNotification({
       emailSender,
@@ -89,7 +104,7 @@ export async function sendDueLessonReminders(params: {
     if (!claimed) continue;
 
     try {
-      await remindBothParties(emailSender, claimed);
+      await remindBothParties(emailSender, claimed, now);
       remindersSent += 1;
     } catch (err) {
       // One bad Lesson must not stop the sweep for the rest.

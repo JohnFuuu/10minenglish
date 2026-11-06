@@ -62,6 +62,44 @@ describe('POST /api/onboarding', () => {
     expect(updated!.selfRatedLevel).toBe(7);
   });
 
+  async function submitAs(answers: Record<string, unknown>) {
+    const account = await Account.create({ role: 'user', email: 'sarah@example.com' });
+    const token = signAccountToken({ accountId: account.id, role: account.role });
+    const res = await request(createApp())
+      .post('/api/onboarding')
+      .set('Authorization', `Bearer ${token}`)
+      .send(answers);
+    return { res, updated: await Account.findById(account.id) };
+  }
+
+  it('saves the optional free-text detail when the referral source is Other', async () => {
+    const { res, updated } = await submitAs({ ...validAnswers, referralSource: 'Other', referralSourceOther: '  A poster at my library  ' });
+
+    expect(res.status).toBe(200);
+    expect(updated!.referralSource).toBe('Other');
+    expect(updated!.referralSourceOther).toBe('A poster at my library');
+  });
+
+  it('accepts Other with no detail (the text box is optional)', async () => {
+    const { res, updated } = await submitAs({ ...validAnswers, referralSource: 'Other', referralSourceOther: '   ' });
+
+    expect(res.status).toBe(200);
+    expect(updated!.referralSource).toBe('Other');
+    expect(updated!.referralSourceOther).toBeUndefined();
+  });
+
+  it('ignores the free-text detail when the referral source is not Other', async () => {
+    const { updated } = await submitAs({ ...validAnswers, referralSourceOther: 'leftover text' });
+
+    expect(updated!.referralSourceOther).toBeUndefined();
+  });
+
+  it('caps the free-text detail at 200 characters', async () => {
+    const { updated } = await submitAs({ ...validAnswers, referralSource: 'Other', referralSourceOther: 'x'.repeat(500) });
+
+    expect(updated!.referralSourceOther).toHaveLength(200);
+  });
+
   it('rejects a request missing required answers', async () => {
     const account = await Account.create({ role: 'user', email: 'sarah@example.com' });
     const token = signAccountToken({ accountId: account.id, role: account.role });

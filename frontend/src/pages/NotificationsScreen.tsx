@@ -1,10 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BellOff } from 'lucide-react';
-import { BottomNav, Button, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
+import { BellOff, Trash2 } from 'lucide-react';
+import { BackButton, BottomNav, Button, NAV_CLEARANCE_CLASS, PageHeader } from '../components';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../toast/ToastContext';
-import { ApiError, fetchNotifications, markNotificationRead, type AppNotification } from '../lib/api';
+import {
+  ApiError,
+  archiveNotification,
+  archiveReadNotifications,
+  fetchNotifications,
+  markNotificationRead,
+  type AppNotification,
+} from '../lib/api';
 import { formatDateTime } from '../lib/formatDateTime';
 import { useCachedFetch } from '../lib/useCachedFetch';
 
@@ -106,12 +113,19 @@ const DEFAULT_TYPE_CONFIG = {
   ),
 };
 
-export function NotificationsScreen() {
-  const { token, account } = useAuth();
-  // BottomNav renders the right tab set for User/Buddy on its own and
-  // renders nothing for Admin (no tab set of its own) — so Admin needs an
-  // explicit way back, same as before it had a bottom nav to rely on.
-  const showBottomNav = account?.role === 'user' || account?.role === 'buddy';
+interface MessagesPanelProps {
+  /** "View and reply" on a support reply. The page navigates to /support; the dashboard pop-up opens Help instead. */
+  onOpenTicket: (ticketId: string) => void;
+  /** Reports the unread count whenever it changes, so the page title / pop-up title / bell badge can follow. */
+  onUnreadCountChange?: (count: number) => void;
+  /** Pop-up mode: just the unread messages, no deleting — that's on the full page ("Manage all messages"). */
+  unreadOnly?: boolean;
+}
+
+// The Messages list itself — shown on the /notifications page and in the
+// dashboard's Messages pop-up (opened from the bell).
+export function MessagesPanel({ onOpenTicket, onUnreadCountChange, unreadOnly = false }: MessagesPanelProps) {
+  const { token } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -121,12 +135,19 @@ export function NotificationsScreen() {
     [token],
     { enabled: Boolean(token), onError: () => showToast('Could not load your notifications.', 'error') },
   );
-  const notifications = notificationsOrNull ?? [];
+  const allNotifications = notificationsOrNull ?? [];
+  const notifications = unreadOnly ? allNotifications.filter((n) => !n.read) : allNotifications;
   const [dismissingId, setDismissingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isConfirmingClear, setIsConfirmingClear] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+
+  const unreadCount = allNotifications.filter((n) => !n.read).length;
+  useEffect(() => {
+    if (!isLoading) onUnreadCountChange?.(unreadCount);
+  }, [unreadCount, isLoading, onUnreadCountChange]);
 
   if (!token) return null;
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
 
   async function dismiss(notification: AppNotification) {
     if (notification.read) return;
@@ -143,114 +164,196 @@ export function NotificationsScreen() {
     }
   }
 
+  async function remove(notification: AppNotification) {
+    setDeletingId(notification.id);
+    try {
+      await archiveNotification(token!, notification.id);
+      setNotifications((current) => (current ?? []).filter((n) => n.id !== notification.id));
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not delete this message.', 'error');
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function clearRead() {
+    setIsClearing(true);
+    try {
+      const res = await archiveReadNotifications(token!);
+      setNotifications((current) => (current ?? []).filter((n) => !n.read));
+      setIsConfirmingClear(false);
+      showToast(`${res.archivedCount} message${res.archivedCount === 1 ? '' : 's'} deleted.`, 'success');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not delete your read messages.', 'error');
+    } finally {
+      setIsClearing(false);
+    }
+  }
+
+  const readCount = allNotifications.length - unreadCount;
+
   async function bookAgain(notification: AppNotification) {
     await dismiss(notification);
     navigate('/book');
   }
 
   return (
+  <div className="flex flex-col gap-2">
+      {isLoading && <p className="text-text-secondary">Loading your notifications…</p>}
+
+      {!isLoading && !unreadOnly && readCount > 0 && !isConfirmingClear && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setIsConfirmingClear(true)}
+            className="flex items-center gap-1 rounded-md px-1 py-1 text-xs font-bold text-text-secondary hover:text-error"
+          >
+            <Trash2 size={13} strokeWidth={2.5} /> Delete read messages
+          </button>
+        </div>
+      )}
+
+      {isConfirmingClear && (
+        <div className="flex flex-col gap-2 rounded-md bg-warning/10 px-3 py-2">
+          <p className="text-sm font-bold text-text-body">
+            Delete {readCount} message{readCount === 1 ? '' : 's'} you've already read? Unread messages stay.
+          </p>
+          <div className="flex gap-2">
+            <Button size="sm" disabled={isClearing} onClick={clearRead}>
+              {isClearing ? 'Deleting…' : 'Delete'}
+            </Button>
+            <Button size="sm" variant="secondary" disabled={isClearing} onClick={() => setIsConfirmingClear(false)}>
+              Keep them
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {!isLoading && notifications.length === 0 && (
+        <div className="py-16 text-center">
+          <BellOff size={40} className="mx-auto mb-3 text-text-secondary" />
+          <p className="text-sm font-bold uppercase tracking-widest text-text-secondary">
+            {unreadOnly ? 'No new messages' : 'All caught up!'}
+          </p>
+        </div>
+      )}
+
+      {!isLoading &&
+        notifications.map((notification) => {
+          const cfg = TYPE_CONFIG[notification.type] ?? DEFAULT_TYPE_CONFIG;
+          return (
+            <div
+              key={notification.id}
+              className={
+                notification.read
+                  ? 'rounded-md border-2 border-b-[3px] border-border bg-bg-surface p-4'
+                  : 'rounded-md border-2 border-b-[3px] border-accent-lime bg-success-bg/40 p-4'
+              }
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border-2 border-border"
+                  style={{ background: cfg.bg }}
+                >
+                  {cfg.icon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <NotificationMessage notification={notification} />
+                    {!notification.read && (
+                      <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-brand-primary" />
+                    )}
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between gap-2">
+                    <p className="text-xs font-bold uppercase tracking-widest text-text-secondary">
+                      {formatDateTime(notification.createdAt)}
+                    </p>
+                    {!unreadOnly && (
+                      <button
+                        type="button"
+                        aria-label="Delete message"
+                        title="Delete message"
+                        disabled={deletingId === notification.id}
+                        onClick={() => remove(notification)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-secondary hover:bg-bg-page hover:text-error disabled:opacity-50"
+                      >
+                        <Trash2 size={16} strokeWidth={2.5} />
+                      </button>
+                    )}
+                  </div>
+
+                  {!notification.read && notification.type === 'buddy_cancellation_refund' && (
+                    <div className="mt-3 flex gap-2">
+                      <Button size="sm" disabled={dismissingId === notification.id} onClick={() => bookAgain(notification)}>
+                        Book another meeting
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={dismissingId === notification.id}
+                        onClick={() => dismiss(notification)}
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  )}
+
+                  {notification.type === 'support_reply' && typeof notification.details?.ticketId === 'string' && (
+                    <div className="mt-3">
+                      <Button
+                        size="sm"
+                        tone="blue"
+                        onClick={() => {
+                          if (!notification.read) dismiss(notification);
+                          onOpenTicket(notification.details!.ticketId as string);
+                        }}
+                      >
+                        View and reply
+                      </Button>
+                    </div>
+                  )}
+
+                  {!notification.read && notification.type !== 'buddy_cancellation_refund' && (
+                    <div className="mt-3">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={dismissingId === notification.id}
+                        onClick={() => dismiss(notification)}
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+    </div>
+  );
+}
+
+export function NotificationsScreen() {
+  const { token, account } = useAuth();
+  // BottomNav renders the right tab set for User/Buddy on its own and
+  // renders nothing for Admin (no tab set of its own). Everyone gets the
+  // Back icon in the header too, since this page is opened from the bell.
+  const showBottomNav = account?.role === 'user' || account?.role === 'buddy';
+  const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  if (!token) return null;
+
+  return (
     <main className={`mx-auto max-w-3xl ${showBottomNav ? NAV_CLEARANCE_CLASS : ''}`}>
       <PageHeader
         title={unreadCount > 0 ? `Messages (${unreadCount})` : 'Messages'}
-        right={
-          !showBottomNav && (
-            <Button variant="secondary" size="sm" onClick={() => navigate('/dashboard')}>
-              Back to Dashboard
-            </Button>
-          )
-        }
+        right={<BackButton onClick={() => navigate('/dashboard')} />}
       />
-
-      <div className="mt-4 flex flex-col gap-2 px-5">
-        {isLoading && <p className="text-text-secondary">Loading your notifications…</p>}
-
-        {!isLoading && notifications.length === 0 && (
-          <div className="py-16 text-center">
-            <BellOff size={40} className="mx-auto mb-3 text-text-secondary" />
-            <p className="text-sm font-bold uppercase tracking-widest text-text-secondary">All caught up!</p>
-          </div>
-        )}
-
-        {!isLoading &&
-          notifications.map((notification) => {
-            const cfg = TYPE_CONFIG[notification.type] ?? DEFAULT_TYPE_CONFIG;
-            return (
-              <div
-                key={notification.id}
-                className={
-                  notification.read
-                    ? 'rounded-md border-2 border-b-[3px] border-border bg-bg-surface p-4'
-                    : 'rounded-md border-2 border-b-[3px] border-accent-lime bg-success-bg/40 p-4'
-                }
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border-2 border-border"
-                    style={{ background: cfg.bg }}
-                  >
-                    {cfg.icon}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <NotificationMessage notification={notification} />
-                      {!notification.read && (
-                        <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-brand-primary" />
-                      )}
-                    </div>
-                    <p className="mt-1.5 text-xs font-bold uppercase tracking-widest text-text-secondary">
-                      {formatDateTime(notification.createdAt)}
-                    </p>
-
-                    {!notification.read && notification.type === 'buddy_cancellation_refund' && (
-                      <div className="mt-3 flex gap-2">
-                        <Button size="sm" disabled={dismissingId === notification.id} onClick={() => bookAgain(notification)}>
-                          Book another meeting
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={dismissingId === notification.id}
-                          onClick={() => dismiss(notification)}
-                        >
-                          Dismiss
-                        </Button>
-                      </div>
-                    )}
-
-                    {notification.type === 'support_reply' && typeof notification.details?.ticketId === 'string' && (
-                      <div className="mt-3">
-                        <Button
-                          size="sm"
-                          tone="blue"
-                          onClick={() => {
-                            if (!notification.read) dismiss(notification);
-                            navigate(`/support?ticket=${notification.details!.ticketId}`);
-                          }}
-                        >
-                          View and reply
-                        </Button>
-                      </div>
-                    )}
-
-                    {!notification.read && notification.type !== 'buddy_cancellation_refund' && (
-                      <div className="mt-3">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={dismissingId === notification.id}
-                          onClick={() => dismiss(notification)}
-                        >
-                          Dismiss
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+      <div className="mt-4 px-5">
+        <MessagesPanel onOpenTicket={(id) => navigate(`/support?ticket=${id}`)} onUnreadCountChange={setUnreadCount} />
       </div>
-
       {showBottomNav && <BottomNav />}
     </main>
   );

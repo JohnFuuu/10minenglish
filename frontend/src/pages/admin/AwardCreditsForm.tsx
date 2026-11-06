@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button } from '../../components';
+import { Button, CreditCoin } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../toast/ToastContext';
 import { awardMemberCredits, type AdminMember } from '../../lib/api';
@@ -44,7 +44,7 @@ export function AwardCreditsForm({ member, onAwarded }: { member: AdminMember; o
     return (
       <div className="flex flex-col gap-2 rounded-md bg-warning/10 px-2 py-2">
         <p className="text-sm font-bold text-text-body">
-          Award {creditsLabel} to {name}? Their balance goes from {member.credits} to {member.credits + credits}.
+          Award {creditsLabel} to {name}? Their balance goes from <CreditCoin className="-mt-0.5" /> {member.credits} to <CreditCoin className="-mt-0.5" /> {member.credits + credits}.
         </p>
         <p className="text-xs text-text-secondary">Reason: {reason.trim()}</p>
         <div className="flex gap-2">

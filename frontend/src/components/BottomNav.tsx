@@ -67,12 +67,10 @@ const PRICING_ICON = (active: boolean) => (
 
 const SUPPORT_ICON = (active: boolean) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? ACTIVE : INACTIVE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    {/* Question mark in a circle — the same symbol as the Help button on the User/Buddy dashboards. */}
     <circle cx="12" cy="12" r="10" />
-    <circle cx="12" cy="12" r="4" />
-    <line x1="4.93" y1="4.93" x2="9.17" y2="9.17" />
-    <line x1="14.83" y1="14.83" x2="19.07" y2="19.07" />
-    <line x1="14.83" y1="9.17" x2="19.07" y2="4.93" />
-    <line x1="4.93" y1="19.07" x2="9.17" y2="14.83" />
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <path d="M12 17h.01" />
   </svg>
 );
 
